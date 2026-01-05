@@ -1,0 +1,352 @@
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Heart, Minus, Plus, Star, Truck, Shield, RotateCcw } from "lucide-react";
+import { PageLayout } from "@/components/layouts/PageLayout";
+import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
+import { useProduct, useProductsByCollection, Product as ProductType } from "@/hooks/useProducts";
+import { ProductCard } from "@/components/ProductCard";
+import { ProductReviews } from "@/components/ProductReviews";
+import { RecentlyViewed } from "@/components/RecentlyViewed";
+import { BackInStockAlert } from "@/components/BackInStockAlert";
+import { SizeRecommendation } from "@/components/SizeRecommendation";
+import { ProductFabricInfo } from "@/components/ProductFabricInfo";
+import { useTrackProductView } from "@/hooks/useRecentlyViewed";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export default function Product() {
+  const { slug } = useParams<{ slug: string }>();
+  const { data: product, isLoading } = useProduct(slug || "");
+  const { data: collectionProducts = [] } = useProductsByCollection(product?.collection?.slug || "");
+  
+  const [currentImage, setCurrentImage] = useState(0);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedPetSize, setSelectedPetSize] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
+  const { user } = useAuth();
+  const trackView = useTrackProductView();
+
+  // Track product view
+  useEffect(() => {
+    if (product?.id && user) {
+      trackView.mutate(product.id);
+    }
+  }, [product?.id, user]);
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-6 py-32 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!product) {
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-6 py-32 text-center">
+          <h1 className="mb-4 font-display text-4xl">Product Not Found</h1>
+          <Link to="/shop" className="font-body text-muted-foreground underline">
+            Return to Shop
+          </Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const images = product.images?.length ? product.images : [product.image_url || "/product-1.jpg"];
+  const sizes = product.sizes || ["XS", "S", "M", "L", "XL"];
+  const petSizes = product.pet_sizes || ["XS", "S", "M", "L"];
+  const features = product.features || ["Premium quality materials", "Matching design for you and your pet", "Machine washable"];
+  
+  const numericId = parseInt(product.id.replace(/-/g, '').slice(0, 8), 16);
+  const inWishlist = isInWishlist(numericId);
+  
+  const relatedProducts = collectionProducts
+    .filter((p) => p.id !== product.id)
+    .slice(0, 3);
+
+  const handleAddToCart = () => {
+    if (!selectedSize && !selectedPetSize) {
+      toast.error("Please select a size", {
+        description: "Choose either your size or your pet's size.",
+      });
+      return;
+    }
+    for (let i = 0; i < quantity; i++) {
+      addToCart({
+        id: numericId,
+        name: product.name,
+        price: product.price,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: selectedSize || "N/A",
+        petSize: selectedPetSize || "N/A",
+      });
+    }
+    toast.success("Added to cart!", {
+      description: `${quantity}x ${product.name}`,
+    });
+  };
+
+  const handleWishlist = () => {
+    if (inWishlist) {
+      removeFromWishlist(numericId);
+      toast.info("Removed from wishlist");
+    } else {
+      addToWishlist({
+        id: numericId,
+        name: product.name,
+        price: product.price,
+        image: product.image_url || "/product-1.jpg",
+        category: product.category?.name || "Fashion",
+      });
+      toast.success("Added to wishlist!");
+    }
+  };
+
+  return (
+    <PageLayout>
+      <div className="container mx-auto px-6 py-6 md:py-8">
+        {/* Breadcrumb */}
+        <nav className="mb-8 flex items-center gap-2 font-body text-sm text-muted-foreground">
+          <Link to="/" className="hover:text-foreground">Home</Link>
+          <span>/</span>
+          {product.collection && (
+            <>
+              <Link to={`/collection/${product.collection.slug}`} className="capitalize hover:text-foreground">
+                {product.collection.name}
+              </Link>
+              <span>/</span>
+            </>
+          )}
+          <span className="text-foreground">{product.name}</span>
+        </nav>
+
+        <div className="grid gap-12 lg:grid-cols-[30%_1fr]">
+          {/* Image Gallery */}
+          <div className="space-y-4">
+            <div className="relative aspect-square overflow-hidden bg-muted">
+              <img
+                src={images[currentImage]}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                    className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-background/90 transition-colors hover:bg-background"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-background/90 transition-colors hover:bg-background"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="flex gap-3">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImage(idx)}
+                  className={`aspect-square w-20 overflow-hidden border-2 transition-colors ${
+                    currentImage === idx ? "border-foreground" : "border-transparent"
+                  }`}
+                >
+                  <img src={img} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Info */}
+          <div className="space-y-8">
+            <div>
+              <p className="mb-2 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                {product.category?.name || "Fashion"}
+              </p>
+              <h1 className="mb-4 font-display text-3xl font-medium tracking-tight md:text-4xl">
+                {product.name}
+              </h1>
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-foreground text-foreground" />
+                  ))}
+                </div>
+                <span className="font-body text-sm text-muted-foreground">(24 reviews)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-display text-2xl font-medium">${product.price}</span>
+                {product.original_price && (
+                  <span className="font-body text-lg text-muted-foreground line-through">
+                    ${product.original_price}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <p className="font-body text-muted-foreground leading-relaxed">
+              {product.description || "A beautiful matching set for you and your furry companion. Made with premium materials for comfort and style."}
+            </p>
+
+            {/* Size Selection */}
+            <div className="space-y-6">
+              <div>
+                <label className="mb-3 block font-body text-xs uppercase tracking-[0.2em] text-foreground">
+                  Your Size
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${
+                        selectedSize === size
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border hover:border-foreground"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="font-body text-xs uppercase tracking-[0.2em] text-foreground">
+                    Pet Size
+                  </label>
+                  <SizeRecommendation 
+                    onSizeSelect={setSelectedPetSize} 
+                    availableSizes={petSizes} 
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {petSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedPetSize(size)}
+                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${
+                        selectedPetSize === size
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border hover:border-foreground"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quantity & Add to Cart */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="flex h-14 items-center border border-border">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-12 text-center font-body">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <Button onClick={handleAddToCart} variant="hero" className="h-14 flex-1">
+                Add to Cart
+              </Button>
+              <button
+                onClick={handleWishlist}
+                className={`flex h-14 w-14 items-center justify-center border transition-colors ${
+                  inWishlist
+                    ? "border-destructive bg-destructive/10"
+                    : "border-border hover:border-foreground"
+                }`}
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    inWishlist ? "fill-destructive text-destructive" : "text-foreground"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Features */}
+            <div className="border-t border-border pt-8">
+              <h3 className="mb-4 font-display text-lg font-medium">Features</h3>
+              <ul className="space-y-2">
+                {features.map((feature, idx) => (
+                  <li key={idx} className="flex items-center gap-2 font-body text-muted-foreground">
+                    <span className="h-1 w-1 rounded-full bg-foreground" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Fabric & Care Info */}
+            <ProductFabricInfo
+              fabricType={(product as any).fabric_type}
+              breathability={(product as any).breathability}
+              stretchLevel={(product as any).stretch_level}
+              isAllergySafe={(product as any).is_allergy_safe}
+              careWash={(product as any).care_wash}
+              careDry={(product as any).care_dry}
+              durabilityRating={(product as any).durability_rating}
+              seasonalTags={(product as any).seasonal_tags}
+            />
+
+            {/* Trust Badges */}
+            <div className="grid grid-cols-3 gap-4 border-t border-border pt-8">
+              <div className="text-center">
+                <Truck className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+                <p className="font-body text-xs text-muted-foreground">Free Shipping</p>
+              </div>
+              <div className="text-center">
+                <Shield className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+                <p className="font-body text-xs text-muted-foreground">Quality Guarantee</p>
+              </div>
+              <div className="text-center">
+                <RotateCcw className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
+                <p className="font-body text-xs text-muted-foreground">Easy Returns</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Product Reviews */}
+        <ProductReviews productId={product.id} productName={product.name} />
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <section className="mt-24">
+            <h2 className="mb-8 text-center font-display text-3xl font-medium">
+              You May Also Like
+            </h2>
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recently Viewed */}
+        <RecentlyViewed />
+      </div>
+    </PageLayout>
+  );
+}

@@ -1,0 +1,278 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface GalleryPost {
+  id: string;
+  user_id: string;
+  pet_id: string | null;
+  product_id: string | null;
+  image_url: string;
+  caption: string | null;
+  likes_count: number;
+  is_featured: boolean;
+  is_approved: boolean;
+  created_at: string;
+  pet?: { name: string; breed: string | null };
+  product?: { name: string; slug: string };
+  profile?: { full_name: string | null };
+}
+
+export interface GalleryComment {
+  id: string;
+  user_id: string;
+  gallery_post_id: string;
+  content: string;
+  created_at: string;
+  profile?: { full_name: string | null };
+}
+
+export function useGalleryPosts(featured?: boolean) {
+  return useQuery({
+    queryKey: ["gallery-posts", featured],
+    queryFn: async () => {
+      let query = supabase
+        .from("pet_gallery")
+        .select(`
+          *,
+          pet:pets(name, breed),
+          product:products(name, slug)
+        `)
+        .eq("is_approved", true)
+        .order("created_at", { ascending: false });
+
+      if (featured) {
+        query = query.eq("is_featured", true);
+      }
+
+      const { data, error } = await query.limit(50);
+      if (error) throw error;
+      return data as GalleryPost[];
+    },
+  });
+}
+
+export function useUserGalleryPosts() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["user-gallery-posts", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("pet_gallery")
+        .select(`
+          *,
+          pet:pets(name, breed),
+          product:products(name, slug)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as GalleryPost[];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useCreateGalleryPost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ 
+      imageFile, 
+      petId, 
+      productId, 
+      caption 
+    }: { 
+      imageFile: File; 
+      petId?: string; 
+      productId?: string; 
+      caption?: string;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      // Upload image
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("gallery-images")
+        .upload(fileName, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("gallery-images")
+        .getPublicUrl(fileName);
+
+      // Create post
+      const { data, error } = await supabase
+        .from("pet_gallery")
+        .insert({
+          user_id: user.id,
+          pet_id: petId || null,
+          product_id: productId || null,
+          image_url: publicUrl,
+          caption: caption || null,
+          is_approved: false, // Requires moderation
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-gallery-posts"] });
+      toast.success("Photo submitted!", {
+        description: "Your photo will be visible after approval.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to upload", { description: error.message });
+    },
+  });
+}
+
+export function useGalleryComments(postId: string) {
+  return useQuery({
+    queryKey: ["gallery-comments", postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("gallery_comments")
+        .select("*")
+        .eq("gallery_post_id", postId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data as GalleryComment[];
+    },
+    enabled: !!postId,
+  });
+}
+
+export function useAddGalleryComment() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("gallery_comments")
+        .insert({
+          user_id: user.id,
+          gallery_post_id: postId,
+          content,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["gallery-comments", variables.postId] });
+    },
+  });
+}
+
+export function useLikeGalleryPost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user) throw new Error("Not authenticated");
+
+      // Check if already liked
+      const { data: existing } = await supabase
+        .from("gallery_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("gallery_post_id", postId)
+        .maybeSingle();
+
+      if (existing) {
+        // Unlike
+        await supabase.from("gallery_likes").delete().eq("id", existing.id);
+        // Decrement likes count
+        const { data: post } = await supabase
+          .from("pet_gallery")
+          .select("likes_count")
+          .eq("id", postId)
+          .single();
+        if (post) {
+          await supabase
+            .from("pet_gallery")
+            .update({ likes_count: Math.max(0, (post.likes_count || 0) - 1) })
+            .eq("id", postId);
+        }
+        return { liked: false };
+      } else {
+        // Like
+        await supabase.from("gallery_likes").insert({
+          user_id: user.id,
+          gallery_post_id: postId,
+        });
+        return { liked: true };
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
+    },
+  });
+}
+
+export function useIsPostLiked(postId: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["gallery-like", postId, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      
+      const { data } = await supabase
+        .from("gallery_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("gallery_post_id", postId)
+        .maybeSingle();
+
+      return !!data;
+    },
+    enabled: !!user && !!postId,
+  });
+}
+
+export function usePetOfTheWeek() {
+  return useQuery({
+    queryKey: ["pet-of-the-week"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from("pet_of_the_week")
+        .select(`
+          *,
+          gallery_post:pet_gallery(
+            *,
+            pet:pets(name, breed)
+          )
+        `)
+        .lte("week_start", today)
+        .gte("week_end", today)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+}

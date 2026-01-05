@@ -1,0 +1,163 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  product_id: string;
+  frequency: string;
+  quantity: number;
+  size: string | null;
+  pet_size: string | null;
+  status: string;
+  next_delivery_date: string;
+  last_order_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useSubscriptions() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["subscriptions", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as Subscription[];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useCreateSubscription() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      frequency,
+      quantity,
+      size,
+      petSize,
+    }: {
+      productId: string;
+      frequency: string;
+      quantity?: number;
+      size?: string;
+      petSize?: string;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      // Calculate next delivery date based on frequency
+      const nextDate = new Date();
+      switch (frequency) {
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          nextDate.setDate(nextDate.getDate() + 14);
+          break;
+        case 'monthly':
+        default:
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+      }
+
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .insert({
+          user_id: user.id,
+          product_id: productId,
+          frequency,
+          quantity: quantity || 1,
+          size: size || null,
+          pet_size: petSize || null,
+          next_delivery_date: nextDate.toISOString().split('T')[0],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Subscription created!", {
+        description: "You'll receive automatic deliveries.",
+      });
+    },
+    onError: () => {
+      toast.error("Failed to create subscription");
+    },
+  });
+}
+
+export function useUpdateSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      subscriptionId,
+      status,
+      frequency,
+      quantity,
+    }: {
+      subscriptionId: string;
+      status?: string;
+      frequency?: string;
+      quantity?: number;
+    }) => {
+      const updates: Partial<Subscription> = {};
+      if (status) updates.status = status;
+      if (frequency) updates.frequency = frequency;
+      if (quantity) updates.quantity = quantity;
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update(updates)
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Subscription updated");
+    },
+    onError: () => {
+      toast.error("Failed to update subscription");
+    },
+  });
+}
+
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ status: 'cancelled' })
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Subscription cancelled");
+    },
+    onError: () => {
+      toast.error("Failed to cancel subscription");
+    },
+  });
+}
