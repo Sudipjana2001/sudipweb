@@ -11,6 +11,9 @@ export function FeaturedCollections() {
 
   // Default fallback images
   const fallbackImages: Record<string, string> = {
+    'summer-vibes': "/collection-summer.jpg",
+    'cozy-winter': "/collection-winter.jpg",
+    'rainy-days': "/collection-rainy.jpg",
     summer: "/collection-summer.jpg",
     winter: "/collection-winter.jpg",
     rainy: "/collection-rainy.jpg",
