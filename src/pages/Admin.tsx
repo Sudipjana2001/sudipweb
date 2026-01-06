@@ -268,7 +268,7 @@ export default function Admin() {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Use RPC function to bypass RLS and ensure deletion
-    const { error } = await supabase.rpc('delete_product_admin', { product_id: id });
+    const { error } = await supabase.rpc('delete_product_admin' as any, { product_id: id });
 
     if (error) {
       console.error("Delete error:", error);

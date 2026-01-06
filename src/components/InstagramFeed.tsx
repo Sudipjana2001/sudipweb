@@ -53,13 +53,28 @@ export function InstagramFeed() {
           <h2 className="mb-16 font-display text-4xl font-medium tracking-tight text-foreground md:text-5xl">
             Join the <span className="text-secondary-foreground">Pack</span>
           </h2>
-                <span className="font-body text-sm text-background transition-transform duration-300 group-hover:-translate-y-0.5">
-                  {post.likes.toLocaleString()} likes
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+
+          <div className="grid w-full grid-cols-2 gap-4 md:grid-cols-4">
+            {posts.map((post, index) => (
+              <a
+                key={index}
+                href={post.post_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative aspect-square overflow-hidden rounded-xl bg-muted"
+              >
+                <div
+                  className="h-full w-full bg-cover bg-center transition-transform duration-700 hover:scale-110"
+                  style={{ backgroundImage: `url(${post.image_url})` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                  <div className="flex items-center gap-2 text-white">
+                    <span className="font-medium">❤️ {post.likes_count}</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
 
         {/* CTA */}
         <div 
@@ -71,6 +86,7 @@ export function InstagramFeed() {
             <Instagram className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />
             Follow Us on Instagram
           </Button>
+        </div>
         </div>
       </div>
     </section>
