@@ -50,7 +50,7 @@ export function Testimonials() {
   const { data: dbTestimonials, isLoading } = useTestimonials();
   
   // Use database testimonials if available, otherwise fallback
-  const testimonials = (dbTestimonials && dbTestimonials.length > 0) ? dbTestimonials : DEFAULT_TESTIMONIALS;
+  const testimonials = DEFAULT_TESTIMONIALS;
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);

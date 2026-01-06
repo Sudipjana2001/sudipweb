@@ -39,7 +39,7 @@ export function WhyChooseUs() {
   const { data: dbFeatures, isLoading } = useFeatures();
 
   // Use database features if available, otherwise fallback
-  const features = (dbFeatures && dbFeatures.length > 0) ? dbFeatures : DEFAULT_FEATURES;
+  const features = DEFAULT_FEATURES;
 
   return (
     <section className="bg-background py-24 md:py-32">

@@ -35,7 +35,7 @@ export function InstagramFeed() {
   const { data: dbPosts, isLoading } = useInstagramPosts();
 
   // Use database posts if available, otherwise fallback
-  const posts = (dbPosts && dbPosts.length > 0) ? dbPosts : DEFAULT_POSTS;
+  const posts = DEFAULT_POSTS;
 
   return (
     <section className="py-24 md:py-32 overflow-hidden">

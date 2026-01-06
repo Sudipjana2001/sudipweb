@@ -47,7 +47,7 @@ export function HeroSection() {
   const navigate = useNavigate();
 
   // Use database slides if available, otherwise use fallback
-  const slides = dbSlides && dbSlides.length > 0 ? dbSlides : fallbackSlides;
+  const slides = fallbackSlides;
 
   useEffect(() => {
     const handleScroll = () => {

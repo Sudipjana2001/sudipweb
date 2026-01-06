@@ -11,7 +11,9 @@ export function Newsletter() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const { data: config, isLoading } = useNewsletterConfig();
+  const badgeText = "Join the Family";
+  const headline = "Unlock 10% Off Your First Order";
+  const description = "Plus get early access to new collections, exclusive offers, and adorable pet content.";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,15 +33,7 @@ export function Newsletter() {
     }, 1500);
   };
 
-  // If loading, show nothing or skeleton (optional)
-  if (isLoading) return null;
 
-  // Ideally config should exist, but handle if somehow missing
-  const badgeText = config?.badge_text || "Join the Family";
-  const headline = config?.headline || "Unlock 10% Off Your First Order";
-  const description = config?.description || "Plus get early access to new collections, exclusive offers, and adorable pet content.";
-
-  if (config && !config.is_active) return null;
 
   return (
     <section className="py-24 md:py-32">

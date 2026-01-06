@@ -15,12 +15,19 @@ export function PromoBanner() {
     seconds: 0,
   });
 
-  // Use first active banner or fallback
-  const banner = dbBanners && dbBanners.length > 0 ? dbBanners[0] : null;
+  // Hardcoded banner for immediate revert
+  const banner = {
+    badge_text: "Limited Time Offer",
+    headline: "Spring Sale is Live",
+    subheadline: "Get 20% off all new arrivals with code SPRING20",
+    end_date: new Date(Date.now() + 86400000).toISOString(), // 24 hours from now
+    background_color: "#f3f4f6",
+    text_color: "#1f2937",
+    cta_text: "Shop Now",
+    cta_link: "/shop"
+  };
 
   useEffect(() => {
-    if (!banner) return;
-
     const calculateTimeLeft = () => {
       const endDate = new Date(banner.end_date).getTime();
       const now = new Date().getTime();
@@ -47,16 +54,7 @@ export function PromoBanner() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [banner]);
-
-  // If no banner from database, return null
-  if (isLoading) {
-    return null;
-  }
-
-  if (!banner) {
-    return null;
-  }
+  }, []);
 
   return (
     <section 
