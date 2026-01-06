@@ -1,4 +1,5 @@
 import { Instagram } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useInstagramPosts } from "@/hooks/useInstagramPosts";
 
