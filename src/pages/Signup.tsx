@@ -73,9 +73,9 @@ export default function Signup() {
 
   return (
     <PageLayout showNewsletter={false}>
-      <div className="container mx-auto px-6 py-16 md:py-24">
-        <div className="mx-auto max-w-md">
-          <div className="mb-10 text-center">
+      <div className="container mx-auto px-6 py-10 md:py-12">
+        <div className="mx-auto max-w-md space-y-8">
+          <div className="text-center">
             <h1 className="mb-3 font-display text-4xl font-medium">Join the Club</h1>
             <p className="font-body text-muted-foreground">
               Create an account to start your twinning journey
