@@ -1,169 +1,175 @@
 import { useState } from "react";
-import { Star, ChevronLeft, ChevronRight, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { useTestimonials } from "@/hooks/useTestimonials";
 
-const DEFAULT_TESTIMONIALS = [
+const testimonials = [
   {
-    id: "1",
-    customer_name: "Sarah Mitchell",
+    id: 1,
+    name: "Sarah Mitchell",
     location: "New York, NY",
     rating: 5,
-    review_text: "Finally found a brand that understands the bond between me and my golden retriever. The quality is exceptional, and we get so many compliments when we go out!",
-    pet_name: "Max",
-    image_url: "/testimonial-1.jpg",
+    text: "Finally found a brand that understands the bond between me and my golden retriever. The quality is exceptional, and we get so many compliments when we go out!",
+    petName: "Max",
+    image: "/testimonial-1.jpg",
   },
   {
-    id: "2",
-    customer_name: "James Chen",
+    id: 2,
+    name: "James Chen",
     location: "San Francisco, CA",
     rating: 5,
-    review_text: "The attention to detail is incredible. My French bulldog loves wearing his matching outfits, and the fabric is so soft. Worth every penny.",
-    pet_name: "Bruno",
-    image_url: "/testimonial-2.jpg",
+    text: "The attention to detail is incredible. My French bulldog loves wearing his matching outfits, and the fabric is so soft. Worth every penny.",
+    petName: "Bruno",
+    image: "/testimonial-2.jpg",
   },
   {
-    id: "3",
-    customer_name: "Emma Rodriguez",
+    id: 3,
+    name: "Emma Rodriguez",
     location: "Austin, TX",
     rating: 5,
-    review_text: "I was skeptical at first, but these are genuinely the most comfortable pet clothes we've tried. Luna actually gets excited when she sees her matching hoodie!",
-    pet_name: "Luna",
-    image_url: "/testimonial-3.jpg",
+    text: "I was skeptical at first, but these are genuinely the most comfortable pet clothes we've tried. Luna actually gets excited when she sees her matching hoodie!",
+    petName: "Luna",
+    image: "/testimonial-3.jpg",
   },
   {
-    id: "4",
-    customer_name: "Michael Park",
+    id: 4,
+    name: "Michael Park",
     location: "Seattle, WA",
     rating: 5,
-    review_text: "The winter collection saved our daily walks. Both my pup and I stay warm and stylish. The customer service team was also incredibly helpful with sizing.",
-    pet_name: "Coco",
-    image_url: "/testimonial-4.jpg",
+    text: "The winter collection saved our daily walks. Both my pup and I stay warm and stylish. The customer service team was also incredibly helpful with sizing.",
+    petName: "Coco",
+    image: "/testimonial-4.jpg",
   },
 ];
 
 export function Testimonials() {
-  const { ref: headerRef, isVisible: headerVisible } = useScrollAnimation();
-  const { ref: contentRef, isVisible: contentVisible } = useScrollAnimation({ threshold: 0.1 });
   const [currentIndex, setCurrentIndex] = useState(0);
-  const { data: dbTestimonials, isLoading } = useTestimonials();
-  
-  // Use database testimonials if available, otherwise fallback
-  const testimonials = DEFAULT_TESTIMONIALS;
+  const [isAnimating, setIsAnimating] = useState(false);
+  const { ref: headerRef, isVisible: headerVisible } = useScrollAnimation();
+  const { ref: cardRef, isVisible: cardVisible } = useScrollAnimation({ threshold: 0.2 });
+
+  const changeTestimonial = (newIndex: number) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setCurrentIndex(newIndex);
+    setTimeout(() => setIsAnimating(false), 500);
+  };
 
   const nextTestimonial = () => {
-    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    changeTestimonial((currentIndex + 1) % testimonials.length);
   };
 
   const prevTestimonial = () => {
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    changeTestimonial((currentIndex - 1 + testimonials.length) % testimonials.length);
   };
 
-  const currentTestimonial = testimonials[currentIndex];
+  const current = testimonials[currentIndex];
 
   return (
-    <section className="bg-secondary/30 py-24 md:py-32 overflow-hidden">
+    <section className="bg-secondary py-24 md:py-32 overflow-hidden">
       <div className="container mx-auto px-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:gap-16 xl:gap-24">
-          
-          {/* Header & Controls */}
-          <div 
-            ref={headerRef}
-            className={`mb-12 lg:mb-0 lg:w-1/3 transition-all duration-700 ${
-              headerVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-12'
-            }`}
-          >
-            <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
-              Community Love
-            </p>
-            <h2 className="mb-8 font-display text-4xl font-medium tracking-tight text-foreground md:text-5xl">
-              Stories from our <br />
-              <span className="italic text-primary">Happy Families</span>
-            </h2>
-            
-            <div className="hidden lg:flex lg:gap-4">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 rounded-full border-border hover:bg-background hover:text-foreground"
-                onClick={prevTestimonial}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 rounded-full border-border hover:bg-background hover:text-foreground"
-                onClick={nextTestimonial}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+        {/* Section Header */}
+        <div 
+          ref={headerRef}
+          className={`mb-16 text-center transition-all duration-700 ${
+            headerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
+          <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
+            Happy Families
+          </p>
+          <h2 className="font-display text-4xl font-medium tracking-tight text-foreground md:text-5xl">
+            What Our Customers Say
+          </h2>
+        </div>
+
+        {/* Testimonial Card */}
+        <div 
+          ref={cardRef}
+          className={`mx-auto max-w-4xl transition-all duration-700 ${
+            cardVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`}
+        >
+          <div className="relative bg-background p-8 shadow-soft md:p-12 transition-shadow duration-500 hover:shadow-elevated">
+            {/* Quote Icon */}
+            <Quote className="absolute right-8 top-8 h-12 w-12 text-muted/50 md:h-16 md:w-16 transition-transform duration-700 hover:scale-110 hover:rotate-12" />
+
+            <div 
+              className={`flex flex-col items-center gap-8 md:flex-row md:items-start transition-all duration-500 ${
+                isAnimating ? 'opacity-0 translate-x-8' : 'opacity-100 translate-x-0'
+              }`}
+            >
+              {/* Image */}
+              <div className="h-32 w-32 flex-shrink-0 overflow-hidden rounded-full bg-muted md:h-40 md:w-40 transition-transform duration-500 hover:scale-105">
+                <div
+                  className="h-full w-full bg-cover bg-center transition-transform duration-700 hover:scale-110"
+                  style={{ backgroundImage: `url(${current.image})` }}
+                />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 text-center md:text-left">
+                {/* Stars */}
+                <div className="mb-4 flex justify-center gap-1 md:justify-start">
+                  {Array.from({ length: current.rating }).map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className="h-4 w-4 fill-foreground text-foreground transition-all duration-300 hover:scale-125"
+                      style={{ animationDelay: `${i * 100}ms` }}
+                    />
+                  ))}
+                </div>
+
+                {/* Quote */}
+                <p className="mb-6 font-body text-lg leading-relaxed text-foreground md:text-xl">
+                  "{current.text}"
+                </p>
+
+                {/* Author */}
+                <div>
+                  <p className="font-display text-lg font-medium text-foreground">
+                    {current.name}
+                  </p>
+                  <p className="font-body text-sm text-muted-foreground">
+                    {current.location} · Pet: {current.petName}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Testimonials Card */}
-          <div 
-            ref={contentRef}
-            className={`relative lg:w-2/3 transition-all duration-700 ${
-              contentVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-12'
-            }`}
-          >
-            <div className="relative overflow-hidden rounded-2xl bg-background p-8 md:p-12 shadow-sm">
-              <div className="mb-8 flex gap-1">
-                {[...Array(currentTestimonial.rating)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-primary text-primary" />
-                ))}
-              </div>
-
-              <blockquote className="mb-10 font-display text-2xl leading-relaxed text-foreground md:text-3xl">
-                "{currentTestimonial.review_text}"
-              </blockquote>
-
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 overflow-hidden rounded-full bg-secondary">
-                   {currentTestimonial.image_url ? (
-                    <img
-                      src={currentTestimonial.image_url}
-                      alt={currentTestimonial.customer_name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
-                      <User className="h-6 w-6" />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <div className="font-display text-lg font-medium text-foreground">
-                    {currentTestimonial.customer_name}
-                  </div>
-                  <div className="font-body text-sm text-muted-foreground">
-                    {currentTestimonial.location} • {currentTestimonial.pet_name}'s Human
-                  </div>
-                </div>
-              </div>
+          {/* Navigation */}
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <button
+              onClick={prevTestimonial}
+              className="flex h-12 w-12 items-center justify-center border border-border bg-background text-foreground transition-all duration-300 hover:bg-foreground hover:text-background hover:scale-105 active:scale-95"
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            
+            {/* Dots */}
+            <div className="flex gap-2">
+              {testimonials.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => changeTestimonial(index)}
+                  className={`h-2 transition-all duration-500 hover:bg-foreground/70 ${
+                    index === currentIndex
+                      ? "w-8 bg-foreground"
+                      : "w-2 bg-foreground/30"
+                  }`}
+                  aria-label={`Go to testimonial ${index + 1}`}
+                />
+              ))}
             </div>
 
-            {/* Mobile Controls */}
-            <div className="mt-8 flex justify-center gap-4 lg:hidden">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 rounded-full border-border hover:bg-background hover:text-foreground"
-                onClick={prevTestimonial}
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 rounded-full border-border hover:bg-background hover:text-foreground"
-                onClick={nextTestimonial}
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
+            <button
+              onClick={nextTestimonial}
+              className="flex h-12 w-12 items-center justify-center border border-border bg-background text-foreground transition-all duration-300 hover:bg-foreground hover:text-background hover:scale-105 active:scale-95"
+              aria-label="Next testimonial"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
