@@ -2,46 +2,52 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useHeroSlides } from "@/hooks/useHeroSlides";
 
-const slides = [
+// Fallback slides if database is empty or loading fails
+const fallbackSlides = [
   {
     id: 1,
-    image: "/hero-1.jpg",
+    image_url: "/hero-1.jpg",
     headline: "Where Pets & Style Twin",
     subheadline: "Premium comfort meets perfect design. Matching outfits for you and your best friend.",
-    cta1: "Shop Twinning Sets",
-    cta1Link: "/shop?collection=twinning",
-    cta2: "Explore Collections",
-    cta2Link: "/shop",
+    cta1_text: "Shop Twinning Sets",
+    cta1_link: "/shop?collection=twinning",
+    cta2_text: "Explore Collections",
+    cta2_link: "/shop",
   },
   {
     id: 2,
-    image: "/hero-2.jpg",
+    image_url: "/hero-2.jpg",
     headline: "Summer Collection 2024",
     subheadline: "Breathable fabrics, effortless style. Stay cool together this season.",
-    cta1: "Shop Summer",
-    cta1Link: "/summer",
-    cta2: "View Lookbook",
-    cta2Link: "/shop",
+    cta1_text: "Shop Summer",
+    cta1_link: "/summer",
+    cta2_text: "View Lookbook",
+    cta2_link: "/shop",
   },
   {
     id: 3,
-    image: "/hero-3.jpg",
+    image_url: "/hero-3.jpg",
     headline: "Cozy Winter Essentials",
     subheadline: "Warmth never looked this good. Luxurious layers for cold days.",
-    cta1: "Shop Winter",
-    cta1Link: "/winter",
-    cta2: "Explore Styles",
-    cta2Link: "/shop",
+    cta1_text: "Shop Winter",
+    cta1_link: "/winter",
+    cta2_text: "Explore Styles",
+    cta2_link: "/shop",
   },
 ];
 
 export function HeroSection() {
+  const { data: dbSlides, isLoading } = useHeroSlides();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
+
+  // Use database slides if available, otherwise use fallback
+  const slides = dbSlides && dbSlides.length > 0 ? dbSlides : fallbackSlides;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,7 +100,7 @@ export function HeroSection() {
           <div 
             className="absolute inset-0 bg-cover bg-center will-change-transform"
             style={{ 
-              backgroundImage: `url(${slide.image})`,
+              backgroundImage: `url(${slide.image_url})`,
               filter: "brightness(0.9)",
               transform: `translateY(${parallaxOffset}px) scale(1.1)`,
               height: "120%",
@@ -128,16 +134,16 @@ export function HeroSection() {
                   <Button 
                     variant="hero" 
                     size="xl"
-                    onClick={() => navigate(slide.cta1Link)}
+                    onClick={() => navigate(slide.cta1_link || "/shop")}
                   >
-                    {slide.cta1}
+                    {slide.cta1_text || "Shop Now"}
                   </Button>
                   <Button 
                     variant="hero-outline" 
                     size="xl"
-                    onClick={() => navigate(slide.cta2Link)}
+                    onClick={() => navigate(slide.cta2_link || "/shop")}
                   >
-                    {slide.cta2}
+                    {slide.cta2_text || "Explore"}
                   </Button>
                 </div>
               </div>

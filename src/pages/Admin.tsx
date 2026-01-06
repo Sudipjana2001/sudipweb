@@ -35,6 +35,12 @@ import { CampaignManager } from "@/components/admin/CampaignManager";
 import { InfluencerManager } from "@/components/admin/InfluencerManager";
 import { ImageModerationLogs } from "@/components/admin/ImageModerationLogs";
 import { RateLimitDashboard } from "@/components/admin/RateLimitDashboard";
+import { HeroSlidesManager } from "@/components/admin/HeroSlidesManager";
+import { PromoBannersManager } from "@/components/admin/PromoBannersManager";
+import { FeaturesManager } from "@/components/admin/FeaturesManager";
+import { TestimonialsManager } from "@/components/admin/TestimonialsManager";
+import { NewsletterManager } from "@/components/admin/NewsletterManager";
+import { InstagramManager } from "@/components/admin/InstagramManager";
 
 interface Product {
   id: string;
@@ -579,6 +585,12 @@ export default function Admin() {
         <Tabs defaultValue="products">
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="hero-slides"><Image className="h-3 w-3 mr-1" />Hero Slides</TabsTrigger>
+            <TabsTrigger value="promo-banners"><Zap className="h-3 w-3 mr-1" />Promo Banners</TabsTrigger>
+            <TabsTrigger value="features"><Star className="h-3 w-3 mr-1" />Features</TabsTrigger>
+            <TabsTrigger value="testimonials"><MessageCircle className="h-3 w-3 mr-1" />Testimonials</TabsTrigger>
+            <TabsTrigger value="newsletter"><MessageCircle className="h-3 w-3 mr-1" />Newsletter</TabsTrigger>
+            <TabsTrigger value="instagram"><Image className="h-3 w-3 mr-1" />Instagram</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="courier"><Truck className="h-3 w-3 mr-1" />Courier</TabsTrigger>
             <TabsTrigger value="sla"><Clock className="h-3 w-3 mr-1" />SLA</TabsTrigger>
@@ -717,6 +729,30 @@ export default function Admin() {
                 </table>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="hero-slides" className="mt-6">
+            <HeroSlidesManager />
+          </TabsContent>
+
+          <TabsContent value="promo-banners" className="mt-6">
+            <PromoBannersManager />
+          </TabsContent>
+
+          <TabsContent value="features" className="mt-6">
+            <FeaturesManager />
+          </TabsContent>
+
+          <TabsContent value="testimonials" className="mt-6">
+            <TestimonialsManager />
+          </TabsContent>
+
+          <TabsContent value="newsletter" className="mt-6">
+            <NewsletterManager />
+          </TabsContent>
+
+          <TabsContent value="instagram" className="mt-6">
+            <InstagramManager />
           </TabsContent>
 
           <TabsContent value="orders" className="mt-6">
