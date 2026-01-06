@@ -18,15 +18,6 @@ export function PromoBanner() {
   // Use first active banner or fallback
   const banner = dbBanners && dbBanners.length > 0 ? dbBanners[0] : null;
 
-  // If no banner from database, return null (hide section)
-  if (isLoading) {
-    return null;
-  }
-
-  if (!banner) {
-    return null;
-  }
-
   useEffect(() => {
     if (!banner) return;
 
@@ -57,6 +48,15 @@ export function PromoBanner() {
 
     return () => clearInterval(timer);
   }, [banner]);
+
+  // If no banner from database, return null
+  if (isLoading) {
+    return null;
+  }
+
+  if (!banner) {
+    return null;
+  }
 
   return (
     <section 
