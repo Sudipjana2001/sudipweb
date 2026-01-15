@@ -119,7 +119,7 @@ export function Header() {
     <>
       <header
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-          isScrolled
+          isScrolled || isMobileMenuOpen
             ? "bg-background/95 shadow-soft backdrop-blur-md"
             : "bg-transparent"
         }`}
@@ -244,7 +244,7 @@ export function Header() {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 top-20 bg-background transition-all duration-300 lg:hidden ${
+          className={`fixed inset-0 top-20 bg-background/95 backdrop-blur-sm transition-all duration-300 lg:hidden ${
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
         >
