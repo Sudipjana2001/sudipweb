@@ -144,31 +144,7 @@ export function HeroSection() {
         <ChevronRight className="h-8 w-8" />
       </button>
 
-      {/* Slide Indicators */}
-      <div className="absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 gap-3">
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => scrollTo(index)}
-            className={`h-0.5 transition-all duration-300 ${
-              index === currentSlide
-                ? "w-12 bg-foreground"
-                : "w-6 bg-foreground/30 hover:bg-foreground/50"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 animate-pulse">
-        <div className="flex flex-col items-center gap-2">
-          <span className="font-body text-[10px] uppercase tracking-[0.2em] text-foreground/50">
-            Scroll
-          </span>
-          <div className="h-8 w-px bg-gradient-to-b from-foreground/50 to-transparent animate-bounce" style={{ animationDuration: '2s' }} />
-        </div>
-      </div>
     </section>
   );
 }
