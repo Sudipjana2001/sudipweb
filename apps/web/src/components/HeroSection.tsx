@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 import { useHeroSlides } from "@/hooks/useHeroSlides";
 
 // Fallback slides if database is empty or loading fails
@@ -40,128 +42,102 @@ const fallbackSlides = [
 
 export function HeroSection() {
   const { data: dbSlides, isLoading } = useHeroSlides();
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const sectionRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
-
+  
   // Use database slides if available, otherwise use fallback
   const slides = fallbackSlides;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (sectionRef.current) {
-        const rect = sectionRef.current.getBoundingClientRect();
-        if (rect.bottom > 0) {
-          setScrollY(window.scrollY);
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
+    Autoplay({ delay: 5000, stopOnInteraction: false })
+  ]);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [currentSlide]);
+    if (!emblaApi) return;
 
-  const nextSlide = () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-    setTimeout(() => setIsAnimating(false), 500);
-  };
+    emblaApi.on("select", () => {
+      setCurrentSlide(emblaApi.selectedScrollSnap());
+    });
+  }, [emblaApi]);
 
-  const prevSlide = () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-    setTimeout(() => setIsAnimating(false), 500);
-  };
+  const scrollPrev = useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
 
-  const parallaxOffset = scrollY * 0.4;
+  const scrollNext = useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+
+  const scrollTo = useCallback((index: number) => {
+    if (emblaApi) emblaApi.scrollTo(index);
+  }, [emblaApi]);
 
   return (
-    <section ref={sectionRef} className="relative h-screen w-full overflow-hidden bg-muted">
-      {/* Slides */}
-      {slides.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-700 ease-out ${
-            index === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0"
-          }`}
-        >
-          {/* Background Image with Parallax */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center will-change-transform"
-            style={{ 
-              backgroundImage: `url(${slide.image_url})`,
-              filter: "brightness(0.9)",
-              transform: `translateY(${parallaxOffset}px) scale(1.1)`,
-              height: "120%",
-              top: "-10%"
-            }}
-          />
-          
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-foreground/10" />
+    <section className="relative h-screen w-full overflow-hidden bg-muted">
+      {/* Embla Carousel Viewport */}
+      <div className="h-full w-full" ref={emblaRef}>
+        <div className="flex h-full w-full touch-pan-y">
+          {slides.map((slide) => (
+            <div key={slide.id} className="relative h-full min-w-full flex-[0_0_100%]">
+              {/* Background Image */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ 
+                  backgroundImage: `url(${slide.image_url})`,
+                  filter: "brightness(0.9)",
+                }}
+              />
+              
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-foreground/10" />
 
-          {/* Content */}
-          <div className="relative z-20 flex h-full items-center justify-center">
-            <div className="container mx-auto px-6 text-center">
-              <div
-                className={`transition-all duration-700 ${
-                  index === currentSlide
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-8"
-                }`}
-              >
-                <p className="mb-4 font-body text-xs uppercase tracking-[0.3em] text-foreground/70">
-                  Premium Pet Fashion
-                </p>
-                <h1 className="mb-6 font-display text-5xl font-medium leading-tight tracking-tight text-foreground md:text-7xl lg:text-8xl">
-                  {slide.headline}
-                </h1>
-                <p className="mx-auto mb-10 max-w-xl font-body text-lg text-foreground/80 md:text-xl">
-                  {slide.subheadline}
-                </p>
-                <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                  <Button 
-                    variant="hero" 
-                    size="xl"
-                    onClick={() => navigate(slide.cta1_link || "/shop")}
-                  >
-                    {slide.cta1_text || "Shop Now"}
-                  </Button>
-                  <Button 
-                    variant="hero-outline" 
-                    size="xl"
-                    onClick={() => navigate(slide.cta2_link || "/shop")}
-                  >
-                    {slide.cta2_text || "Explore"}
-                  </Button>
+              {/* Content */}
+              <div className="relative z-20 flex h-full items-center justify-center">
+                <div className="container mx-auto px-6 text-center">
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <p className="mb-4 font-body text-xs uppercase tracking-[0.3em] text-foreground/70">
+                      Premium Pet Fashion
+                    </p>
+                    <h1 className="mb-6 font-display text-5xl font-medium leading-tight tracking-tight text-foreground md:text-7xl lg:text-8xl">
+                      {slide.headline}
+                    </h1>
+                    <p className="mx-auto mb-10 max-w-xl font-body text-lg text-foreground/80 md:text-xl">
+                      {slide.subheadline}
+                    </p>
+                    <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+                      <Button 
+                        variant="hero" 
+                        size="xl"
+                        onClick={() => navigate(slide.cta1_link || "/shop")}
+                      >
+                        {slide.cta1_text || "Shop Now"}
+                      </Button>
+                      <Button 
+                        variant="hero-outline" 
+                        size="xl"
+                        onClick={() => navigate(slide.cta2_link || "/shop")}
+                      >
+                        {slide.cta2_text || "Explore"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
+      </div>
 
       {/* Navigation Arrows */}
       <button
-        onClick={prevSlide}
+        onClick={scrollPrev}
         className="absolute left-6 top-1/2 z-30 -translate-y-1/2 p-3 text-foreground/60 transition-all duration-300 hover:text-foreground hover:scale-110 active:scale-95"
         aria-label="Previous slide"
       >
         <ChevronLeft className="h-8 w-8" />
       </button>
       <button
-        onClick={nextSlide}
+        onClick={scrollNext}
         className="absolute right-6 top-1/2 z-30 -translate-y-1/2 p-3 text-foreground/60 transition-all duration-300 hover:text-foreground hover:scale-110 active:scale-95"
         aria-label="Next slide"
       >
@@ -173,7 +149,7 @@ export function HeroSection() {
         {slides.map((_, index) => (
           <button
             key={index}
-            onClick={() => setCurrentSlide(index)}
+            onClick={() => scrollTo(index)}
             className={`h-0.5 transition-all duration-300 ${
               index === currentSlide
                 ? "w-12 bg-foreground"
