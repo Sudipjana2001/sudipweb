@@ -90,7 +90,7 @@ export default function Collection() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
               {sortedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

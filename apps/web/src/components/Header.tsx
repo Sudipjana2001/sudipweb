@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navLinks = [
-  { name: "Twinning Sets", href: "/shop?collection=twinning" },
-  { name: "Summer", href: "/summer" },
-  { name: "Winter", href: "/winter" },
-  { name: "Rainy", href: "/rainy" },
-  { name: "New Arrivals", href: "/shop?sort=newest" },
+  { name: "Home", href: "/" },
+  { name: "Collections", href: "/shop" },
+  { name: "Community", href: "/gallery" },
+  { name: "Support", href: "/support" },
 ];
 
 const popularSearches = [

@@ -10,19 +10,18 @@ export function useScrollAnimation<T extends HTMLElement = HTMLDivElement>(
   options: UseScrollAnimationOptions = {}
 ) {
   const { threshold = 0, rootMargin = '50px', triggerOnce = true } = options;
-  const ref = useRef<T>(null);
+  const [ref, setRef] = useState<T | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
+    if (!ref) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
           if (triggerOnce) {
-            observer.unobserve(element);
+            observer.unobserve(ref);
           }
         } else if (!triggerOnce) {
           setIsVisible(false);
@@ -31,12 +30,12 @@ export function useScrollAnimation<T extends HTMLElement = HTMLDivElement>(
       { threshold, rootMargin }
     );
 
-    observer.observe(element);
+    observer.observe(ref);
 
     return () => observer.disconnect();
-  }, [threshold, rootMargin, triggerOnce]);
+  }, [ref, threshold, rootMargin, triggerOnce]);
 
-  return { ref, isVisible };
+  return { ref: setRef, isVisible };
 }
 
 export function useStaggeredAnimation<T extends HTMLElement = HTMLDivElement>(

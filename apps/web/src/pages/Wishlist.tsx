@@ -44,7 +44,7 @@ export default function Wishlist() {
       <div className="container mx-auto px-6 py-6 md:py-8">
         <h1 className="mb-12 font-display text-4xl font-medium md:text-5xl">My Wishlist</h1>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
           {wishlistItems.map((item) => (
             <div key={item.id} className="group relative">
               <Link to={`/product/${item.id}`}>

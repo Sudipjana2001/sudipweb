@@ -17,6 +17,176 @@ const speciesOptions = [
   { value: "cat", label: "Cat", icon: Cat },
 ];
 
+
+interface PetFormProps {
+  form: any;
+  setForm: (form: any) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+  isEditing: boolean;
+  onPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  uploading: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+}
+
+const PetForm = ({ 
+  form, 
+  setForm, 
+  onSubmit, 
+  isSubmitting, 
+  isEditing, 
+  onPhotoUpload, 
+  uploading, 
+  fileInputRef 
+}: PetFormProps) => (
+  <div className="space-y-6">
+    {/* Photo Upload */}
+    <div className="flex justify-center">
+      <div className="relative">
+        <div className="h-24 w-24 overflow-hidden rounded-full bg-muted">
+          {form.photo_url ? (
+            <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              {form.species === "cat" ? <Cat className="h-10 w-10 text-muted-foreground" /> : <Dog className="h-10 w-10 text-muted-foreground" />}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="absolute -bottom-1 -right-1 rounded-full bg-primary p-2 text-primary-foreground"
+          disabled={uploading}
+        >
+          <Upload className="h-4 w-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onPhotoUpload}
+        />
+      </div>
+    </div>
+
+    {/* Basic Info */}
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <Label>Name *</Label>
+        <Input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Pet's name"
+        />
+      </div>
+      <div>
+        <Label>Species</Label>
+        <div className="flex gap-2 mt-1">
+          {speciesOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setForm({ ...form, species: opt.value })}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                form.species === opt.value ? "border-primary bg-primary/10" : "border-border"
+              }`}
+            >
+              <opt.icon className="h-5 w-5" />
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <Label>Breed</Label>
+        <Input
+          value={form.breed}
+          onChange={(e) => setForm({ ...form, breed: e.target.value })}
+          placeholder="e.g., Golden Retriever"
+        />
+      </div>
+      <div>
+        <Label>Birth Date</Label>
+        <Input
+          type="date"
+          value={form.birth_date}
+          onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
+        />
+      </div>
+    </div>
+
+    {/* Measurements */}
+    <div className="border-t pt-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Ruler className="h-5 w-5 text-muted-foreground" />
+        <span className="font-medium">Measurements (for size recommendations)</span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <Label>Weight (kg)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={form.weight_kg}
+            onChange={(e) => setForm({ ...form, weight_kg: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Height (cm)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={form.height_cm}
+            onChange={(e) => setForm({ ...form, height_cm: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Length (cm)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={form.length_cm}
+            onChange={(e) => setForm({ ...form, length_cm: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Neck (cm)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={form.neck_cm}
+            onChange={(e) => setForm({ ...form, neck_cm: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label>Chest (cm)</Label>
+          <Input
+            type="number"
+            step="0.1"
+            value={form.chest_cm}
+            onChange={(e) => setForm({ ...form, chest_cm: e.target.value })}
+          />
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <Label>Notes</Label>
+      <Textarea
+        value={form.notes}
+        onChange={(e) => setForm({ ...form, notes: e.target.value })}
+        placeholder="Any special notes about your pet..."
+      />
+    </div>
+
+    <Button onClick={onSubmit} className="w-full" disabled={isSubmitting}>
+      {isEditing ? "Update Pet" : "Add Pet"}
+    </Button>
+  </div>
+);
+
 export default function Pets() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
@@ -159,155 +329,6 @@ export default function Pets() {
     );
   }
 
-  const PetForm = () => (
-    <div className="space-y-6">
-      {/* Photo Upload */}
-      <div className="flex justify-center">
-        <div className="relative">
-          <div className="h-24 w-24 overflow-hidden rounded-full bg-muted">
-            {form.photo_url ? (
-              <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                {form.species === "cat" ? <Cat className="h-10 w-10 text-muted-foreground" /> : <Dog className="h-10 w-10 text-muted-foreground" />}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 rounded-full bg-primary p-2 text-primary-foreground"
-            disabled={uploading}
-          >
-            <Upload className="h-4 w-4" />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handlePhotoUpload}
-          />
-        </div>
-      </div>
-
-      {/* Basic Info */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Name *</Label>
-          <Input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Pet's name"
-          />
-        </div>
-        <div>
-          <Label>Species</Label>
-          <div className="flex gap-2 mt-1">
-            {speciesOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setForm({ ...form, species: opt.value })}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
-                  form.species === opt.value ? "border-primary bg-primary/10" : "border-border"
-                }`}
-              >
-                <opt.icon className="h-5 w-5" />
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Breed</Label>
-          <Input
-            value={form.breed}
-            onChange={(e) => setForm({ ...form, breed: e.target.value })}
-            placeholder="e.g., Golden Retriever"
-          />
-        </div>
-        <div>
-          <Label>Birth Date</Label>
-          <Input
-            type="date"
-            value={form.birth_date}
-            onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
-          />
-        </div>
-      </div>
-
-      {/* Measurements */}
-      <div className="border-t pt-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Ruler className="h-5 w-5 text-muted-foreground" />
-          <span className="font-medium">Measurements (for size recommendations)</span>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <Label>Weight (kg)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.weight_kg}
-              onChange={(e) => setForm({ ...form, weight_kg: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Height (cm)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.height_cm}
-              onChange={(e) => setForm({ ...form, height_cm: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Length (cm)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.length_cm}
-              onChange={(e) => setForm({ ...form, length_cm: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Neck (cm)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.neck_cm}
-              onChange={(e) => setForm({ ...form, neck_cm: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Chest (cm)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={form.chest_cm}
-              onChange={(e) => setForm({ ...form, chest_cm: e.target.value })}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <Label>Notes</Label>
-        <Textarea
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          placeholder="Any special notes about your pet..."
-        />
-      </div>
-
-      <Button onClick={handleSubmit} className="w-full" disabled={addPet.isPending || updatePet.isPending}>
-        {editingPet ? "Update Pet" : "Add Pet"}
-      </Button>
-    </div>
-  );
-
   return (
     <PageLayout>
       <div className="container mx-auto px-6 py-16">
@@ -323,11 +344,20 @@ export default function Pets() {
                 Add Pet
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Pet</DialogTitle>
               </DialogHeader>
-              <PetForm />
+              <PetForm 
+                form={form} 
+                setForm={setForm} 
+                onSubmit={handleSubmit} 
+                isSubmitting={addPet.isPending || updatePet.isPending}
+                isEditing={false}
+                onPhotoUpload={handlePhotoUpload}
+                uploading={uploading}
+                fileInputRef={fileInputRef}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -404,11 +434,20 @@ export default function Pets() {
                           <Pencil className="h-3 w-3" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-[500px]">
+                      <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>Edit {pet.name}</DialogTitle>
                         </DialogHeader>
-                        <PetForm />
+                        <PetForm 
+                          form={form} 
+                          setForm={setForm} 
+                          onSubmit={handleSubmit} 
+                          isSubmitting={addPet.isPending || updatePet.isPending}
+                          isEditing={true}
+                          onPhotoUpload={handlePhotoUpload}
+                          uploading={uploading}
+                          fileInputRef={fileInputRef}
+                        />
                       </DialogContent>
                     </Dialog>
                     <Button
