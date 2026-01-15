@@ -20,44 +20,17 @@ const navLinks = [
   { name: "Support", href: "/support" },
 ];
 
-const popularSearches = [
-  "Summer dress",
-  "Winter coat", 
-  "Matching outfits",
-  "Pet accessories",
-  "Twinning sets",
-  "Rainy day",
-];
+
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { cartCount, wishlistItems } = useCart();
   const { user, profile, isAdmin, signOut } = useAuth();
-  const { data: products = [] } = useProducts();
 
-  // Generate autocomplete suggestions based on products and popular searches
-  const suggestions = searchQuery.trim()
-    ? [
-        ...popularSearches.filter(s => 
-          s.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        ...products
-          .filter(p => 
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.category?.name && p.category.name.toLowerCase().includes(searchQuery.toLowerCase()))
-          )
-          .map(p => p.name)
-          .slice(0, 3)
-      ].slice(0, 6)
-    : popularSearches;
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,48 +40,9 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    if (isSearchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-      setShowSuggestions(true);
-    }
-  }, [isSearchOpen]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchOpen(false);
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
 
-  // Sync search query with URL when on shop page
-  useEffect(() => {
-    const urlSearch = searchParams.get("search") || "";
-    if (window.location.pathname === "/shop") {
-      setSearchQuery(urlSearch);
-    }
-  }, [searchParams]);
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setShowSuggestions(true);
-    // Navigate to shop page with search query in real-time
-    if (value.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(value)}`, { replace: true });
-    } else {
-      navigate("/shop", { replace: true });
-    }
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    navigate(`/shop?search=${encodeURIComponent(suggestion)}`, { replace: true });
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -120,7 +54,7 @@ export function Header() {
       <header
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
           isScrolled || isMobileMenuOpen
-            ? "bg-background/95 shadow-soft backdrop-blur-md"
+            ? "bg-white dark:bg-zinc-950 shadow-soft"
             : "bg-transparent"
         }`}
       >
@@ -244,7 +178,7 @@ export function Header() {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 top-20 bg-background/95 backdrop-blur-sm transition-all duration-300 lg:hidden ${
+          className={`fixed inset-0 top-20 z-40 bg-white dark:bg-zinc-950 transition-all duration-300 lg:hidden ${
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
         >
