@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
 const navLinks = [
   { name: "Home", href: "/" },
   { name: "Collections", href: "/shop" },
@@ -162,77 +163,7 @@ export function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              {/* Expandable Search */}
-              <div ref={searchContainerRef} className="relative flex items-center">
-                <div className={`flex items-center overflow-hidden transition-all duration-300 ease-out ${
-                  isSearchOpen 
-                    ? "w-64 sm:w-80 border border-border bg-background rounded-sm" 
-                    : "w-0"
-                }`}>
-                  <Search className="ml-3 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onFocus={() => setShowSuggestions(true)}
-                    placeholder="Search products..."
-                    className="w-full bg-transparent py-2.5 pl-2 pr-8 font-body text-sm placeholder:text-muted-foreground focus:outline-none"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => handleSearchChange("")}
-                      className="absolute right-10 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isSearchOpen) {
-                      setIsSearchOpen(false);
-                      setShowSuggestions(false);
-                      setSearchQuery("");
-                    } else {
-                      setIsSearchOpen(true);
-                    }
-                  }}
-                  className={`p-1 text-foreground transition-colors hover:text-foreground/70 ${isSearchOpen ? "ml-2" : ""}`}
-                  aria-label="Search"
-                >
-                  {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-                </button>
 
-                {/* Suggestions Dropdown */}
-                {isSearchOpen && showSuggestions && (
-                  <div className="absolute left-0 right-8 top-full mt-1 bg-background border border-border shadow-lg z-50 max-h-64 overflow-y-auto">
-                    {!searchQuery.trim() && (
-                      <div className="px-3 py-2 border-b border-border">
-                        <span className="font-body text-xs uppercase tracking-wider text-muted-foreground">Popular Searches</span>
-                      </div>
-                    )}
-                    {suggestions.length > 0 ? (
-                      suggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left font-body text-sm transition-colors hover:bg-muted"
-                        >
-                          <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{suggestion}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-3 py-4 text-center">
-                        <p className="font-body text-sm text-muted-foreground">No suggestions found</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
 
               {/* User Account */}
               {user ? (
