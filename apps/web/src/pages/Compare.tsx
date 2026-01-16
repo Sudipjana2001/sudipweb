@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/layouts/PageLayout";
 import { useProducts } from "@/hooks/useProducts";
 import { X, Plus, Check, ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useCompare } from "@/hooks/useCompare";
 import { toast } from "sonner";
 
 export default function Compare() {
@@ -12,34 +13,43 @@ export default function Compare() {
   const { data: products = [], isLoading } = useProducts();
   const { addToCart } = useCart();
 
-  const [compareIds, setCompareIds] = useState<string[]>(() => {
-    const ids = searchParams.get("ids");
-    return ids ? ids.split(",").filter(Boolean) : [];
-  });
-  const [showSelector, setShowSelector] = useState(false);
-
+  const { compareIds, addToCompare: addToCompareHook, removeFromCompare: removeFromCompareHook } = useCompare();
+  
+  // Update URL params when compareIds change
   useEffect(() => {
     if (compareIds.length > 0) {
-      setSearchParams({ ids: compareIds.join(",") });
+      setSearchParams({ ids: compareIds.join(",") }, { replace: true });
     } else {
-      setSearchParams({});
+      setSearchParams({}, { replace: true });
     }
   }, [compareIds, setSearchParams]);
+
+  // Initialize from URL if empty (optional, for sharing links)
+  useEffect(() => {
+    const urlIds = searchParams.get("ids")?.split(",").filter(Boolean);
+    if (urlIds && urlIds.length > 0 && compareIds.length === 0) {
+       urlIds.forEach(id => addToCompareHook(id));
+    }
+  }, []); // Run once on mount
+
+  const [showSelector, setShowSelector] = useState(false);
 
   const compareProducts = products.filter((p) => compareIds.includes(p.id));
   const availableProducts = products.filter((p) => !compareIds.includes(p.id));
 
   const addToCompare = (id: string) => {
-    if (compareIds.length >= 4) {
-      toast.error("Maximum 4 products can be compared");
+    const success = addToCompareHook(id);
+    if (!success) {
+      if (compareIds.length >= 3) {
+         toast.error("Maximum 3 products can be compared");
+      }
       return;
     }
-    setCompareIds([...compareIds, id]);
     setShowSelector(false);
   };
 
   const removeFromCompare = (id: string) => {
-    setCompareIds(compareIds.filter((cid) => cid !== id));
+    removeFromCompareHook(id);
   };
 
   const handleAddToCart = (productId: string) => {
@@ -99,17 +109,26 @@ export default function Compare() {
 
   return (
     <PageLayout>
-      <section className="bg-muted py-16">
-        <div className="container mx-auto px-6 text-center">
-          <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Compare
-          </p>
-          <h1 className="mb-4 font-display text-5xl font-medium tracking-tight">
-            Compare Products
-          </h1>
-          <p className="mx-auto max-w-xl font-body text-lg text-muted-foreground">
-            Select up to 4 products to compare features side by side
-          </p>
+      <section className="bg-muted py-12 md:py-16">
+        <div className="container mx-auto px-6">
+          <button 
+            onClick={() => navigate(-1)}
+            className="mb-6 flex items-center gap-2 font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back
+          </button>
+          
+          <div className="text-center">
+            <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              Compare
+            </p>
+            <h1 className="mb-4 font-display text-4xl md:text-5xl font-medium tracking-tight">
+              Compare Products
+            </h1>
+            <p className="mx-auto max-w-xl font-body text-lg text-muted-foreground">
+              Select up to 3 products to compare features side by side
+            </p>
+          </div>
         </div>
       </section>
 
@@ -121,48 +140,56 @@ export default function Compare() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] border-collapse">
+              <table className="w-full min-w-[800px] border-collapse table-fixed">
                 <thead>
                   <tr>
-                    <th className="w-48 border-b border-border p-4 text-left font-body text-sm font-medium text-muted-foreground">
+                    <th className="w-[25%] border-b border-border p-4 text-left font-body text-sm font-medium text-muted-foreground">
                       Feature
                     </th>
-                    {compareProducts.map((product) => (
-                      <th key={product.id} className="border-b border-border p-4">
-                        <div className="relative">
-                          <button
-                            onClick={() => removeFromCompare(product.id)}
-                            className="absolute -right-2 -top-2 rounded-full bg-muted p-1 transition-colors hover:bg-destructive hover:text-destructive-foreground"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/product/${product.slug}`)}
-                            className="block"
-                          >
-                            <img
-                              src={product.image_url || "/placeholder.svg"}
-                              alt={product.name}
-                              className="mx-auto mb-3 h-40 w-40 object-cover"
-                            />
-                            <p className="font-display text-lg">{product.name}</p>
-                          </button>
-                        </div>
-                      </th>
-                    ))}
-                    {compareIds.length < 4 && (
-                      <th className="border-b border-border p-4">
-                        <button
-                          onClick={() => setShowSelector(true)}
-                          className="mx-auto flex h-40 w-40 flex-col items-center justify-center gap-2 border-2 border-dashed border-border transition-colors hover:border-foreground hover:bg-muted"
-                        >
-                          <Plus className="h-8 w-8 text-muted-foreground" />
-                          <span className="font-body text-sm text-muted-foreground">
-                            Add Product
-                          </span>
-                        </button>
-                      </th>
-                    )}
+                    {[0, 1, 2].map((index) => {
+                      const product = compareProducts[index];
+                      return (
+                        <th key={index} className="w-[25%] border-b border-border p-4 align-bottom">
+                          {product ? (
+                            <div className="relative">
+                              <button
+                                onClick={() => removeFromCompare(product.id)}
+                                className="absolute -right-2 -top-2 rounded-full bg-muted p-1 transition-colors hover:bg-destructive hover:text-destructive-foreground z-10"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => navigate(`/product/${product.slug}`)}
+                                className="block w-full"
+                              >
+                                <div className="mx-auto w-32 aspect-[3/4] mb-3 overflow-hidden bg-muted">
+                                   <img
+                                    src={product.image_url || "/placeholder.svg"}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                                <p className="font-display text-base leading-tight line-clamp-2">{product.name}</p>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="h-full flex items-end justify-center pb-8">
+                               {index === compareProducts.length && (
+                                <button
+                                  onClick={() => setShowSelector(true)}
+                                  className="flex h-32 w-32 flex-col items-center justify-center gap-2 border-2 border-dashed border-border transition-colors hover:border-foreground hover:bg-muted"
+                                >
+                                  <Plus className="h-6 w-6 text-muted-foreground" />
+                                  <span className="font-body text-xs text-muted-foreground">
+                                    Add Product
+                                  </span>
+                                </button>
+                               )}
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
@@ -171,32 +198,37 @@ export default function Compare() {
                       <td className="border-b border-border p-4 font-body text-sm font-medium">
                         {feature.label}
                       </td>
-                      {compareProducts.map((product) => (
-                        <td
-                          key={product.id}
-                          className="border-b border-border p-4 text-center font-body text-sm"
-                        >
-                          {getFeatureValue(product, feature.key)}
-                        </td>
-                      ))}
-                      {compareIds.length < 4 && (
-                        <td className="border-b border-border p-4" />
-                      )}
+                      {[0, 1, 2].map((index) => {
+                         const product = compareProducts[index];
+                         return (
+                            <td
+                              key={index}
+                              className="border-b border-border p-4 text-center font-body text-sm"
+                            >
+                              {product ? getFeatureValue(product, feature.key) : "—"}
+                            </td>
+                         );
+                      })}
                     </tr>
                   ))}
                   <tr>
                     <td className="p-4" />
-                    {compareProducts.map((product) => (
-                      <td key={product.id} className="p-4 text-center">
-                        <button
-                          onClick={() => handleAddToCart(product.id)}
-                          className="inline-flex items-center gap-2 bg-foreground px-6 py-3 font-body text-sm text-background transition-opacity hover:opacity-90"
-                        >
-                          <ShoppingBag className="h-4 w-4" />
-                          Add to Cart
-                        </button>
-                      </td>
-                    ))}
+                    {[0, 1, 2].map((index) => {
+                       const product = compareProducts[index];
+                       return (
+                        <td key={index} className="p-4 text-center">
+                          {product && (
+                            <button
+                              onClick={() => handleAddToCart(product.id)}
+                              className="inline-flex w-full justify-center items-center gap-2 bg-foreground px-4 py-3 font-body text-sm text-background transition-opacity hover:opacity-90"
+                            >
+                              <ShoppingBag className="h-4 w-4" />
+                              Add
+                            </button>
+                          )}
+                        </td>
+                       );
+                    })}
                   </tr>
                 </tbody>
               </table>

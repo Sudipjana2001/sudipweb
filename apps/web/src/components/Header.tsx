@@ -41,6 +41,16 @@ export function Header() {
   }, []);
 
 
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
 
 
@@ -178,7 +188,7 @@ export function Header() {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 top-20 z-40 bg-white dark:bg-zinc-950 transition-all duration-300 lg:hidden ${
+          className={`fixed inset-0 top-20 z-40 bg-white dark:bg-zinc-950 transition-all duration-300 lg:hidden overflow-y-auto ${
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
           }`}
         >

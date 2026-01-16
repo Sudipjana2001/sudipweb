@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 const COMPARE_STORAGE_KEY = "compareProducts";
-const MAX_COMPARE_ITEMS = 4;
+const MAX_COMPARE_ITEMS = 3;
 
 export function useCompare() {
   const [compareIds, setCompareIds] = useState<string[]>(() => {

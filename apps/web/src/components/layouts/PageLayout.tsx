@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Newsletter } from "@/components/Newsletter";
-import { CompareBar } from "@/components/CompareBar";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -16,7 +15,6 @@ export function PageLayout({ children, showNewsletter = true }: PageLayoutProps)
       <main className="pt-20 pb-16">{children}</main>
       {showNewsletter && <Newsletter />}
       <Footer />
-      <CompareBar />
     </div>
   );
 }

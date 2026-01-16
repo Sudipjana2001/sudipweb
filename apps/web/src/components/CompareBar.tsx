@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { GitCompare, X } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useProducts } from "@/hooks/useProducts";
@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 
 export function CompareBar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { compareIds, removeFromCompare, clearCompare } = useCompare();
   const { data: products = [] } = useProducts();
 
   const compareProducts = products.filter((p) => compareIds.includes(p.id));
 
-  if (compareIds.length === 0) return null;
+  const hiddenPaths = ["/compare", "/gallery", "/support"];
+
+  if (compareIds.length === 0 || hiddenPaths.includes(location.pathname)) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background shadow-xl">
@@ -21,7 +24,7 @@ export function CompareBar() {
             <div className="flex items-center gap-2">
               <GitCompare className="h-5 w-5" />
               <span className="font-body text-sm font-medium">
-                Compare ({compareIds.length}/4)
+                Compare ({compareIds.length}/3)
               </span>
             </div>
 

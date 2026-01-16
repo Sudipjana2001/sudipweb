@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { CompareBar } from "@/components/CompareBar";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import Collection from "./pages/Collection";
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/docs" element={<Documentation />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CompareBar />
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
