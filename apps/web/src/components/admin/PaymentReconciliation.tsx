@@ -106,7 +106,7 @@ export function PaymentReconciliation() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${stats?.totalRevenue?.toFixed(2) || "0.00"}
+              ₹{stats?.totalRevenue?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -118,7 +118,7 @@ export function PaymentReconciliation() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              ${stats?.totalRefunds?.toFixed(2) || "0.00"}
+              ₹{stats?.totalRefunds?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -130,7 +130,7 @@ export function PaymentReconciliation() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats?.netRevenue?.toFixed(2) || "0.00"}
+              ₹{stats?.netRevenue?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -208,7 +208,7 @@ export function PaymentReconciliation() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          ${payment.amount.toFixed(2)}
+                          ₹{payment.amount.toFixed(2)}
                         </span>
                         <span className="text-sm text-muted-foreground capitalize">
                           via {payment.payment_method}
@@ -222,7 +222,7 @@ export function PaymentReconciliation() {
                       </p>
                       {payment.refund_amount > 0 && (
                         <p className="text-xs text-destructive">
-                          Refunded: ${payment.refund_amount.toFixed(2)}
+                          Refunded: ₹{payment.refund_amount.toFixed(2)}
                         </p>
                       )}
                     </div>
@@ -267,7 +267,7 @@ export function PaymentReconciliation() {
                                 <div>
                                   <Label>Original Amount</Label>
                                   <p className="text-lg font-bold">
-                                    ${payment.amount.toFixed(2)}
+                                    ₹{payment.amount.toFixed(2)}
                                   </p>
                                 </div>
                                 <div>

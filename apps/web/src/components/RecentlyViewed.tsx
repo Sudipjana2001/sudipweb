@@ -30,7 +30,7 @@ export function RecentlyViewed() {
                   />
                 </div>
                 <p className="mt-2 text-sm font-medium line-clamp-1">{item.product.name}</p>
-                <p className="text-sm text-muted-foreground">${item.product.price}</p>
+                <p className="text-sm text-muted-foreground">₹{item.product.price}</p>
               </Link>
             )
           ))}

@@ -141,7 +141,7 @@ export default function About() {
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             {[
-              { icon: Truck, title: "Free Shipping", desc: "On all orders over $100" },
+              { icon: Truck, title: "Free Shipping", desc: "On all orders over ₹100" },
               { icon: Shield, title: "Quality Guarantee", desc: "30-day satisfaction promise" },
               { icon: RotateCcw, title: "Easy Returns", desc: "No questions asked" },
             ].map((item) => (

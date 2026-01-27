@@ -574,7 +574,7 @@ export default function Admin() {
               <Users className="h-10 w-10 text-primary" />
               <div>
                 <p className="text-2xl font-bold">
-                  ${orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}
+                  ₹{orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}
                 </p>
                 <p className="text-muted-foreground">Total Revenue</p>
               </div>
@@ -671,7 +671,7 @@ export default function Admin() {
                               className="w-24"
                             />
                           ) : (
-                            <span>${product.price}</span>
+                            <span>₹{product.price}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -774,7 +774,7 @@ export default function Admin() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {new Date(order.created_at).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-3">${order.total.toFixed(2)}</td>
+                        <td className="px-4 py-3">₹{order.total.toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <select
                             value={order.status}

@@ -150,8 +150,8 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="font-body text-[10px] uppercase tracking-wider text-background/70">
                   You:
                 </span>
-                <div className="flex gap-1">
-                  {sizes.slice(0, 4).map((size) => (
+                <div className="flex flex-wrap gap-1">
+                  {sizes.map((size) => (
                     <button
                       key={size}
                       onClick={(e) => {
@@ -173,7 +173,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <span className="font-body text-[10px] uppercase tracking-wider text-background/70">
                   Pet:
                 </span>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
                   {petSizes.map((size) => (
                     <button
                       key={size}
@@ -214,11 +214,11 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
           <div className="flex items-center gap-2">
             <span className="font-body text-base font-medium text-foreground">
-              ${product.price}
+              ₹{product.price}
             </span>
             {product.original_price && (
               <span className="font-body text-sm text-muted-foreground line-through">
-                ${product.original_price}
+                ₹{product.original_price}
               </span>
             )}
           </div>

@@ -197,7 +197,7 @@ export function SmartSearch({ isOpen, onClose }: SmartSearchProps) {
                           {product.category?.name || "Uncategorized"}
                         </p>
                       </div>
-                      <p className="font-medium">${product.price.toFixed(2)}</p>
+                      <p className="font-medium">₹{product.price.toFixed(2)}</p>
                     </button>
                   ))}
                 </div>

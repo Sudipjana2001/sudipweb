@@ -81,9 +81,9 @@ export default function Compare() {
   const getFeatureValue = (product: typeof compareProducts[0], key: string) => {
     switch (key) {
       case "price":
-        return `$${product.price.toFixed(2)}`;
+        return `₹${product.price.toFixed(2)}`;
       case "original_price":
-        return product.original_price ? `$${product.original_price.toFixed(2)}` : "—";
+        return product.original_price ? `₹${product.original_price.toFixed(2)}` : "—";
       case "category":
         return product.category?.name || "—";
       case "collection":
@@ -283,7 +283,7 @@ export default function Compare() {
                       {product.name}
                     </p>
                     <p className="font-body text-sm text-muted-foreground">
-                      ${product.price.toFixed(2)}
+                      ₹{product.price.toFixed(2)}
                     </p>
                   </button>
                 ))}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Heart, Minus, Plus, Star, Truck, Shield, RotateCcw } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useProduct, useProductsByCollection, Product as ProductType } from "@/hooks/useProducts";
+import { useProductReviews, getAverageRating } from "@/hooks/useReviews";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductReviews } from "@/components/ProductReviews";
 import { RecentlyViewed } from "@/components/RecentlyViewed";
@@ -18,7 +19,11 @@ import { toast } from "sonner";
 export default function Product() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || "");
+  const navigate = useNavigate();
   const { data: collectionProducts = [] } = useProductsByCollection(product?.collection?.slug || "");
+  const { data: reviews = [] } = useProductReviews(product?.id || "");
+  const averageRating = getAverageRating(reviews);
+  const totalReviews = reviews.length;
   
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
@@ -92,6 +97,26 @@ export default function Product() {
     });
   };
 
+  const handleBuyNow = () => {
+    if (!selectedSize && !selectedPetSize) {
+      toast.error("Please select a size", {
+        description: "Choose either your size or your pet's size.",
+      });
+      return;
+    }
+    for (let i = 0; i < quantity; i++) {
+      addToCart({
+        id: numericId,
+        name: product.name,
+        price: product.price,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: selectedSize || "N/A",
+        petSize: selectedPetSize || "N/A",
+      });
+    }
+    navigate("/checkout");
+  };
+
   const handleWishlist = () => {
     if (inWishlist) {
       removeFromWishlist(numericId);
@@ -135,6 +160,16 @@ export default function Product() {
                 alt={product.name}
                 className="h-full w-full object-cover"
               />
+              <button
+                onClick={handleWishlist}
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 transition-colors hover:bg-background z-10"
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    inWishlist ? "fill-destructive text-destructive" : "text-foreground"
+                  }`}
+                />
+              </button>
               {images.length > 1 && (
                 <>
                   <button
@@ -178,17 +213,24 @@ export default function Product() {
               </h1>
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-foreground text-foreground" />
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${
+                        star <= Math.round(averageRating)
+                          ? "fill-foreground text-foreground"
+                          : "text-muted"
+                      }`}
+                    />
                   ))}
                 </div>
-                <span className="font-body text-sm text-muted-foreground">(24 reviews)</span>
+                <span className="font-body text-sm text-muted-foreground">({totalReviews} reviews)</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-display text-2xl font-medium">${product.price}</span>
+                <span className="font-display text-2xl font-medium">₹{product.price}</span>
                 {product.original_price && (
                   <span className="font-body text-lg text-muted-foreground line-through">
-                    ${product.original_price}
+                    ₹{product.original_price}
                   </span>
                 )}
               </div>
@@ -249,39 +291,52 @@ export default function Product() {
             </div>
 
             {/* Quantity & Add to Cart */}
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="flex h-14 items-center border border-border">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-12 text-center font-body">{quantity}</span>
-                <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+            <div className="flex flex-col gap-4">
+              {/* Mobile: Quantity Selector */}
+              <div className="flex items-center gap-3 sm:hidden">
+                <div className="flex h-12 w-32 items-center border border-border">
+                  <button
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="flex h-full flex-1 items-center justify-center transition-colors hover:bg-muted"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-8 text-center font-body text-sm">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="flex h-full flex-1 items-center justify-center transition-colors hover:bg-muted"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <Button onClick={handleAddToCart} variant="hero" className="h-14 flex-1">
-                Add to Cart
-              </Button>
-              <button
-                onClick={handleWishlist}
-                className={`flex h-14 w-14 items-center justify-center border transition-colors ${
-                  inWishlist
-                    ? "border-destructive bg-destructive/10"
-                    : "border-border hover:border-foreground"
-                }`}
-              >
-                <Heart
-                  className={`h-5 w-5 ${
-                    inWishlist ? "fill-destructive text-destructive" : "text-foreground"
-                  }`}
-                />
-              </button>
+
+              {/* Action Buttons (and Desktop Layout) */}
+              <div className="flex flex-col gap-4 sm:flex-row">
+                {/* Desktop Quantity - Hidden on Mobile */}
+                <div className="hidden h-14 items-center border border-border sm:flex">
+                  <button
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-12 text-center font-body">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <Button onClick={handleAddToCart} variant="hero" className="h-14 w-full flex-1 sm:w-auto">
+                  Add to Cart
+                </Button>
+                <Button onClick={handleBuyNow} variant="hero-outline" className="h-14 w-full flex-1 sm:w-auto">
+                  Buy Now
+                </Button>
+              </div>
             </div>
 
             {/* Features */}

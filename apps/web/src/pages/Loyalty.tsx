@@ -88,7 +88,7 @@ export default function Loyalty() {
                   <p className="text-sm opacity-80">Available Points</p>
                   <p className="font-display text-5xl font-bold">{points.toLocaleString()}</p>
                   <p className="mt-1 text-sm opacity-80">
-                    Worth ${discountValue.toFixed(2)} in discounts
+                    Worth ₹{discountValue.toFixed(2)} in discounts
                   </p>
                 </div>
                 <div className="text-right">
@@ -120,7 +120,7 @@ export default function Loyalty() {
                 <h3 className="mt-4 font-display text-lg font-medium">Points Multiplier</h3>
                 <p className="mt-1 text-3xl font-bold">{benefits.pointsMultiplier}x</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Earn {benefits.pointsMultiplier} points per $1 spent
+                  Earn {benefits.pointsMultiplier} points per ₹1 spent
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-card p-6">
@@ -206,7 +206,7 @@ export default function Loyalty() {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center justify-between">
                   <span>Make a purchase</span>
-                  <span className="font-medium">1 pt/$1</span>
+                  <span className="font-medium">1 pt/₹1</span>
                 </li>
                 <li className="flex items-center justify-between">
                   <span>Write a review</span>
@@ -229,11 +229,11 @@ export default function Loyalty() {
                 <h3 className="font-display text-lg font-medium">Redeem Points</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Use your points at checkout for instant discounts. 100 points = $1 off.
+                Use your points at checkout for instant discounts. 100 points = ₹1 off.
               </p>
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">Your points are worth</p>
-                <p className="font-display text-2xl font-bold">${discountValue.toFixed(2)}</p>
+                <p className="font-display text-2xl font-bold">₹{discountValue.toFixed(2)}</p>
               </div>
             </div>
           </div>

@@ -94,12 +94,12 @@ export default function Cart() {
 
                   {/* Price */}
                   <div className="col-span-4 text-center font-body md:col-span-2">
-                    ${item.price}
+                    ₹{item.price}
                   </div>
 
                   {/* Total */}
                   <div className="col-span-4 text-right font-body font-medium md:col-span-2">
-                    ${item.price * item.quantity}
+                    ₹{item.price * item.quantity}
                   </div>
 
                   {/* Remove (Desktop) */}
@@ -131,18 +131,18 @@ export default function Cart() {
               <div className="space-y-4 border-b border-border pb-6">
                 <div className="flex justify-between font-body text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${cartTotal}</span>
+                  <span>₹{cartTotal}</span>
                 </div>
                 <div className="flex justify-between font-body text-sm">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>{cartTotal >= 100 ? "Free" : "$10"}</span>
+                  <span>{cartTotal >= 100 ? "Free" : "₹10"}</span>
                 </div>
               </div>
 
               <div className="flex justify-between py-6">
                 <span className="font-display text-lg font-medium">Total</span>
                 <span className="font-display text-lg font-medium">
-                  ${cartTotal >= 100 ? cartTotal : cartTotal + 10}
+                  ₹{cartTotal >= 100 ? cartTotal : cartTotal + 10}
                 </span>
               </div>
 
@@ -154,7 +154,7 @@ export default function Cart() {
               </Link>
 
               <p className="mt-4 text-center font-body text-xs text-muted-foreground">
-                Free shipping on orders over $100
+                Free shipping on orders over ₹100
               </p>
             </div>
           </div>

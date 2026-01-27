@@ -152,7 +152,7 @@ export function CouponsManager() {
               className="pl-8"
             />
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              {form.discount_type === "percentage" ? "%" : "$"}
+              {form.discount_type === "percentage" ? "%" : "₹"}
             </span>
           </div>
         </div>
@@ -165,7 +165,7 @@ export function CouponsManager() {
               onChange={(e) => setForm({ ...form, min_order_amount: parseFloat(e.target.value) || 0 })}
               className="pl-8"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
           </div>
         </div>
       </div>
@@ -303,10 +303,10 @@ export function CouponsManager() {
                     <span className="font-medium">
                       {coupon.discount_type === "percentage"
                         ? `${coupon.discount_value}%`
-                        : `$${coupon.discount_value}`}
+                        : `₹${coupon.discount_value}`}
                     </span>
                     {coupon.min_order_amount > 0 && (
-                      <p className="text-xs text-muted-foreground">Min: ${coupon.min_order_amount}</p>
+                      <p className="text-xs text-muted-foreground">Min: ₹{coupon.min_order_amount}</p>
                     )}
                   </td>
                   <td className="px-4 py-3">

@@ -1,0 +1,99 @@
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\PromoBanner.tsx[24m[0m
+[0m  [2m57:6[22m  [33mwarning[39m  React Hook useEffect has a missing dependency: 'banner.end_date'. Either include it or remove the dependency array  [2mreact-hooks/exhaustive-deps[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\SavedAddressSelector.tsx[24m[0m
+[0m  [2m189:12[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m190:23[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\WhyChooseUs.tsx[24m[0m
+[0m  [2m8:32[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\admin\FeaturesManager.tsx[24m[0m
+[0m  [2m81:32[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\admin\HeroSlidesManager.tsx[24m[0m
+[0m  [2m134:30[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\admin\InstagramManager.tsx[24m[0m
+[0m  [2m115:29[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\admin\PromoBannersManager.tsx[24m[0m
+[0m  [2m105:31[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\admin\TestimonialsManager.tsx[24m[0m
+[0m  [2m125:36[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\badge.tsx[24m[0m
+[0m  [2m29:17[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\button.tsx[24m[0m
+[0m  [2m55:18[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\command.tsx[24m[0m
+[0m  [2m24:11[22m  [31merror[39m  An interface declaring no members is equivalent to its supertype  [2m@typescript-eslint/no-empty-object-type[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\form.tsx[24m[0m
+[0m  [2m129:10[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\navigation-menu.tsx[24m[0m
+[0m  [2m111:3[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\sidebar.tsx[24m[0m
+[0m  [2m636:3[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\sonner.tsx[24m[0m
+[0m  [2m27:19[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\textarea.tsx[24m[0m
+[0m  [2m5:18[22m  [31merror[39m  An interface declaring no members is equivalent to its supertype  [2m@typescript-eslint/no-empty-object-type[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\components\ui\toggle.tsx[24m[0m
+[0m  [2m37:18[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\contexts\AuthContext.tsx[24m[0m
+[0m  [2m171:17[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\contexts\CartContext.tsx[24m[0m
+[0m  [2m116:17[22m  [33mwarning[39m  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  [2mreact-refresh/only-export-components[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\hooks\useOrders.ts[24m[0m
+[0m  [2m147:30[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\hooks\usePushNotifications.ts[24m[0m
+[0m  [2m32:17[22m  [31merror[39m  Optional chain expressions can return undefined by design - using a non-null assertion is unsafe and wrong  [2m@typescript-eslint/no-non-null-asserted-optional-chain[22m[0m
+[0m  [2m33:15[22m  [31merror[39m  Optional chain expressions can return undefined by design - using a non-null assertion is unsafe and wrong  [2m@typescript-eslint/no-non-null-asserted-optional-chain[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Admin.tsx[24m[0m
+[0m  [2m123:6[22m   [33mwarning[39m  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  [2mreact-hooks/exhaustive-deps[22m[0m
+[0m  [2m271:68[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Compare.tsx[24m[0m
+[0m  [2m33:6[22m  [33mwarning[39m  React Hook useEffect has missing dependencies: 'addToCompareHook', 'compareIds.length', and 'searchParams'. Either include them or remove the dependency array  [2mreact-hooks/exhaustive-deps[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Gallery.tsx[24m[0m
+[0m  [2m15:40[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Loyalty.tsx[24m[0m
+[0m  [2m50:6[22m  [33mwarning[39m  React Hook useEffect has a missing dependency: 'initLoyalty'. Either include it or remove the dependency array  [2mreact-hooks/exhaustive-deps[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Pets.tsx[24m[0m
+[0m  [2m22:9[22m   [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m23:19[22m  [31merror[39m  Unexpected any. Specify a different type  [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\src\pages\Product.tsx[24m[0m
+[0m   [2m36:6[22m   [33mwarning[39m  React Hook useEffect has a missing dependency: 'trackView'. Either include it or remove the dependency array  [2mreact-hooks/exhaustive-deps[22m[0m
+[0m  [2m302:39[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m303:42[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m304:41[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m305:42[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m306:37[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m307:36[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m308:45[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m  [2m309:41[22m  [31merror[39m    Unexpected any. Specify a different type                                                                      [2m@typescript-eslint/no-explicit-any[22m[0m
+[0m[0m
+[0m[4mD:\Pebric\apps\web\tailwind.config.ts[24m[0m
+[0m  [2m139:13[22m  [31merror[39m  A `require()` style import is forbidden  [2m@typescript-eslint/no-require-imports[22m[0m
+[0m[0m
+[0m[31m[1m✖ 40 problems (26 errors, 14 warnings)[22m[39m[0m
+[0m[31m[1m[22m[39m[0m

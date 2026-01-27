@@ -78,10 +78,10 @@ export function RefundTracker() {
                 {getStatusIcon(payment.refund_status)}
                 <div>
                   <p className="font-medium">
-                    Refund of ${payment.refund_amount.toFixed(2)}
+                    Refund of ₹{payment.refund_amount.toFixed(2)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Original payment: ${payment.amount.toFixed(2)} via{" "}
+                    Original payment: ₹{payment.amount.toFixed(2)} via{" "}
                     {payment.payment_method.toUpperCase()}
                   </p>
                   {payment.refund_processed_at && (

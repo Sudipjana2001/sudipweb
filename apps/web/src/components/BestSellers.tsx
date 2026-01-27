@@ -263,7 +263,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             {product.name}
           </h3>
           <p className="font-display text-lg text-foreground">
-            ${product.price}
+            ₹{product.price}
           </p>
         </div>
       </div>

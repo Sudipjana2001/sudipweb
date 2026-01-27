@@ -286,7 +286,7 @@ export default function Shop() {
                 {/* Price Range Filter */}
                 <div>
                   <label className="mb-2 block font-body text-xs uppercase tracking-wider text-muted-foreground">
-                    Price Range: ${priceRange[0]} - ${priceRange[1]}
+                    Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
                   </label>
                   <Slider
                     value={priceRange}
@@ -323,7 +323,7 @@ export default function Shop() {
                   )}
                   {(priceRange[0] > priceBounds.min || priceRange[1] < priceBounds.max) && (
                     <span className="inline-flex items-center gap-1 bg-foreground px-2 py-1 text-xs text-background">
-                      ${priceRange[0]}-${priceRange[1]}
+                      ₹{priceRange[0]}-₹{priceRange[1]}
                       <button onClick={() => setPriceRange([priceBounds.min, priceBounds.max])}><X className="h-3 w-3" /></button>
                     </span>
                   )}

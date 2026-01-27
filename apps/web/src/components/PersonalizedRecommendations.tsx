@@ -148,7 +148,7 @@ export function PersonalizedRecommendations() {
 
         <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide -mx-6 px-6 sm:mx-0 sm:px-0">
           {recommendations.map((product) => (
-            <div key={product.id} className="min-w-[280px] snap-center">
+            <div key={product.id} className="min-w-[200px] max-w-[200px] snap-center">
               <ProductCard
                 key={product.id}
                 product={product as Product}

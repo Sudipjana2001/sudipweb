@@ -98,7 +98,7 @@ export function RevenueDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
             <div className="flex items-center text-xs text-green-600">
               <TrendingUp className="mr-1 h-3 w-3" />
               +{revenueChange}% from last week
@@ -115,7 +115,7 @@ export function RevenueDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${grossProfit.toFixed(2)}
+              ₹{grossProfit.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               {profitMargin.toFixed(1)}% margin
@@ -144,7 +144,7 @@ export function RevenueDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${avgOrderValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{avgOrderValue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Per order</p>
           </CardContent>
         </Card>
@@ -160,7 +160,7 @@ export function RevenueDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              ${paymentStats?.totalRefunds?.toFixed(2) || "0.00"}
+              ₹{paymentStats?.totalRefunds?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -172,7 +172,7 @@ export function RevenueDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${paymentStats?.netRevenue?.toFixed(2) || "0.00"}
+              ₹{paymentStats?.netRevenue?.toFixed(2) || "0.00"}
             </div>
           </CardContent>
         </Card>
@@ -216,7 +216,7 @@ export function RevenueDashboard() {
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                     }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                    formatter={(value: number) => [`₹${value.toFixed(2)}`, "Revenue"]}
                   />
                   <Line
                     type="monotone"
@@ -249,7 +249,7 @@ export function RevenueDashboard() {
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                     }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, "Revenue"]}
+                    formatter={(value: number) => [`₹${value.toFixed(2)}`, "Revenue"]}
                   />
                   <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>

@@ -97,7 +97,7 @@ export default function Checkout() {
       setAppliedCoupon(result.coupon);
       setCouponDiscount(result.discount);
       toast.success("Coupon applied!", {
-        description: `You saved $${result.discount.toFixed(2)}`,
+        description: `You saved ₹${result.discount.toFixed(2)}`,
       });
     } else {
       toast.error(result.message || "Invalid coupon");
@@ -338,7 +338,7 @@ export default function Checkout() {
               <div className="grid grid-cols-3 gap-4 border-t border-border pt-8">
                 <div className="text-center">
                   <Truck className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
-                  <p className="font-body text-xs text-muted-foreground">Free Shipping $100+</p>
+                  <p className="font-body text-xs text-muted-foreground">Free Shipping ₹100+</p>
                 </div>
                 <div className="text-center">
                   <ShieldCheck className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
@@ -370,7 +370,7 @@ export default function Checkout() {
                         </p>
                         <p className="font-body text-xs text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <p className="font-body text-sm font-medium">${item.price * item.quantity}</p>
+                      <p className="font-body text-sm font-medium">₹{item.price * item.quantity}</p>
                     </div>
                   ))}
                 </div>
@@ -389,7 +389,7 @@ export default function Checkout() {
                           {appliedCoupon.code}
                         </span>
                         <span className="font-body text-xs text-green-600/80">
-                          (-${couponDiscount.toFixed(2)})
+                          (-₹{couponDiscount.toFixed(2)})
                         </span>
                       </div>
                       <button
@@ -423,27 +423,27 @@ export default function Checkout() {
                 <div className="space-y-3 border-b border-border pb-6">
                   <div className="flex justify-between font-body text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>${cartTotal.toFixed(2)}</span>
+                    <span>₹{cartTotal.toFixed(2)}</span>
                   </div>
                   {couponDiscount > 0 && (
                     <div className="flex justify-between font-body text-sm text-green-600">
                       <span>Discount</span>
-                      <span>-${couponDiscount.toFixed(2)}</span>
+                      <span>-₹{couponDiscount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-body text-sm">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span>{shippingCost === 0 ? "Free" : `$${shippingCost.toFixed(2)}`}</span>
+                    <span>{shippingCost === 0 ? "Free" : `₹${shippingCost.toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between font-body text-sm">
                     <span className="text-muted-foreground">Tax (8%)</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>₹{tax.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="flex justify-between py-6">
                   <span className="font-display text-lg font-medium">Total</span>
-                  <span className="font-display text-lg font-medium">${total.toFixed(2)}</span>
+                  <span className="font-display text-lg font-medium">₹{total.toFixed(2)}</span>
                 </div>
 
                 <Button 
