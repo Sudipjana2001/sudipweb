@@ -213,18 +213,31 @@ export default function Product() {
               </h1>
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-4 w-4 ${
-                        star <= Math.round(averageRating)
-                          ? "fill-foreground text-foreground"
-                          : "text-muted"
-                      }`}
-                    />
-                  ))}
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const filled = star <= Math.floor(averageRating);
+                    const halfFilled = star === Math.ceil(averageRating) && averageRating % 1 >= 0.3 && averageRating % 1 < 0.8;
+                    
+                    return (
+                      <div key={star} className="relative">
+                        <Star
+                          className={`h-4 w-4 ${
+                            filled
+                              ? "fill-foreground text-foreground"
+                              : "text-muted"
+                          }`}
+                        />
+                        {halfFilled && (
+                          <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
+                            <Star className="h-4 w-4 fill-foreground text-foreground" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <span className="font-body text-sm text-muted-foreground">({totalReviews} reviews)</span>
+                <span className="font-body text-sm text-muted-foreground">
+                  {averageRating > 0 ? averageRating.toFixed(1) : '0.0'} ({totalReviews} reviews)
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-display text-2xl font-medium">₹{product.price}</span>
@@ -235,10 +248,6 @@ export default function Product() {
                 )}
               </div>
             </div>
-
-            <p className="font-body text-muted-foreground leading-relaxed">
-              {product.description || "A beautiful matching set for you and your furry companion. Made with premium materials for comfort and style."}
-            </p>
 
             {/* Size Selection */}
             <div className="space-y-6">
@@ -352,6 +361,14 @@ export default function Product() {
               </ul>
             </div>
 
+            {/* Description */}
+            <div className="border-t border-border pt-8">
+              <h3 className="mb-4 font-display text-lg font-medium">Description</h3>
+              <p className="font-body text-muted-foreground leading-relaxed">
+                {product.description || "A beautiful matching set for you and your furry companion. Made with premium materials for comfort and style."}
+              </p>
+            </div>
+
             {/* Fabric & Care Info */}
             <ProductFabricInfo
               fabricType={(product as any).fabric_type}
@@ -383,7 +400,7 @@ export default function Product() {
         </div>
 
         {/* Product Reviews */}
-        <ProductReviews productId={product.id} productName={product.name} />
+        <ProductReviews productId={product.id} productName={product.name} productSlug={slug || ""} />
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

@@ -17,6 +17,7 @@ export interface Review {
   updated_at: string;
   // Joined fields
   user_name?: string;
+  user_has_voted?: boolean;
 }
 
 export interface ReviewWithUser extends Review {
@@ -24,11 +25,14 @@ export interface ReviewWithUser extends Review {
     full_name: string | null;
     avatar_url: string | null;
   };
+  user_has_voted?: boolean;
 }
 
 export function useProductReviews(productId: string) {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ["reviews", productId],
+    queryKey: ["reviews", productId, user?.id],
     queryFn: async () => {
       const { data: reviews, error } = await supabase
         .from("reviews")
@@ -47,9 +51,22 @@ export function useProductReviews(productId: string) {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
+      // Fetch user's votes if authenticated
+      let userVotes = new Set<string>();
+      if (user) {
+        const { data: votes } = await supabase
+          .from("review_helpful_votes")
+          .select("review_id")
+          .eq("user_id", user.id)
+          .in("review_id", reviews.map(r => r.id));
+        
+        userVotes = new Set(votes?.map(v => v.review_id) || []);
+      }
+
       return reviews.map(review => ({
         ...review,
         profiles: profileMap.get(review.user_id) || null,
+        user_has_voted: userVotes.has(review.id),
       })) as ReviewWithUser[];
     },
     enabled: !!productId,
@@ -172,25 +189,61 @@ export function useDeleteReview() {
 
 export function useMarkReviewHelpful() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, product_id }: { id: string; product_id: string }) => {
-      const { data: review } = await supabase
+      if (!user) throw new Error("Not authenticated");
+
+      // Get the review to check the author
+      const { data: review, error: reviewError } = await supabase
         .from("reviews")
-        .select("helpful_count")
+        .select("user_id, helpful_count")
         .eq("id", id)
         .single();
 
-      const { error } = await supabase
+      if (reviewError) throw reviewError;
+
+      // Prevent author from voting on their own review
+      if (review.user_id === user.id) {
+        throw new Error("You cannot vote on your own review");
+      }
+
+      // Check if user has already voted
+      const { data: existingVote } = await supabase
+        .from("review_helpful_votes")
+        .select("id")
+        .eq("review_id", id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existingVote) {
+        throw new Error("You have already voted on this review");
+      }
+
+      // Insert the vote
+      const { error: voteError } = await supabase
+        .from("review_helpful_votes")
+        .insert({ review_id: id, user_id: user.id });
+
+      if (voteError) throw voteError;
+
+      // Increment the helpful count
+      const { error: updateError } = await supabase
         .from("reviews")
-        .update({ helpful_count: (review?.helpful_count || 0) + 1 })
+        .update({ helpful_count: (review.helpful_count || 0) + 1 })
         .eq("id", id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
       return { product_id };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["reviews", result.product_id] });
+      toast.success("Thanks for your feedback!");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 }

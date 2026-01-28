@@ -123,6 +123,10 @@ export function Header() {
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4" />
+                      My Profile
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/pets")}>
                       <Dog className="mr-2 h-4 w-4" />
                       My Pets
@@ -212,6 +216,15 @@ export function Header() {
                   <p className="font-body text-sm text-muted-foreground">
                     Signed in as {profile?.full_name || user.email}
                   </p>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigate("/profile");
+                    }}
+                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                  >
+                    My Profile
+                  </button>
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);

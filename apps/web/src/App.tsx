@@ -32,6 +32,8 @@ import Referrals from "./pages/Referrals";
 import Subscriptions from "./pages/Subscriptions";
 import Returns from "./pages/Returns";
 import Support from "./pages/Support";
+import Profile from "./pages/Profile";
+import ProductReviewsPage from "./pages/ProductReviewsPage";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +54,7 @@ const App = () => (
               <Route path="/winter" element={<Collection />} />
               <Route path="/rainy" element={<Collection />} />
               <Route path="/product/:slug" element={<Product />} />
+              <Route path="/product/:slug/reviews" element={<ProductReviewsPage />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/wishlist" element={<Wishlist />} />
@@ -70,6 +73,7 @@ const App = () => (
               <Route path="/subscriptions" element={<Subscriptions />} />
               <Route path="/returns" element={<Returns />} />
               <Route path="/support" element={<Support />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/docs" element={<Documentation />} />
               <Route path="*" element={<NotFound />} />

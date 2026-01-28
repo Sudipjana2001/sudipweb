@@ -36,14 +36,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchProfile = async (userId: string) => {
+    const { data: authUser } = await supabase.auth.getUser();
+    const metadataName = authUser?.user?.user_metadata?.full_name;
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .maybeSingle();
 
-    if (!error && data) {
-      setProfile(data);
+    if (!error) {
+      if (data) {
+        // If profile exists but name is null and we have it in metadata, sync it
+        if (!data.full_name && metadataName) {
+          const { data: updatedData } = await supabase
+            .from("profiles")
+            .update({ full_name: metadataName })
+            .eq("id", userId)
+            .select()
+            .single();
+          if (updatedData) {
+            setProfile(updatedData);
+          } else {
+            setProfile(data);
+          }
+        } else {
+          setProfile(data);
+        }
+      } else if (metadataName) {
+        // If profile doesn't exist but we have name in metadata, create it
+        const { data: newData } = await supabase
+          .from("profiles")
+          .insert({
+            id: userId,
+            email: authUser.user?.email,
+            full_name: metadataName,
+          })
+          .select()
+          .single();
+        if (newData) {
+          setProfile(newData);
+        }
+      }
     }
   };
 
@@ -103,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -113,6 +147,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
+
+    // If signup successful, create the profile with the name
+    if (!error && data.user) {
+      await supabase.from("profiles").upsert({
+        id: data.user.id,
+        email: email,
+        full_name: fullName,
+      });
+    }
 
     return { error };
   };
@@ -137,13 +180,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("Not authenticated") };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("id", user.id);
+      .upsert({
+        id: user.id,
+        email: user.email,
+        ...updates,
+      })
+      .select()
+      .single();
 
-    if (!error) {
-      setProfile((prev) => (prev ? { ...prev, ...updates } : null));
+    if (!error && data) {
+      setProfile(data);
     }
 
     return { error };
