@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -50,7 +51,9 @@ export function useSupportTickets() {
 
 
 export function useTicketMessages(ticketId: string) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["ticket-messages", ticketId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -64,6 +67,36 @@ export function useTicketMessages(ticketId: string) {
     },
     enabled: !!ticketId,
   });
+
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (!ticketId) return;
+
+    const channel = supabase
+      .channel(`ticket-messages-${ticketId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ticket_messages",
+          filter: `ticket_id=eq.${ticketId}`,
+        },
+        (payload) => {
+          queryClient.setQueryData(
+            ["ticket-messages", ticketId],
+            (old: TicketMessage[] = []) => [...old, payload.new as TicketMessage]
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [ticketId, queryClient]);
+
+  return query;
 }
 
 export function useCreateTicket() {
@@ -150,7 +183,9 @@ export function useAddTicketMessage() {
 }
 
 export function useAdminTickets() {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["admin-tickets"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -162,6 +197,29 @@ export function useAdminTickets() {
       return data as SupportTicket[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-tickets-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_tickets",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 }
 
 export function useUpdateTicketStatus() {

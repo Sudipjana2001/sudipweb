@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageCircle, Send } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const statusOptions = [
   { value: "open", label: "Open" },
@@ -43,9 +43,9 @@ export function SupportManager() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 grid-cols-[350px_1fr]">
       {/* Ticket List */}
-      <div className="space-y-2 max-h-[600px] overflow-y-auto">
+      <div className="space-y-2 h-[500px] overflow-y-auto pr-2">
         {tickets.map((ticket) => (
           <button
             key={ticket.id}
@@ -99,6 +99,14 @@ function TicketDetail({
   const { data: messages = [] } = useTicketMessages(ticketId);
   const addMessage = useAddTicketMessage();
   const [reply, setReply] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleReply = async () => {
     if (!reply.trim()) return;
@@ -107,7 +115,7 @@ function TicketDetail({
   };
 
   return (
-    <div className="rounded-lg border flex flex-col h-[600px]">
+    <div className="rounded-lg border flex flex-col h-[500px]">
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-2">
@@ -128,7 +136,7 @@ function TicketDetail({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((msg) => (
           <div
             key={msg.id}
