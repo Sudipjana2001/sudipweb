@@ -88,8 +88,6 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
 
   const hasUserReviewed = reviews.some((r) => r.user_id === user?.id);
 
-  console.log('Rendering ProductReviews component for', productId, 'with', reviews.length, 'total reviews. Slicing to 2.');
-
   return (
     <div className="mt-16 border-t border-border pt-16">
       <div className="flex flex-col gap-8 lg:flex-row lg:gap-16">
@@ -379,7 +377,7 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
                     to={`/product/${productSlug}/reviews`}
                     className="inline-flex items-center gap-2 px-4 py-2 border border-border hover:border-foreground transition-colors font-medium text-sm"
                   >
-                    VIEW ALL {reviews.length} Reviews
+                    See All {reviews.length} Reviews
                   </Link>
                 </div>
               )}

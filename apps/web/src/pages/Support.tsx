@@ -212,7 +212,10 @@ export default function Support() {
               {/* Ticket Detail */}
               <div className="lg:col-span-2">
                 {selectedTicket ? (
-                  <TicketDetail ticketId={selectedTicket} />
+                  <TicketDetail 
+                    ticketId={selectedTicket} 
+                    ticketStatus={tickets.find(t => t.id === selectedTicket)?.status || 'open'}
+                  />
                 ) : (
                   <div className="rounded-lg border border-border bg-card p-12 text-center h-full flex items-center justify-center">
                     <p className="text-muted-foreground">Select a ticket to view details</p>
@@ -294,13 +297,15 @@ function NewTicketForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function TicketDetail({ ticketId }: { ticketId: string }) {
+function TicketDetail({ ticketId, ticketStatus }: { ticketId: string; ticketStatus: string }) {
   const { data: messages = [] } = useTicketMessages(ticketId);
   const addMessage = useAddTicketMessage();
   const [newMessage, setNewMessage] = useState("");
+  
+  const isClosed = ticketStatus === 'closed';
 
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isClosed) return;
     await addMessage.mutateAsync({ ticketId, message: newMessage });
     setNewMessage("");
   };
@@ -338,17 +343,23 @@ function TicketDetail({ ticketId }: { ticketId: string }) {
 
       {/* Input */}
       <div className="border-t p-4">
-        <div className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type your message..."
-          />
-          <Button onClick={handleSend} disabled={addMessage.isPending}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+        {isClosed ? (
+          <div className="text-center text-muted-foreground text-sm py-2">
+            This ticket is closed. You cannot send new messages.
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Type your message..."
+            />
+            <Button onClick={handleSend} disabled={addMessage.isPending}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

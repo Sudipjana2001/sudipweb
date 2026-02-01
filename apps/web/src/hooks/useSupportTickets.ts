@@ -33,9 +33,12 @@ export function useSupportTickets() {
   return useQuery({
     queryKey: ["support-tickets", user?.id],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from("support_tickets")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -44,6 +47,7 @@ export function useSupportTickets() {
     enabled: !!user,
   });
 }
+
 
 export function useTicketMessages(ticketId: string) {
   return useQuery({

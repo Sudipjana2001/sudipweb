@@ -45,6 +45,13 @@ export default function Shop() {
     if (search !== null) setSearchQuery(search);
   }, [searchParams]);
 
+  // Update price range when products load
+  useEffect(() => {
+    if (products.length > 0 && priceRange[0] === 0 && priceRange[1] === 500) {
+      setPriceRange([priceBounds.min, priceBounds.max]);
+    }
+  }, [priceBounds, products.length, priceRange]);
+
   const filteredProducts = products.filter((p) => {
     const matchesCollection =
       selectedCollection === "all" || p.collection?.slug === selectedCollection;

@@ -116,7 +116,7 @@ export function PersonalizedRecommendations() {
 
   if (isLoading) {
     return (
-      <section className="py-16 bg-muted/30">
+      <section className="py-8 bg-muted/30">
         <div className="container mx-auto px-6">
           <div className="flex justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -129,7 +129,7 @@ export function PersonalizedRecommendations() {
   if (recommendations.length === 0) return null;
 
   return (
-    <section className="py-16 bg-muted/30">
+    <section className="py-8 bg-muted/30">
       <div className="container mx-auto px-6">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 mb-2">

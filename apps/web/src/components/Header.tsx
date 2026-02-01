@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingBag, Heart, Search, User, LogOut, Dog, Award, GitCompare, Truck, HelpCircle } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { cartCount, wishlistItems } = useCart();
   const { user, profile, isAdmin, signOut } = useAuth();
 
@@ -94,15 +95,26 @@ export function Header() {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex lg:items-center lg:gap-8">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.href}
-                  className="underline-animation font-body text-sm tracking-wide text-foreground transition-colors hover:text-foreground/70"
-                >
-                  {link.name}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = link.href === "/" 
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(link.href);
+                  
+                return (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className="group relative font-body text-sm tracking-wide text-foreground transition-colors hover:text-foreground/70"
+                  >
+                    {link.name}
+                    <span 
+                      className={`absolute bottom-0 left-0 h-px w-full bg-foreground transition-transform duration-300 ease-out origin-center ${
+                        isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                      }`} 
+                    />
+                  </Link>
+                );
+              })}
             </nav>
 
             {/* Actions */}

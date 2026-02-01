@@ -138,70 +138,7 @@ export function ProductCard({ product }: ProductCardProps) {
             />
           </button>
 
-          {/* Quick Add Overlay */}
-          <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-foreground/90 to-transparent p-4 transition-all duration-300 ${
-              isHovered ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
-            }`}
-          >
-            {/* Size Selectors */}
-            <div className="mb-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="font-body text-[10px] uppercase tracking-wider text-background/70">
-                  You:
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setSelectedSize(size);
-                      }}
-                      className={`h-7 w-8 font-body text-xs transition-colors ${
-                        selectedSize === size
-                          ? "bg-background text-foreground"
-                          : "bg-background/20 text-background hover:bg-background/40"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-body text-[10px] uppercase tracking-wider text-background/70">
-                  Pet:
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {petSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setSelectedPetSize(size);
-                      }}
-                      className={`h-7 w-8 font-body text-xs transition-colors ${
-                        selectedPetSize === size
-                          ? "bg-background text-foreground"
-                          : "bg-background/20 text-background hover:bg-background/40"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
 
-            <Button
-              onClick={handleAddToCart}
-              className="w-full gap-2 bg-background text-foreground hover:bg-background/90"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              Add to Cart
-            </Button>
-          </div>
         </div>
 
         {/* Product Info */}
