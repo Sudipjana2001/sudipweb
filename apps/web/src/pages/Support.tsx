@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -301,8 +301,16 @@ function TicketDetail({ ticketId, ticketStatus }: { ticketId: string; ticketStat
   const { data: messages = [] } = useTicketMessages(ticketId);
   const addMessage = useAddTicketMessage();
   const [newMessage, setNewMessage] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   const isClosed = ticketStatus === 'closed';
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || isClosed) return;
@@ -313,7 +321,7 @@ function TicketDetail({ ticketId, ticketStatus }: { ticketId: string; ticketStat
   return (
     <div className="rounded-lg border border-border bg-card h-[500px] flex flex-col">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             No messages yet. Start the conversation!
