@@ -68,8 +68,8 @@ export default function Product() {
   const petSizes = product.pet_sizes || ["XS", "S", "M", "L"];
   const features = product.features || ["Premium quality materials", "Matching design for you and your pet", "Machine washable"];
   
-  const numericId = parseInt(product.id.replace(/-/g, '').slice(0, 8), 16);
-  const inWishlist = isInWishlist(numericId);
+  /* Removed numericId hack */
+  const inWishlist = isInWishlist(product.id);
   
   const relatedProducts = collectionProducts
     .filter((p) => p.id !== product.id)
@@ -84,12 +84,13 @@ export default function Product() {
     }
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: numericId,
+        id: product.id,
         name: product.name,
         price: product.price,
         image: product.image_url || "/product-1.jpg",
         ownerSize: selectedSize || "N/A",
         petSize: selectedPetSize || "N/A",
+        slug: product.slug,
       });
     }
     toast.success("Added to cart!", {
@@ -106,7 +107,7 @@ export default function Product() {
     }
     for (let i = 0; i < quantity; i++) {
       addToCart({
-        id: numericId,
+        id: product.id,
         name: product.name,
         price: product.price,
         image: product.image_url || "/product-1.jpg",
@@ -119,15 +120,16 @@ export default function Product() {
 
   const handleWishlist = () => {
     if (inWishlist) {
-      removeFromWishlist(numericId);
+      removeFromWishlist(product.id);
       toast.info("Removed from wishlist");
     } else {
       addToWishlist({
-        id: numericId,
+        id: product.id,
         name: product.name,
         price: product.price,
         image: product.image_url || "/product-1.jpg",
         category: product.category?.name || "Fashion",
+        slug: product.slug,
       });
       toast.success("Added to wishlist!");
     }

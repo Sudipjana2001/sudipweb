@@ -38,10 +38,11 @@ export default function Cart() {
           <div className="lg:col-span-2">
             <div className="border-b border-border pb-4">
               <div className="hidden grid-cols-12 gap-4 font-body text-xs uppercase tracking-wider text-muted-foreground md:grid">
-                <div className="col-span-6">Product</div>
+                <div className="col-span-5">Product</div>
                 <div className="col-span-2 text-center">Quantity</div>
                 <div className="col-span-2 text-center">Price</div>
                 <div className="col-span-2 text-right">Total</div>
+                <div className="col-span-1"></div>
               </div>
             </div>
 
@@ -52,12 +53,12 @@ export default function Cart() {
                   className="grid grid-cols-12 items-center gap-4 py-6"
                 >
                   {/* Product */}
-                  <div className="col-span-12 flex items-center gap-4 md:col-span-6">
-                    <Link to={`/product/${item.id}`} className="h-24 w-20 flex-shrink-0 overflow-hidden bg-muted">
+                  <div className="col-span-12 flex items-center gap-4 md:col-span-5">
+                    <Link to={`/product/${item.slug}`} className="h-24 w-20 flex-shrink-0 overflow-hidden bg-muted">
                       <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                     </Link>
                     <div className="flex-1">
-                      <Link to={`/product/${item.id}`}>
+                      <Link to={`/product/${item.slug}`}>
                         <h3 className="font-display text-lg font-medium hover:underline">{item.name}</h3>
                       </Link>
                       <p className="font-body text-sm text-muted-foreground">
@@ -103,12 +104,15 @@ export default function Cart() {
                   </div>
 
                   {/* Remove (Desktop) */}
-                  <button
-                    onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize)}
-                    className="col-span-12 hidden text-right md:col-span-12 md:mt-0"
-                  >
-                    <Trash2 className="ml-auto h-4 w-4 text-muted-foreground hover:text-destructive" />
-                  </button>
+                  <div className="hidden justify-end md:col-span-1 md:flex">
+                    <button
+                      onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize)}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

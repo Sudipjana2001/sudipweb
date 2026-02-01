@@ -56,12 +56,13 @@ export default function Compare() {
     const product = compareProducts.find((p) => p.id === productId);
     if (product) {
       addToCart({
-        id: parseInt(productId.slice(0, 8), 16), // Convert UUID to number for cart
+        id: productId, // Use UUID directly
         name: product.name,
         price: product.price,
         image: product.image_url || "/placeholder.svg",
         ownerSize: product.sizes?.[0] || "M",
         petSize: product.pet_sizes?.[0] || "M",
+        slug: product.slug,
       });
       toast.success("Added to cart");
     }

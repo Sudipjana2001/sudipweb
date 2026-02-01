@@ -24,20 +24,21 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addToCompare, isInCompare, removeFromCompare } = useCompare();
   const navigate = useNavigate();
 
-  const numericId = parseInt(product.id.replace(/-/g, '').slice(0, 8), 16);
-  const inWishlist = isInWishlist(numericId);
+  /* Removed numericId hack */
+  const inWishlist = isInWishlist(product.id);
   const inCompare = isInCompare(product.id);
   const productLink = `/product/${product.slug}`;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addToCart({
-      id: numericId,
+      id: product.id,
       name: product.name,
       price: product.price,
       image: image,
       ownerSize: selectedSize,
       petSize: selectedPetSize,
+      slug: product.slug,
     });
     toast.success("Added to cart!", {
       description: `${product.name} - Size ${selectedSize} / Pet ${selectedPetSize}`,
@@ -47,15 +48,16 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     if (inWishlist) {
-      removeFromWishlist(numericId);
+      removeFromWishlist(product.id);
       toast.info("Removed from wishlist");
     } else {
       addToWishlist({
-        id: numericId,
+        id: product.id,
         name: product.name,
         price: product.price,
         image: image,
         category: category,
+        slug: product.slug,
       });
       toast.success("Added to wishlist!");
     }

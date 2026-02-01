@@ -36,9 +36,11 @@ export function PersonalizedRecommendations() {
       const collectionPrefs: Record<string, number> = {};
       const viewedProductIds = new Set<string>();
 
-      const processItems = (items: Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }> | null, weight: number) => {
+      const processItems = (items: Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }> | null, weight: number, exclude: boolean = true) => {
         items?.forEach((item) => {
-          viewedProductIds.add(item.product_id);
+          if (exclude) {
+            viewedProductIds.add(item.product_id);
+          }
           if (item.products?.category_id) {
             categoryPrefs[item.products.category_id] = (categoryPrefs[item.products.category_id] || 0) + weight;
           }
@@ -48,9 +50,9 @@ export function PersonalizedRecommendations() {
         });
       };
 
-      processItems(ordersRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 3);
-      processItems(viewedRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 1);
-      processItems(wishlistRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 2);
+      processItems(ordersRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 3, true);
+      processItems(viewedRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 1, false);
+      processItems(wishlistRes.data as Array<{ product_id: string; products: { category_id: string | null; collection_id: string | null } | null }>, 2, false);
 
       // Get top categories and collections
       const topCategories = Object.entries(categoryPrefs)

@@ -123,20 +123,21 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   const [selectedPetSize, setSelectedPetSize] = useState(petSizes[1] || petSizes[0]);
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
 
-  const numericId = parseInt(product.id.replace(/-/g, '').slice(0, 8), 16);
-  const inWishlist = isInWishlist(numericId);
+  /* Removed numericId hack */
+  const inWishlist = isInWishlist(product.id);
   const categoryName = product.category?.name || "Fashion";
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart({
-      id: numericId,
+      id: product.id,
       name: product.name,
       price: product.price,
       image: product.image_url || "/product-1.jpg",
       ownerSize: selectedSize,
       petSize: selectedPetSize,
+      slug: product.slug,
     });
     toast.success("Added to cart!", {
       description: `${product.name} - Size ${selectedSize} / Pet ${selectedPetSize}`,
@@ -147,15 +148,16 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
     e.preventDefault();
     e.stopPropagation();
     if (inWishlist) {
-      removeFromWishlist(numericId);
+      removeFromWishlist(product.id);
       toast.info("Removed from wishlist");
     } else {
       addToWishlist({
-        id: numericId,
+        id: product.id,
         name: product.name,
         price: product.price,
         image: product.image_url || "/product-1.jpg",
         category: categoryName,
+        slug: product.slug,
       });
       toast.success("Added to wishlist!");
     }
