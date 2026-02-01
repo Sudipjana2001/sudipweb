@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { toast } from "sonner";
 
@@ -16,7 +17,9 @@ export interface FlashSale {
 }
 
 export function useFlashSales() {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["flash-sales"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -28,6 +31,30 @@ export function useFlashSales() {
       return data as FlashSale[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("flash-sales-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "flash_sales",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["flash-sales"] });
+          queryClient.invalidateQueries({ queryKey: ["active-flash-sales"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 }
 
 export function useActiveFlashSales() {

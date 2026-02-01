@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -30,8 +31,9 @@ export interface ReviewWithUser extends Review {
 
 export function useProductReviews(productId: string) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["reviews", productId, user?.id],
     queryFn: async () => {
       const { data: reviews, error } = await supabase
@@ -71,6 +73,32 @@ export function useProductReviews(productId: string) {
     },
     enabled: !!productId,
   });
+
+  useEffect(() => {
+    if (!productId) return;
+
+    const channel = supabase
+      .channel(`reviews-realtime-${productId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "reviews",
+          filter: `product_id=eq.${productId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [productId, queryClient]);
+
+  return query;
 }
 
 export function useUserReviews() {

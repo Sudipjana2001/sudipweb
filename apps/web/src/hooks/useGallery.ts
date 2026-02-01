@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -29,7 +30,9 @@ export interface GalleryComment {
 }
 
 export function useGalleryPosts(featured?: boolean) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["gallery-posts", featured],
     queryFn: async () => {
       let query = supabase
@@ -51,6 +54,30 @@ export function useGalleryPosts(featured?: boolean) {
       return data as GalleryPost[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("gallery-posts-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pet_gallery",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
+          queryClient.invalidateQueries({ queryKey: ["user-gallery-posts"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 }
 
 export function useUserGalleryPosts() {
@@ -186,7 +213,9 @@ export function useCreateGalleryPost() {
 }
 
 export function useGalleryComments(postId: string) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["gallery-comments", postId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -200,6 +229,32 @@ export function useGalleryComments(postId: string) {
     },
     enabled: !!postId,
   });
+
+  useEffect(() => {
+    if (!postId) return;
+
+    const channel = supabase
+      .channel(`gallery-comments-realtime-${postId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "gallery_comments",
+          filter: `gallery_post_id=eq.${postId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["gallery-comments", postId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [postId, queryClient]);
+
+  return query;
 }
 
 export function useAddGalleryComment() {
