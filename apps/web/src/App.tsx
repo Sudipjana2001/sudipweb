@@ -20,6 +20,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import AdminChat from "./pages/AdminChat";
 import Orders from "./pages/Orders";
 import Documentation from "./pages/Documentation";
 import Pets from "./pages/Pets";
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/support" element={<Support />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/chat" element={<AdminChat />} />
               <Route path="/docs" element={<Documentation />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

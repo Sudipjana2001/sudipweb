@@ -78,6 +78,46 @@ export function useUserGalleryPosts() {
   });
 }
 
+/**
+ * Compress image before upload for faster uploads
+ */
+async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+      
+      // Scale down if larger than maxWidth
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to compress image'));
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export function useCreateGalleryPost() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -96,13 +136,18 @@ export function useCreateGalleryPost() {
     }) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Upload image
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Compress image for faster upload (max 1200px, 80% quality)
+      const compressedImage = await compressImage(imageFile);
+      
+      // Upload compressed image
+      const fileName = `${user.id}/${Date.now()}.jpg`;
       
       const { error: uploadError } = await supabase.storage
         .from("gallery-images")
-        .upload(fileName, imageFile);
+        .upload(fileName, compressedImage, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        });
 
       if (uploadError) throw uploadError;
 
@@ -119,7 +164,7 @@ export function useCreateGalleryPost() {
           product_id: productId || null,
           image_url: publicUrl,
           caption: caption || null,
-          is_approved: false, // Requires moderation
+          is_approved: true, // Auto-approve (admin can still manage)
         })
         .select()
         .single();
@@ -130,8 +175,8 @@ export function useCreateGalleryPost() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
       queryClient.invalidateQueries({ queryKey: ["user-gallery-posts"] });
-      toast.success("Photo submitted!", {
-        description: "Your photo will be visible after approval.",
+      toast.success("Photo uploaded!", {
+        description: "Your photo is now visible in the gallery.",
       });
     },
     onError: (error) => {

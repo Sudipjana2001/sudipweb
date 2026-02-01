@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "./AuthContext";
+import { CartService } from "@/services/CartService";
+import { CartItemModel } from "@/domain/models/CartItem";
 
 export interface CartItem {
   id: number | string;
@@ -43,6 +45,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const { user } = useAuth();
 
+  // Create service instance (memoized per user)
+  const cartService = new CartService(user?.id ?? null);
+
   // Load cart and wishlist from Supabase on login
   useEffect(() => {
     if (!user) {
@@ -52,7 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const loadUserData = async () => {
-      // Load Cart
+      // Load Cart using CartService
       const { data: cartData } = await supabase
         .from("cart_items")
         .select(`
@@ -65,37 +70,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
             images,
             slug
           )
-          )
         `)
         .eq("user_id", user.id);
 
       if (cartData) {
-        const groupedItems = new Map<string, CartItem>();
-
-        cartData.forEach((item: any) => {
-          const id = item.product.id;
-          const ownerSize = item.size || "N/A";
-          const petSize = item.pet_size || "N/A";
-          const key = `${id}-${ownerSize}-${petSize}`;
-
-          if (groupedItems.has(key)) {
-            const existing = groupedItems.get(key)!;
-            existing.quantity += item.quantity;
-          } else {
-            groupedItems.set(key, {
-              id,
-              name: item.product.name,
-              price: item.product.price,
-              image: item.product.image_url || item.product.images?.[0] || "",
-              ownerSize,
-              petSize,
-              quantity: item.quantity,
-              slug: item.product.slug,
-            });
-          }
-        });
-
-        setCartItems(Array.from(groupedItems.values()));
+        // Use CartService to group items
+        const groupedItems = cartService.groupCartItems(cartData as any);
+        setCartItems(groupedItems);
       }
 
       // Load Wishlist
@@ -133,150 +114,75 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const addToCart = async (item: Omit<CartItem, "quantity">) => {
+    // Normalize sizes using domain model
+    const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
+    const petSize = CartItemModel.normalizeSize(item.petSize);
+
     // Optimistic update
     setCartItems((prev) => {
       const existing = prev.find(
-        (i) => i.id === item.id && i.ownerSize === item.ownerSize && i.petSize === item.petSize
+        (i) => i.id === item.id && i.ownerSize === ownerSize && i.petSize === petSize
       );
       if (existing) {
         return prev.map((i) =>
-          i.id === item.id && i.ownerSize === item.ownerSize && i.petSize === item.petSize
-            ? { ...i, quantity: i.quantity + +1 }
+          i.id === item.id && i.ownerSize === ownerSize && i.petSize === petSize
+            ? { ...i, quantity: i.quantity + 1 }
             : i
         );
       }
-      return [...prev, { ...item, quantity: 1, slug: item.slug }];
+      return [...prev, { ...item, ownerSize, petSize, quantity: 1, slug: item.slug }];
     });
 
+    // Sync with database using CartService
     if (user) {
-      // Sync with Supabase
-      // First check if exists to update quantity, or insert new
-      // We need to query by product_id, size, pet_size, user_id
-      const { data: existing } = await supabase
-        .from("cart_items")
-        .select("id, quantity")
-        .eq("user_id", user.id)
-        .eq("product_id", item.id as unknown as string) // Assuming item.id is the UUID string
-        .eq("size", item.ownerSize)
-        .eq("pet_size", item.petSize)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from("cart_items")
-          .update({ quantity: existing.quantity + 1 })
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("cart_items").insert({
-          user_id: user.id,
-          product_id: item.id as unknown as string,
-          quantity: 1,
-          size: item.ownerSize,
-          pet_size: item.petSize,
-        });
-      }
+      await cartService.addItem({ ...item, ownerSize, petSize });
     }
   };
 
-  const removeFromCart = async (id: number, ownerSize: string, petSize: string) => {
+  const removeFromCart = async (id: number | string, ownerSize: string, petSize: string) => {
+    // Normalize sizes
+    const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
+    const normalizedPetSize = CartItemModel.normalizeSize(petSize);
+
+    // Optimistic update
     setCartItems((prev) =>
-      prev.filter((i) => !(i.id === id && i.ownerSize === ownerSize && i.petSize === petSize))
+      prev.filter((i) => !(i.id === id && i.ownerSize === normalizedOwnerSize && i.petSize === normalizedPetSize))
     );
 
+    // Sync with database using CartService
     if (user) {
-      try {
-        // Fetch all potential matches first to allow JS-side filtering
-        const { data: candidates, error: fetchError } = await supabase
-          .from("cart_items")
-          .select("id, size, pet_size")
-          .eq("user_id", user.id)
-          .eq("product_id", id as unknown as string);
-
-        if (fetchError) {
-          console.error("Error fetching items for deletion:", fetchError);
-          return;
-        }
-
-        if (!candidates || candidates.length === 0) {
-          console.warn("No matching cart items found in DB to delete.");
-          return;
-        }
-
-        // Filter candidates in JS to robustly handle "N/A" / null / empty
-        const idsToDelete = candidates
-          .filter((c) => {
-            const dbSize = c.size || "N/A";
-            const dbPetSize = c.pet_size || "N/A";
-            
-            // Normalize checks
-            const sizeMatch = ownerSize === "N/A" 
-              ? ["N/A", "", null].includes(c.size) 
-              : c.size === ownerSize;
-            
-            const petSizeMatch = petSize === "N/A"
-              ? ["N/A", "", null].includes(c.pet_size)
-              : c.pet_size === petSize;
-
-            return sizeMatch && petSizeMatch;
-          })
-          .map((c) => c.id);
-
-        if (idsToDelete.length > 0) {
-          const { error: deleteError } = await supabase
-            .from("cart_items")
-            .delete()
-            .in("id", idsToDelete);
-
-          if (deleteError) {
-             console.error("Error deleting cart items:", deleteError);
-          }
-        }
-      } catch (err) {
-        console.error("Unexpected error in removeFromCart:", err);
-      }
+      await cartService.removeItem(id, normalizedOwnerSize, normalizedPetSize);
     }
   };
 
-  const updateQuantity = async (id: number, ownerSize: string, petSize: string, quantity: number) => {
+  const updateQuantity = async (id: number | string, ownerSize: string, petSize: string, quantity: number) => {
+    const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
+    const normalizedPetSize = CartItemModel.normalizeSize(petSize);
+
     if (quantity < 1) {
-      removeFromCart(id, ownerSize, petSize);
+      removeFromCart(id, normalizedOwnerSize, normalizedPetSize);
       return;
     }
+
+    // Optimistic update
     setCartItems((prev) =>
       prev.map((i) =>
-        i.id === id && i.ownerSize === ownerSize && i.petSize === petSize
+        i.id === id && i.ownerSize === normalizedOwnerSize && i.petSize === normalizedPetSize
           ? { ...i, quantity }
           : i
       )
     );
 
+    // Sync with database using CartService
     if (user) {
-      let query = supabase
-        .from("cart_items")
-        .update({ quantity })
-        .eq("user_id", user.id)
-        .eq("product_id", id as unknown as string);
-
-      if (ownerSize === "N/A") {
-        query = query.or("size.is.null,size.eq.,size.eq.N/A");
-      } else {
-        query = query.eq("size", ownerSize);
-      }
-
-      if (petSize === "N/A") {
-        query = query.or("pet_size.is.null,pet_size.eq.,pet_size.eq.N/A");
-      } else {
-        query = query.eq("pet_size", petSize);
-      }
-
-      await query;
+      await cartService.updateQuantity(id, normalizedOwnerSize, normalizedPetSize, quantity);
     }
   };
 
   const clearCart = async () => {
     setCartItems([]);
     if (user) {
-      await supabase.from("cart_items").delete().eq("user_id", user.id);
+      await cartService.clearCart();
     }
   };
 
@@ -295,7 +201,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeFromWishlist = async (id: number) => {
+  const removeFromWishlist = async (id: number | string) => {
     setWishlistItems((prev) => prev.filter((i) => i.id !== id));
 
     if (user) {
@@ -307,10 +213,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isInWishlist = (id: number) => wishlistItems.some((i) => i.id === id);
+  const isInWishlist = (id: number | string) => wishlistItems.some((i) => i.id === id);
 
-  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  // Use CartService static method for totals calculation
+  const { subtotal: cartTotal, itemCount: cartCount } = CartService.calculateTotals(cartItems);
 
   return (
     <CartContext.Provider

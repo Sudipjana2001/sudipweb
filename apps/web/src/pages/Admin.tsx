@@ -550,7 +550,7 @@ export default function Admin() {
           </Dialog>
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-center gap-4">
               <Package className="h-10 w-10 text-primary" />
@@ -577,6 +577,18 @@ export default function Admin() {
                   ₹{orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}
                 </p>
                 <p className="text-muted-foreground">Total Revenue</p>
+              </div>
+            </div>
+          </div>
+          <div 
+            className="rounded-lg border border-border bg-card p-6 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => navigate("/admin/chat")}
+          >
+            <div className="flex items-center gap-4">
+              <MessageCircle className="h-10 w-10 text-primary" />
+              <div>
+                <p className="text-2xl font-bold">Live Chat</p>
+                <p className="text-muted-foreground">Support Dashboard</p>
               </div>
             </div>
           </div>

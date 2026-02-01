@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, Tag, X, Check } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
@@ -13,6 +13,7 @@ import { GiftWrapOption } from "@/components/GiftWrapOption";
 import { SavedAddressSelector } from "@/components/SavedAddressSelector";
 import { PaymentMethodSelector, PaymentMethod } from "@/components/PaymentMethodSelector";
 import { useCreatePayment } from "@/hooks/usePayments";
+import { useOrderTotal } from "@/hooks/useOrderTotal";
 import { toast } from "sonner";
 
 export default function Checkout() {
@@ -51,10 +52,9 @@ export default function Checkout() {
   const [giftMessage, setGiftMessage] = useState("");
   const giftWrapPrice = 5;
 
-  const shippingCost = cartTotal >= 100 ? 0 : 10;
+  // Use OrderTotal domain object for pricing calculations
   const giftWrapCost = giftWrap ? giftWrapPrice : 0;
-  const tax = (cartTotal - couponDiscount + giftWrapCost) * 0.08;
-  const total = cartTotal - couponDiscount + shippingCost + giftWrapCost + tax;
+  const { shippingCost, tax, total } = useOrderTotal(cartTotal, couponDiscount, giftWrapCost);
 
   const handleGiftWrapChange = (enabled: boolean, message: string) => {
     setGiftWrap(enabled);
