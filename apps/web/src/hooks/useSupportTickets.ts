@@ -73,20 +73,18 @@ export function useTicketMessages(ticketId: string) {
     if (!ticketId) return;
 
     const channel = supabase
-      .channel(`ticket-messages-${ticketId}`)
+      .channel(`ticket-messages-realtime-${ticketId}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // Listen for all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "ticket_messages",
           filter: `ticket_id=eq.${ticketId}`,
         },
-        (payload) => {
-          queryClient.setQueryData(
-            ["ticket-messages", ticketId],
-            (old: TicketMessage[] = []) => [...old, payload.new as TicketMessage]
-          );
+        () => {
+          // Invalidate query to re-fetch full data - more robust than manual cache update
+          queryClient.invalidateQueries({ queryKey: ["ticket-messages", ticketId] });
         }
       )
       .subscribe();

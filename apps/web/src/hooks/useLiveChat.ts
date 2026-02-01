@@ -106,41 +106,29 @@ export function useChatMessages(sessionId: string | undefined) {
 
   // Subscribe to real-time updates
   useEffect(() => {
-    if (!sessionId || isSubscribed) return;
+    if (!sessionId) return;
 
     const channel = supabase
-      .channel(`chat-${sessionId}`)
+      .channel(`chat-realtime-${sessionId}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // Listen for all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "chat_messages",
           filter: `chat_session_id=eq.${sessionId}`,
         },
-        (payload) => {
-          // Add new message to cache
-          queryClient.setQueryData(
-            ["chat-messages", sessionId],
-            (old: ChatMessage[] = []) => [...old, payload.new as ChatMessage]
-          );
+        () => {
+          // Invalidate and re-fetch - more reliable than manual cache update
+          queryClient.invalidateQueries({ queryKey: ["chat-messages", sessionId] });
         }
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-           // Successfully subscribed
-        } else if (status === "CHANNEL_ERROR") {
-          console.error("Realtime channel error");
-        }
-      });
-
-    setIsSubscribed(true);
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      setIsSubscribed(false);
     };
-  }, [sessionId, queryClient, isSubscribed]);
+  }, [sessionId, queryClient]);
 
   return messagesQuery;
 }
