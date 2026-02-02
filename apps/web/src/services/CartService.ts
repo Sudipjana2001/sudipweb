@@ -85,7 +85,7 @@ export class CartService {
     const petSize = CartItemModel.normalizeSize(item.petSize);
 
     // Check if item already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: fetchError } = await supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('user_id', this.userId)
@@ -94,19 +94,23 @@ export class CartService {
       .eq('pet_size', petSize)
       .maybeSingle();
 
+    if (fetchError) throw fetchError;
+
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from('cart_items')
         .update({ quantity: existing.quantity + 1 })
         .eq('id', existing.id);
+      if (error) throw error;
     } else {
-      await supabase.from('cart_items').insert({
+      const { error } = await supabase.from('cart_items').insert({
         user_id: this.userId,
         product_id: item.id as string,
         quantity: 1,
         size: ownerSize,
         pet_size: petSize,
       });
+      if (error) throw error;
     }
   }
 
@@ -124,13 +128,9 @@ export class CartService {
         .eq('user_id', this.userId)
         .eq('product_id', productId as string);
 
-      if (fetchError) {
-        console.error('Error fetching items for deletion:', fetchError);
-        return;
-      }
+      if (fetchError) throw fetchError;
 
       if (!candidates || candidates.length === 0) {
-        console.warn('No matching cart items found in DB to delete.');
         return;
       }
 
@@ -148,12 +148,11 @@ export class CartService {
           .delete()
           .in('id', idsToDelete);
 
-        if (deleteError) {
-          console.error('Error deleting cart items:', deleteError);
-        }
+        if (deleteError) throw deleteError;
       }
     } catch (err) {
-      console.error('Unexpected error in removeItem:', err);
+      console.error('Error in removeItem:', err);
+      throw err;
     }
   }
 
@@ -187,7 +186,8 @@ export class CartService {
       query = query.eq('pet_size', petSize);
     }
 
-    await query;
+    const { error } = await query;
+    if (error) throw error;
   }
 
   /**
@@ -195,7 +195,8 @@ export class CartService {
    */
   async clearCart(): Promise<void> {
     if (!this.userId) return;
-    await supabase.from('cart_items').delete().eq('user_id', this.userId);
+    const { error } = await supabase.from('cart_items').delete().eq('user_id', this.userId);
+    if (error) throw error;
   }
 
   /**

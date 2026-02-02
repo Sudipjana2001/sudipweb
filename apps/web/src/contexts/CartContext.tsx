@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/client";
 import { useAuth } from "./AuthContext";
 import { CartService } from "@/services/CartService";
 import { CartItemModel } from "@/domain/models/CartItem";
+import { toast } from "sonner";
 
 export interface CartItem {
   id: number | string;
@@ -41,23 +42,74 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  // Load state from localStorage if available (for guests)
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("guest_cart");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const { user } = useAuth();
+  const [isMerged, setIsMerged] = useState(false);
 
   // Create service instance (memoized per user)
   const cartService = new CartService(user?.id ?? null);
-
-  // Load cart and wishlist from Supabase on login
+  
+  // Sync guest cart to localStorage
   useEffect(() => {
     if (!user) {
-      setCartItems([]);
+      localStorage.setItem("guest_cart", JSON.stringify(cartItems));
+    }
+  }, [cartItems, user]);
+
+  // Load cart and wishlist from Supabase on login, and merge guest cart
+  useEffect(() => {
+    if (!user) {
+      // If user logs out, we keep the current state (which effectively becomes the persistent guest cart if they continue shopping)
+      // Or we could revert to the 'guest_cart' from before login? 
+      // Standard behavior: clear or keep empty. 
+      // Let's reload from guest_cart in case there was a session overlap, or just rely on state.
+      // But usually logout clears the UI.
+      const saved = localStorage.getItem("guest_cart");
+      setCartItems(saved ? JSON.parse(saved) : []);
       setWishlistItems([]);
+      setIsMerged(false);
       return;
     }
 
-    const loadUserData = async () => {
-      // Load Cart using CartService
+    const syncAndLoadData = async () => {
+      // 1. Merge Strategy: Check for guest cart items to sync
+      const guestCartJson = localStorage.getItem("guest_cart");
+      if (guestCartJson && !isMerged) {
+        const guestItems: CartItem[] = JSON.parse(guestCartJson);
+        if (guestItems.length > 0) {
+          // Push guest items to Supabase
+          // We use sequential operations to ensure correctness
+          for (const item of guestItems) {
+            await cartService.addItem({
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              image: item.image,
+              ownerSize: item.ownerSize,
+              petSize: item.petSize,
+              slug: item.slug
+            });
+            // Update quantity if > 1
+            if (item.quantity > 1) {
+              await cartService.updateQuantity(item.id, item.ownerSize, item.petSize, item.quantity);
+            }
+          }
+          // Clear guest cart after successful sync
+          localStorage.removeItem("guest_cart");
+        }
+        setIsMerged(true); // Prevent re-merging in same session
+      }
+
+      // 2. Load Cart from DB (now includes merged items)
       const { data: cartData } = await supabase
         .from("cart_items")
         .select(`
@@ -79,7 +131,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCartItems(groupedItems);
       }
 
-      // Load Wishlist
+      // 3. Load Wishlist
       const { data: wishlistData } = await supabase
         .from("wishlist_items")
         .select(`
@@ -110,7 +162,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    loadUserData();
+    syncAndLoadData();
   }, [user]);
 
   const addToCart = async (item: Omit<CartItem, "quantity">) => {
@@ -135,7 +187,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Sync with database using CartService
     if (user) {
-      await cartService.addItem({ ...item, ownerSize, petSize });
+      try {
+        await cartService.addItem({ ...item, ownerSize, petSize });
+      } catch (error) {
+        console.error("Failed to sync cart:", error);
+        toast.error("Failed to save to account. Please check your connection.");
+      }
     }
   };
 
@@ -151,7 +208,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Sync with database using CartService
     if (user) {
-      await cartService.removeItem(id, normalizedOwnerSize, normalizedPetSize);
+      try {
+        await cartService.removeItem(id, normalizedOwnerSize, normalizedPetSize);
+      } catch (error) {
+        console.error("Failed to sync cart:", error);
+      }
     }
   };
 
@@ -175,14 +236,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Sync with database using CartService
     if (user) {
-      await cartService.updateQuantity(id, normalizedOwnerSize, normalizedPetSize, quantity);
+      try {
+        await cartService.updateQuantity(id, normalizedOwnerSize, normalizedPetSize, quantity);
+      } catch (error) {
+        console.error("Failed to sync cart:", error);
+      }
     }
   };
 
   const clearCart = async () => {
     setCartItems([]);
     if (user) {
-      await cartService.clearCart();
+      try {
+        await cartService.clearCart();
+      } catch (error) {
+        console.error("Failed to clear cart DB:", error);
+      }
     }
   };
 

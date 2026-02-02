@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingBag, GitCompare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -90,11 +91,14 @@ export function ProductCard({ product }: ProductCardProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+
+
         {/* Image Container */}
         <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-          <img
+          <OptimizedImage
             src={image}
             alt={product.name}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Heart, Minus, Plus, Star, Truck, Shield, RotateCcw } from "lucide-react";
+import { Heart, Minus, Plus, Star, Truck, Shield, RotateCcw } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -29,9 +30,60 @@ export default function Product() {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPetSize, setSelectedPetSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
   const { user } = useAuth();
   const trackView = useTrackProductView();
+
+  /* Safe access for loading state */
+  const images = product?.images?.length ? product.images : [product?.image_url || "/product-1.jpg"];
+  const sizes = product?.sizes || ["XS", "S", "M", "L", "XL"];
+  const petSizes = product?.pet_sizes || ["XS", "S", "M", "L"];
+  const features = product?.features || ["Premium quality materials", "Matching design for you and your pet", "Machine washable"];
+  
+  /* Removed numericId hack */
+  const inWishlist = isInWishlist(product?.id || "");
+  
+  const relatedProducts = collectionProducts
+    .filter((p) => p.id !== product?.id)
+    .slice(0, 3);
+
+  // Swipe gesture handlers
+  const minSwipeDistance = 50;
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+
+  // Show swipe hint on mount for mobile
+  useEffect(() => {
+    if (window.innerWidth < 768 && images.length > 1) {
+      setShowSwipeHint(true);
+      const timer = setTimeout(() => setShowSwipeHint(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [images.length]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && images.length > 1) {
+      setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    }
+    if (isRightSwipe && images.length > 1) {
+      setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    }
+  };
 
   // Track product view
   useEffect(() => {
@@ -63,17 +115,7 @@ export default function Product() {
     );
   }
 
-  const images = product.images?.length ? product.images : [product.image_url || "/product-1.jpg"];
-  const sizes = product.sizes || ["XS", "S", "M", "L", "XL"];
-  const petSizes = product.pet_sizes || ["XS", "S", "M", "L"];
-  const features = product.features || ["Premium quality materials", "Matching design for you and your pet", "Machine washable"];
-  
-  /* Removed numericId hack */
-  const inWishlist = isInWishlist(product.id);
-  
-  const relatedProducts = collectionProducts
-    .filter((p) => p.id !== product.id)
-    .slice(0, 3);
+
 
   const handleAddToCart = () => {
     if (!selectedSize && !selectedPetSize) {
@@ -105,17 +147,19 @@ export default function Product() {
       });
       return;
     }
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image_url || "/product-1.jpg",
-        ownerSize: selectedSize || "N/A",
-        petSize: selectedPetSize || "N/A",
-      });
-    }
-    navigate("/checkout");
+
+    const buyNowItem = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_url || "/product-1.jpg",
+      ownerSize: selectedSize || "N/A",
+      petSize: selectedPetSize || "N/A",
+      slug: product.slug,
+      quantity: quantity,
+    };
+
+    navigate("/checkout", { state: { buyNowItem } });
   };
 
   const handleWishlist = () => {
@@ -137,7 +181,7 @@ export default function Product() {
 
   return (
     <PageLayout>
-      <div className="container mx-auto px-6 py-6 md:py-8">
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Breadcrumb */}
         <nav className="mb-8 flex items-center gap-2 font-body text-sm text-muted-foreground">
           <Link to="/" className="hover:text-foreground">Home</Link>
@@ -156,11 +200,21 @@ export default function Product() {
         <div className="grid gap-12 lg:grid-cols-[30%_1fr]">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div className="relative aspect-square overflow-hidden bg-muted">
-              <img
+            <div 
+              className="relative aspect-square overflow-hidden bg-muted cursor-grab active:cursor-grabbing touch-pan-y"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+
+
+              <OptimizedImage
                 src={images[currentImage]}
                 alt={product.name}
-                className="h-full w-full object-cover"
+                priority={true} // LCP Image
+                sizes="(max-width: 768px) 100vw, 30vw"
+                className="h-full w-full object-cover select-none pointer-events-none bg-muted"
+                draggable={false}
               />
               <button
                 onClick={handleWishlist}
@@ -172,33 +226,53 @@ export default function Product() {
                   }`}
                 />
               </button>
+              
+              {/* Swipe Hint Overlay */}
+              <div 
+                className={`absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none transition-opacity duration-500 ${
+                  showSwipeHint ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <div className="bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
+                  <p className="text-xs font-medium text-foreground flex items-center gap-2">
+                    <Minus className="w-4 h-4" /> Swipe to view <Minus className="w-4 h-4" />
+                  </p>
+                </div>
+              </div>
+
+              {/* Image indicator dots */}
               {images.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-                    className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-background/90 transition-colors hover:bg-background"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-                    className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-background/90 transition-colors hover:bg-background"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                  {images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImage(idx)}
+                      className={`h-2 w-2 rounded-full transition-all ${
+                        currentImage === idx 
+                          ? "bg-foreground w-4" 
+                          : "bg-foreground/40 hover:bg-foreground/60"
+                      }`}
+                      aria-label={`View image ${idx + 1}`}
+                    />
+                  ))}
+                </div>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImage(idx)}
-                  className={`aspect-square w-20 overflow-hidden border-2 transition-colors ${
+                  className={`relative flex-shrink-0 aspect-square w-20 overflow-hidden border-2 transition-colors ${
                     currentImage === idx ? "border-foreground" : "border-transparent"
                   }`}
                 >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
+                  <OptimizedImage 
+                    src={img} 
+                    alt={`View ${idx + 1}`} 
+                    sizes="80px"
+                    className="h-full w-full object-cover" 
+                  />
                 </button>
               ))}
             </div>

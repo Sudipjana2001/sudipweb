@@ -11,7 +11,7 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, showNewsletter = true }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="pt-20 pb-16">{children}</main>
       {showNewsletter && <Newsletter />}

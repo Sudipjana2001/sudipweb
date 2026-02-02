@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
@@ -10,7 +10,23 @@ import { useBestSellers, Product } from "@/hooks/useProducts";
 export function BestSellers() {
   const { data: products = [], isLoading } = useBestSellers();
   const [startIndex, setStartIndex] = useState(0);
-  const visibleCount = 4;
+  
+  // Responsive visible count
+  const [visibleCount, setVisibleCount] = useState(4);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640) setVisibleCount(1);
+      else if (window.innerWidth < 1024) setVisibleCount(2);
+      else if (window.innerWidth < 1280) setVisibleCount(3);
+      else setVisibleCount(4);
+    };
+
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const { ref: headerRef, isVisible: headerVisible } = useScrollAnimation();
   const { ref: sliderRef, isVisible: sliderVisible } = useScrollAnimation({ threshold: 0.05 });
 
@@ -88,7 +104,12 @@ export function BestSellers() {
             style={{ transform: `translateX(-${startIndex * (100 / visibleCount)}%)` }}
           >
             {products.map((product, index) => (
-              <ProductCard key={product.id} product={product} index={index} />
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                index={index} 
+                width={`calc(${100 / visibleCount}% - ${24 * (visibleCount - 1) / visibleCount}px)`}
+              />
             ))}
           </div>
         </div>
@@ -115,7 +136,7 @@ export function BestSellers() {
   );
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ProductCard({ product, index, width }: { product: Product; index: number; width: string }) {
   const [isHovered, setIsHovered] = useState(false);
   const sizes = product.sizes || ["S", "M", "L"];
   const petSizes = product.pet_sizes || ["S", "M", "L"];
@@ -164,9 +185,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   };
 
   return (
-    <Link to={`/product/${product.slug}`}>
+    <Link to={`/product/${product.slug}`} style={{ width, minWidth: width }}>
       <div 
-        className="group min-w-[calc(25%-18px)] flex-shrink-0 transition-transform duration-500"
+        className="group w-full flex-shrink-0 transition-transform duration-500"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{ transitionDelay: `${index * 50}ms` }}

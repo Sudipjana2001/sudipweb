@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, Tag, X, Check } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,25 @@ import { toast } from "sonner";
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cartItems, cartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const createOrder = useCreateOrder();
   
+  const buyNowItem = location.state?.buyNowItem;
+  
+  // Use buyNowItem if present, otherwise use cartItems
+  const checkoutItems = useMemo(() => {
+    return buyNowItem ? [buyNowItem] : cartItems;
+  }, [buyNowItem, cartItems]);
+
+  const activeTotal = useMemo(() => {
+    if (buyNowItem) {
+      return buyNowItem.price * buyNowItem.quantity;
+    }
+    return cartTotal;
+  }, [buyNowItem, cartTotal]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: user?.email || "",
@@ -45,7 +60,7 @@ export default function Checkout() {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
-  const codAvailable = cartTotal <= 500;
+  const codAvailable = activeTotal <= 500;
 
   // Gift wrap state
   const [giftWrap, setGiftWrap] = useState(false);
@@ -54,7 +69,7 @@ export default function Checkout() {
 
   // Use OrderTotal domain object for pricing calculations
   const giftWrapCost = giftWrap ? giftWrapPrice : 0;
-  const { shippingCost, tax, total } = useOrderTotal(cartTotal, couponDiscount, giftWrapCost);
+  const { shippingCost, tax, total } = useOrderTotal(activeTotal, couponDiscount, giftWrapCost);
 
   const handleGiftWrapChange = (enabled: boolean, message: string) => {
     setGiftWrap(enabled);
@@ -82,14 +97,13 @@ export default function Checkout() {
     }));
   };
   
-
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     
     setIsValidating(true);
     const result = await validateCoupon.mutateAsync({
       code: couponCode,
-      orderAmount: cartTotal,
+      orderAmount: activeTotal,
     });
     setIsValidating(false);
 
@@ -123,7 +137,7 @@ export default function Checkout() {
       return;
     }
 
-    if (cartItems.length === 0) {
+    if (checkoutItems.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
@@ -145,7 +159,7 @@ export default function Checkout() {
 
     try {
       const order = await createOrder.mutateAsync({
-        items: cartItems.map(item => ({
+        items: checkoutItems.map(item => ({
           productId: item.id.toString(),
           productName: item.name,
           productImage: item.image,
@@ -170,7 +184,10 @@ export default function Checkout() {
         });
       }
 
-      clearCart();
+      // Conditionally clear cart if not a "buy now" item
+      if (!buyNowItem) {
+        clearCart();
+      }
       
       if (paymentMethod === "cod") {
         toast.success("Order placed successfully!", {
@@ -358,7 +375,7 @@ export default function Checkout() {
 
                 {/* Cart Items */}
                 <div className="mb-6 space-y-4 border-b border-border pb-6">
-                  {cartItems.map((item) => (
+                  {checkoutItems.map((item) => (
                     <div key={`${item.id}-${item.ownerSize}-${item.petSize}`} className="flex gap-4">
                       <div className="h-20 w-16 flex-shrink-0 overflow-hidden bg-background">
                         <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
