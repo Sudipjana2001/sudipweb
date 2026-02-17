@@ -21,6 +21,8 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import AdminChat from "./pages/AdminChat";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import { AdminRoute, UserRoute } from "@/components/AdminRoute";
 import Orders from "./pages/Orders";
 import Documentation from "./pages/Documentation";
@@ -83,6 +85,8 @@ const App = () => (
               <Route path="/returns" element={<UserRoute><Returns /></UserRoute>} />
               <Route path="/support" element={<UserRoute><Support /></UserRoute>} />
               <Route path="/profile" element={<UserRoute><Profile /></UserRoute>} />
+              <Route path="/privacy" element={<UserRoute><Privacy /></UserRoute>} />
+              <Route path="/terms" element={<UserRoute><Terms /></UserRoute>} />
               <Route path="/docs" element={<UserRoute><Documentation /></UserRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

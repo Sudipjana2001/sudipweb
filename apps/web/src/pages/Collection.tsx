@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { ProductCard } from "@/components/ProductCard";
 import { useProductsByCollection, useCollections } from "@/hooks/useProducts";
@@ -8,10 +8,19 @@ type SortOption = "featured" | "price-low" | "price-high" | "newest";
 
 export default function Collection() {
   const { slug } = useParams<{ slug: string }>();
-  const collectionSlug = slug || "summer";
+  const location = useLocation();
   
+  // Determine slug from URL path if not provided as param
+  // For routes like /summer, /winter, /rainy defined in App.tsx
+  const pathSlug = location.pathname.split('/')[1];
+  const collectionSlug = slug || (["summer", "winter", "rainy"].includes(pathSlug) ? pathSlug : "summer");
+  
+  console.log("Collection Debug:", { slug, pathSlug, collectionSlug });
+
   const { data: products = [], isLoading: productsLoading } = useProductsByCollection(collectionSlug);
   const { data: collections = [] } = useCollections();
+
+  console.log("Collection Data:", { productsLength: products.length, collectionsLength: collections.length });
   
   const collection = collections.find(c => c.slug === collectionSlug);
   const [sortBy, setSortBy] = useState<SortOption>("featured");

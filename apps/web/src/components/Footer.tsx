@@ -32,7 +32,7 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="bg-foreground text-background">
+    <footer className="bg-foreground text-background relative z-50">
       {/* Main Footer */}
       <div className="container mx-auto px-6 py-16 md:py-20">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-6">
@@ -50,9 +50,12 @@ export function Footer() {
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
-                  href={social.href}
-                  className="flex h-10 w-10 items-center justify-center border border-background/20 text-background/70 transition-all duration-300 hover:border-background hover:text-background"
+                  href={social.href === "#" ? undefined : social.href}
+                  className="flex h-10 w-10 items-center justify-center border border-background/20 text-background/70 transition-all duration-300 hover:border-background hover:text-background cursor-pointer"
                   aria-label={social.name}
+                  onClick={(e) => {
+                    if (social.href === "#") e.preventDefault();
+                  }}
                 >
                   <social.icon className="h-4 w-4" />
                 </a>
