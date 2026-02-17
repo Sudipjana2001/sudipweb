@@ -208,125 +208,125 @@ export function Header() {
             </div>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        <div
-          className={`fixed inset-0 top-20 z-40 bg-white dark:bg-zinc-950 transition-all duration-300 lg:hidden overflow-y-auto ${
-            isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
-          }`}
-        >
-          <nav className="container mx-auto px-6 py-8">
-            <ul className="space-y-6">
-              {navLinks.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="font-display text-2xl text-foreground transition-colors hover:text-foreground/70"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8">
-              {user ? (
-                <div className="space-y-4">
-                  <p className="font-body text-sm text-muted-foreground">
-                    Signed in as {profile?.full_name || user.email}
-                  </p>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/profile");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    My Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/pets");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    My Pets
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/loyalty");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    Rewards
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/tracking");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    Track Order
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/orders");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    My Orders
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate("/admin");
-                      }}
-                      className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                    >
-                      Admin Dashboard
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      handleSignOut();
-                    }}
-                    className="block w-full border border-destructive px-6 py-3 font-body text-sm text-destructive transition-colors hover:bg-destructive/10"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-4">
-                  <button 
-                    className="flex-1 bg-foreground px-6 py-3 font-body text-sm text-background transition-colors hover:bg-foreground/90"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/login");
-                    }}
-                  >
-                    Sign In
-                  </button>
-                  <button 
-                    className="flex-1 border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/signup");
-                    }}
-                  >
-                    Register
-                  </button>
-                </div>
-              )}
-            </div>
-          </nav>
-        </div>
       </header>
+
+      {/* Mobile Menu - outside header to avoid stacking context issues */}
+      <div
+        className={`fixed inset-0 top-20 z-[60] bg-background transition-all duration-300 lg:hidden overflow-y-auto ${
+          isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <nav className="container mx-auto px-6 py-8">
+          <ul className="space-y-6">
+            {navLinks.map((link) => (
+              <li key={link.name}>
+                <Link
+                  to={link.href}
+                  className="font-display text-2xl text-foreground transition-colors hover:text-foreground/70"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8">
+            {user ? (
+              <div className="space-y-4">
+                <p className="font-body text-sm text-muted-foreground">
+                  Signed in as {profile?.full_name || user.email}
+                </p>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/profile");
+                  }}
+                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                >
+                  My Profile
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/pets");
+                  }}
+                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                >
+                  My Pets
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/loyalty");
+                  }}
+                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                >
+                  Rewards
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/tracking");
+                  }}
+                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                >
+                  Track Order
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/orders");
+                  }}
+                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                >
+                  My Orders
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigate("/admin");
+                    }}
+                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                  >
+                    Admin Dashboard
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                  className="block w-full border border-destructive px-6 py-3 font-body text-sm text-destructive transition-colors hover:bg-destructive/10"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <button 
+                  className="flex-1 bg-foreground px-6 py-3 font-body text-sm text-background transition-colors hover:bg-foreground/90"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/login");
+                  }}
+                >
+                  Sign In
+                </button>
+                <button 
+                  className="flex-1 border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate("/signup");
+                  }}
+                >
+                  Register
+                </button>
+              </div>
+            )}
+          </div>
+        </nav>
+      </div>
     </>
   );
 }

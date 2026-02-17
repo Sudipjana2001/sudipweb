@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageLayout } from "@/components/layouts/PageLayout";
+import { AdminLayout } from "@/components/layouts/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Users, ShoppingBag, Plus, Pencil, Trash2, Save, Upload, X, Tag, BarChart3, Image, RotateCcw, MessageCircle, ScrollText, AlertTriangle, Zap, Gift, DollarSign, ShoppingCart, Shield, Star, Truck, TrendingDown, CreditCard, PieChart, MapPin, Target, Clock, UserCheck } from "lucide-react";
+import { Package, Users, ShoppingBag, Plus, Pencil, Trash2, Save, Upload, X, MessageCircle, TrendingUp, IndianRupee } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +77,7 @@ const defaultPetSizes = ["XS", "S", "M", "L"];
 export default function Admin() {
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const [activeSection, setActiveSection] = useState("dashboard");
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +87,8 @@ export default function Admin() {
   const [uploading, setUploading] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
   const { data: collections = [] } = useCollections();
   const { data: categories = [] } = useCategories();
 
@@ -124,11 +125,8 @@ export default function Admin() {
   }, [isAdmin]);
 
   const fetchData = async () => {
-    // Only show full page loader if we have no data yet
-    if (products.length === 0) {
-      setIsLoading(true);
-    }
-    
+    if (products.length === 0) setIsLoading(true);
+
     const [productsRes, ordersRes] = await Promise.all([
       supabase.from("products").select("*").order("created_at", { ascending: false }),
       supabase.from("orders").select("*").order("created_at", { ascending: false }),
@@ -136,7 +134,6 @@ export default function Admin() {
 
     if (productsRes.data) setProducts(productsRes.data as Product[]);
     if (ordersRes.data) setOrders(ordersRes.data as Order[]);
-    
     setIsLoading(false);
   };
 
@@ -148,77 +145,67 @@ export default function Admin() {
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `products/${fileName}`;
+      const file = files[i];
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from("product-images").upload(filePath, file);
 
-        if (uploadError) {
+      if (uploadError) {
         toast.error(`Failed to upload ${file.name}`);
         continue;
-        }
+      }
 
-        const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-        
-        uploadedUrls.push(publicUrl);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("product-images").getPublicUrl(filePath);
+
+      uploadedUrls.push(publicUrl);
     }
 
     if (isEdit) {
-        // For edit mode, we append to existing images if any, or create new array
-        const currentImages = editForm.images || [];
-        // If this is the first image being uploaded and there is no main image_url, set it
-        const mainImage = editForm.image_url || uploadedUrls[0];
-        setEditForm({ 
-            ...editForm, 
-            images: [...currentImages, ...uploadedUrls],
-            image_url: mainImage
-        });
+      const currentImages = editForm.images || [];
+      const mainImage = editForm.image_url || uploadedUrls[0];
+      setEditForm({
+        ...editForm,
+        images: [...currentImages, ...uploadedUrls],
+        image_url: mainImage,
+      });
     } else {
-        const currentImages = newProduct.images || [];
-        const mainImage = newProduct.image_url || uploadedUrls[0];
-        setNewProduct({ 
-            ...newProduct, 
-            images: [...currentImages, ...uploadedUrls],
-            image_url: mainImage 
-        });
+      const currentImages = newProduct.images || [];
+      const mainImage = newProduct.image_url || uploadedUrls[0];
+      setNewProduct({
+        ...newProduct,
+        images: [...currentImages, ...uploadedUrls],
+        image_url: mainImage,
+      });
     }
 
     toast.success("Images uploaded successfully");
     setUploading(false);
   };
-    
+
   const removeImage = (index: number, isEdit: boolean) => {
-      if (isEdit) {
-          const currentImages = [...(editForm.images || [])];
-          const removedUrl = currentImages[index];
-          currentImages.splice(index, 1);
-          
-          // If we removed the main image, set the new first image as main, or empty if none left
-          let newMainImage = editForm.image_url;
-          if (editForm.image_url === removedUrl) {
-              newMainImage = currentImages.length > 0 ? currentImages[0] : null;
-          }
-
-          setEditForm({ ...editForm, images: currentImages, image_url: newMainImage });
-      } else {
-          const currentImages = [...(newProduct.images || [])];
-           const removedUrl = currentImages[index];
-          currentImages.splice(index, 1);
-
-           // If we removed the main image, set the new first image as main
-          let newMainImage = newProduct.image_url;
-          if (newProduct.image_url === removedUrl) {
-              newMainImage = currentImages.length > 0 ? currentImages[0] : "";
-          }
-
-          setNewProduct({ ...newProduct, images: currentImages, image_url: newMainImage });
+    if (isEdit) {
+      const currentImages = [...(editForm.images || [])];
+      const removedUrl = currentImages[index];
+      currentImages.splice(index, 1);
+      let newMainImage = editForm.image_url;
+      if (editForm.image_url === removedUrl) {
+        newMainImage = currentImages.length > 0 ? currentImages[0] : null;
       }
+      setEditForm({ ...editForm, images: currentImages, image_url: newMainImage });
+    } else {
+      const currentImages = [...(newProduct.images || [])];
+      const removedUrl = currentImages[index];
+      currentImages.splice(index, 1);
+      let newMainImage = newProduct.image_url;
+      if (newProduct.image_url === removedUrl) {
+        newMainImage = currentImages.length > 0 ? currentImages[0] : "";
+      }
+      setNewProduct({ ...newProduct, images: currentImages, image_url: newMainImage });
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -258,32 +245,28 @@ export default function Admin() {
   };
 
   const handleDelete = async (id: string) => {
-    // Start animation
-    setDeletingIds(prev => {
-        const next = new Set(prev);
-        next.add(id);
-        return next;
+    setDeletingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
     });
 
-    // Wait for animation to finish
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Use RPC function to bypass RLS and ensure deletion
-    const { error } = await supabase.rpc('delete_product_admin' as any, { product_id: id });
+    const { error } = await supabase.rpc("delete_product_admin" as any, { product_id: id });
 
     if (error) {
       console.error("Delete error:", error);
-      // Revert animation state on error
-      setDeletingIds(prev => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
       });
-      
-      if (error.message.includes('foreign key constraint')) {
-          toast.error("Cannot delete product because it is part of an existing order.");
+
+      if (error.message.includes("foreign key constraint")) {
+        toast.error("Cannot delete product because it is part of an existing order.");
       } else {
-          toast.error(`Failed to delete product: ${error.message}`);
+        toast.error(`Failed to delete product: ${error.message}`);
       }
       return;
     }
@@ -362,377 +345,416 @@ export default function Admin() {
 
   if (authLoading || isLoading) {
     return (
-      <PageLayout showNewsletter={false}>
-        <div className="container mx-auto px-6 py-16">
-          <div className="flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
+      <AdminLayout activeSection={activeSection} onSectionChange={setActiveSection}>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
-      </PageLayout>
+      </AdminLayout>
     );
   }
 
   if (!isAdmin) return null;
 
-  return (
-    <PageLayout showNewsletter={false}>
-      <div className="container mx-auto px-6 py-16">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="font-display text-4xl font-medium">Admin Dashboard</h1>
-          <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
+  // ─── Stat Cards ─────────────────────────────────────────────
+  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+  const activeProducts = products.filter((p) => p.is_active).length;
+  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+
+  const statsCards = [
+    {
+      label: "Total Products",
+      value: products.length,
+      sub: `${activeProducts} active`,
+      icon: <Package className="h-5 w-5" />,
+      gradient: "from-blue-500/10 to-blue-600/5",
+      iconColor: "text-blue-600",
+    },
+    {
+      label: "Total Orders",
+      value: orders.length,
+      sub: `${pendingOrders} pending`,
+      icon: <ShoppingBag className="h-5 w-5" />,
+      gradient: "from-amber-500/10 to-amber-600/5",
+      iconColor: "text-amber-600",
+    },
+    {
+      label: "Revenue",
+      value: `₹${totalRevenue.toLocaleString("en-IN")}`,
+      sub: "All time",
+      icon: <IndianRupee className="h-5 w-5" />,
+      gradient: "from-emerald-500/10 to-emerald-600/5",
+      iconColor: "text-emerald-600",
+    },
+    {
+      label: "Live Chat",
+      value: "Open",
+      sub: "Support dashboard",
+      icon: <MessageCircle className="h-5 w-5" />,
+      gradient: "from-purple-500/10 to-purple-600/5",
+      iconColor: "text-purple-600",
+      clickable: true,
+      onClick: () => navigate("/admin/chat"),
+    },
+  ];
+
+  // ─── Section Content Renderer ───────────────────────────────
+  const renderSection = () => {
+    switch (activeSection) {
+      case "dashboard":
+        return (
+          <div className="space-y-8">
+            {/* Stats */}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {statsCards.map((card) => (
+                <div
+                  key={card.label}
+                  onClick={card.onClick}
+                  className={`group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br ${card.gradient} p-5 transition-all duration-200 ${
+                    card.clickable ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                      <p className="mt-1 text-2xl font-bold tracking-tight">{card.value}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{card.sub}</p>
+                    </div>
+                    <div className={`rounded-lg bg-background/80 p-2.5 ${card.iconColor}`}>
+                      {card.icon}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={() => setActiveSection("products")}>
+                <Package className="mr-2 h-4 w-4" /> Manage Products
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="name">Product Name *</Label>
-                    <Input
-                      id="name"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="slug">Slug *</Label>
-                    <Input
-                      id="slug"
-                      value={newProduct.slug}
-                      onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })}
-                      placeholder="product-name"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="price">Price *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="original_price">Original Price</Label>
-                    <Input
-                      id="original_price"
-                      type="number"
-                      value={newProduct.original_price || ""}
-                      onChange={(e) => setNewProduct({ ...newProduct, original_price: e.target.value ? Number(e.target.value) : null })}
-                    />
-                  </div>
-                </div>
+              <Button variant="outline" onClick={() => setActiveSection("orders")}>
+                <ShoppingBag className="mr-2 h-4 w-4" /> View Orders
+              </Button>
+              <Button variant="outline" onClick={() => setActiveSection("analytics")}>
+                <TrendingUp className="mr-2 h-4 w-4" /> Analytics
+              </Button>
+            </div>
 
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="collection">Collection</Label>
-                    <select
-                      id="collection"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={newProduct.collection_id}
-                      onChange={(e) => setNewProduct({ ...newProduct, collection_id: e.target.value })}
-                    >
-                      <option value="">Select collection</option>
-                      {collections.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <select
-                      id="category"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={newProduct.category_id}
-                      onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
-                    >
-                      <option value="">Select category</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Product Images</Label>
-                  <div className="mt-2 flex flex-wrap gap-4">
-                    {newProduct.images && newProduct.images.length > 0 ? (
-                        newProduct.images.map((img, index) => (
-                            <div key={index} className="relative h-20 w-20 overflow-hidden rounded-lg bg-muted group">
-                                <img src={img} alt={`Preview ${index}`} className="h-full w-full object-cover" />
-                                <button
-                                onClick={() => removeImage(index, false)}
-                                className="absolute right-1 top-1 rounded-full bg-background p-1 opacity-100 hover:bg-destructive hover:text-destructive-foreground"
-                                >
-                                <X className="h-3 w-3" />
-                                </button>
-                                {newProduct.image_url === img && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white text-center py-0.5">
-                                        Main
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      {uploading ? "Uploading..." : "Upload Images"}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, false)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <Label htmlFor="stock">Stock</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={newProduct.stock}
-                      onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 pt-6">
-                    <input
-                      type="checkbox"
-                      id="is_best_seller"
-                      checked={newProduct.is_best_seller}
-                      onChange={(e) => setNewProduct({ ...newProduct, is_best_seller: e.target.checked })}
-                    />
-                    <Label htmlFor="is_best_seller">Best Seller</Label>
-                  </div>
-                  <div className="flex items-center gap-2 pt-6">
-                    <input
-                      type="checkbox"
-                      id="is_new_arrival"
-                      checked={newProduct.is_new_arrival}
-                      onChange={(e) => setNewProduct({ ...newProduct, is_new_arrival: e.target.checked })}
-                    />
-                    <Label htmlFor="is_new_arrival">New Arrival</Label>
-                  </div>
-                </div>
-
-                <Button onClick={handleAddProduct} className="w-full">
-                  Add Product
+            {/* Recent Orders Preview */}
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Recent Orders</h3>
+                <Button variant="ghost" size="sm" onClick={() => setActiveSection("orders")}>
+                  View All →
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div className="overflow-hidden rounded-xl border border-border">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b border-border bg-muted/30">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order</th>
+                        <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {orders.slice(0, 5).map((order) => (
+                        <tr key={order.id} className="transition-colors hover:bg-muted/20">
+                          <td className="px-4 py-3 text-sm font-medium">{order.order_number}</td>
+                          <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">₹{order.total.toFixed(2)}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                order.status === "delivered"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : order.status === "cancelled"
+                                  ? "bg-red-100 text-red-700"
+                                  : order.status === "shipped"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {order.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
 
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center gap-4">
-              <Package className="h-10 w-10 text-primary" />
+      case "products":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-2xl font-bold">{products.length}</p>
-                <p className="text-muted-foreground">Products</p>
+                <h2 className="text-xl font-semibold">Products</h2>
+                <p className="text-sm text-muted-foreground">{products.length} products total</p>
               </div>
-            </div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center gap-4">
-              <ShoppingBag className="h-10 w-10 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{orders.length}</p>
-                <p className="text-muted-foreground">Orders</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center gap-4">
-              <Users className="h-10 w-10 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">
-                  ₹{orders.reduce((sum, o) => sum + o.total, 0).toFixed(0)}
-                </p>
-                <p className="text-muted-foreground">Total Revenue</p>
-              </div>
-            </div>
-          </div>
-          <div 
-            className="rounded-lg border border-border bg-card p-6 cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => navigate("/admin/chat")}
-          >
-            <div className="flex items-center gap-4">
-              <MessageCircle className="h-10 w-10 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">Live Chat</p>
-                <p className="text-muted-foreground">Support Dashboard</p>
-              </div>
-            </div>
-          </div>
-        </div>
+              <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="name">Product Name *</Label>
+                        <Input
+                          id="name"
+                          value={newProduct.name}
+                          onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="slug">Slug *</Label>
+                        <Input
+                          id="slug"
+                          value={newProduct.slug}
+                          onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })}
+                          placeholder="product-name"
+                        />
+                      </div>
+                    </div>
 
-        <Tabs defaultValue="products">
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="hero-slides"><Image className="h-3 w-3 mr-1" />Hero Slides</TabsTrigger>
-            <TabsTrigger value="promo-banners"><Zap className="h-3 w-3 mr-1" />Promo Banners</TabsTrigger>
-            <TabsTrigger value="faqs">FAQs</TabsTrigger>
-            <TabsTrigger value="features"><Star className="h-3 w-3 mr-1" />Features</TabsTrigger>
-            <TabsTrigger value="testimonials"><MessageCircle className="h-3 w-3 mr-1" />Testimonials</TabsTrigger>
-            <TabsTrigger value="newsletter"><MessageCircle className="h-3 w-3 mr-1" />Newsletter</TabsTrigger>
-            <TabsTrigger value="instagram"><Image className="h-3 w-3 mr-1" />Instagram</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="courier"><Truck className="h-3 w-3 mr-1" />Courier</TabsTrigger>
-            <TabsTrigger value="sla"><Clock className="h-3 w-3 mr-1" />SLA</TabsTrigger>
-            <TabsTrigger value="gallery"><Image className="h-3 w-3 mr-1" />Gallery</TabsTrigger>
-            <TabsTrigger value="moderation"><Shield className="h-3 w-3 mr-1" />Moderation</TabsTrigger>
-            <TabsTrigger value="influencers"><UserCheck className="h-3 w-3 mr-1" />Influencers</TabsTrigger>
-            <TabsTrigger value="returns"><RotateCcw className="h-3 w-3 mr-1" />Returns</TabsTrigger>
-            <TabsTrigger value="rto"><TrendingDown className="h-3 w-3 mr-1" />RTO</TabsTrigger>
-            <TabsTrigger value="support"><MessageCircle className="h-3 w-3 mr-1" />Support</TabsTrigger>
-            <TabsTrigger value="coupons"><Tag className="h-3 w-3 mr-1" />Coupons</TabsTrigger>
-            <TabsTrigger value="flash-sales"><Zap className="h-3 w-3 mr-1" />Flash Sales</TabsTrigger>
-            <TabsTrigger value="bundles"><Gift className="h-3 w-3 mr-1" />Bundles</TabsTrigger>
-            <TabsTrigger value="pricing"><DollarSign className="h-3 w-3 mr-1" />Pricing</TabsTrigger>
-            <TabsTrigger value="abandoned"><ShoppingCart className="h-3 w-3 mr-1" />Abandoned</TabsTrigger>
-            <TabsTrigger value="stock"><AlertTriangle className="h-3 w-3 mr-1" />Stock</TabsTrigger>
-            <TabsTrigger value="payments"><CreditCard className="h-3 w-3 mr-1" />Payments</TabsTrigger>
-            <TabsTrigger value="revenue"><PieChart className="h-3 w-3 mr-1" />Revenue</TabsTrigger>
-            <TabsTrigger value="campaigns"><Target className="h-3 w-3 mr-1" />Campaigns</TabsTrigger>
-            <TabsTrigger value="analytics"><BarChart3 className="h-3 w-3 mr-1" />Analytics</TabsTrigger>
-            <TabsTrigger value="locations"><MapPin className="h-3 w-3 mr-1" />Locations</TabsTrigger>
-            <TabsTrigger value="rate-limits"><Shield className="h-3 w-3 mr-1" />Rate Limits</TabsTrigger>
-            <TabsTrigger value="satisfaction"><Star className="h-3 w-3 mr-1" />CSAT</TabsTrigger>
-            <TabsTrigger value="gdpr"><Shield className="h-3 w-3 mr-1" />GDPR</TabsTrigger>
-            <TabsTrigger value="logs"><ScrollText className="h-3 w-3 mr-1" />Logs</TabsTrigger>
-          </TabsList>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="price">Price *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          value={newProduct.price}
+                          onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="original_price">Original Price</Label>
+                        <Input
+                          id="original_price"
+                          type="number"
+                          value={newProduct.original_price || ""}
+                          onChange={(e) =>
+                            setNewProduct({ ...newProduct, original_price: e.target.value ? Number(e.target.value) : null })
+                          }
+                        />
+                      </div>
+                    </div>
 
-          <TabsContent value="products" className="mt-6">
-            <div className="rounded-lg border border-border">
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="collection">Collection</Label>
+                        <select
+                          id="collection"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={newProduct.collection_id}
+                          onChange={(e) => setNewProduct({ ...newProduct, collection_id: e.target.value })}
+                        >
+                          <option value="">Select collection</option>
+                          {collections.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="category">Category</Label>
+                        <select
+                          id="category"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={newProduct.category_id}
+                          onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
+                        >
+                          <option value="">Select category</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Product Images</Label>
+                      <div className="mt-2 flex flex-wrap gap-4">
+                        {newProduct.images &&
+                          newProduct.images.length > 0 &&
+                          newProduct.images.map((img, index) => (
+                            <div key={index} className="relative h-20 w-20 overflow-hidden rounded-lg bg-muted group">
+                              <img src={img} alt={`Preview ${index}`} className="h-full w-full object-cover" />
+                              <button
+                                onClick={() => removeImage(index, false)}
+                                className="absolute right-1 top-1 rounded-full bg-background p-1 opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              {newProduct.image_url === img && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white text-center py-0.5">
+                                  Main
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {uploading ? "Uploading..." : "Upload Images"}
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handleImageUpload(e, false)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <Label htmlFor="stock">Stock</Label>
+                        <Input
+                          id="stock"
+                          type="number"
+                          value={newProduct.stock}
+                          onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                        <input
+                          type="checkbox"
+                          id="is_best_seller"
+                          checked={newProduct.is_best_seller}
+                          onChange={(e) => setNewProduct({ ...newProduct, is_best_seller: e.target.checked })}
+                        />
+                        <Label htmlFor="is_best_seller">Best Seller</Label>
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                        <input
+                          type="checkbox"
+                          id="is_new_arrival"
+                          checked={newProduct.is_new_arrival}
+                          onChange={(e) => setNewProduct({ ...newProduct, is_new_arrival: e.target.checked })}
+                        />
+                        <Label htmlFor="is_new_arrival">New Arrival</Label>
+                      </div>
+                    </div>
+
+                    <Button onClick={handleAddProduct} className="w-full">
+                      Add Product
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-border">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="border-b border-border bg-muted/50">
+                  <thead className="border-b border-border bg-muted/30">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Product</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Price</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Stock</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</th>
+                      <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">Price</th>
+                      <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Stock</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {products.map((product) => (
-                      <tr 
-                        key={product.id} 
-                        className={`border-b border-border transition-all duration-500 ease-in-out ${
-                            deletingIds.has(product.id) ? "opacity-0 -translate-x-full" : "opacity-100"
-                        }`}
+                      <tr
+                        key={product.id}
+                        className="hover:bg-muted/20"
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {product.image_url && (
-                              <img
-                                src={product.image_url}
-                                alt={product.name}
-                                className="h-10 w-10 rounded-lg object-cover"
-                              />
+                              <img src={product.image_url} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
                             )}
-                            {editingProduct === product.id ? (
-                              <Input
-                                value={editForm.name || ""}
-                                onChange={(e) =>
-                                  setEditForm({ ...editForm, name: e.target.value })
-                                }
-                                className="w-48"
-                              />
-                            ) : (
-                              <span className="font-medium">{product.name}</span>
-                            )}
+                            <div>
+                              {editingProduct === product.id ? (
+                                <Input
+                                  value={editForm.name || ""}
+                                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                  className="w-36 sm:w-48"
+                                />
+                              ) : (
+                                <span className="font-medium text-sm">{product.name}</span>
+                              )}
+                              <p className="text-xs text-muted-foreground sm:hidden">₹{product.price}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden px-4 py-3 sm:table-cell">
                           {editingProduct === product.id ? (
                             <Input
                               type="number"
                               value={editForm.price || ""}
-                              onChange={(e) =>
-                                setEditForm({ ...editForm, price: Number(e.target.value) })
-                              }
+                              onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
                               className="w-24"
                             />
                           ) : (
-                            <span>₹{product.price}</span>
+                            <span className="text-sm">₹{product.price}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden px-4 py-3 md:table-cell">
                           {editingProduct === product.id ? (
                             <Input
                               type="number"
                               value={editForm.stock || ""}
-                              onChange={(e) =>
-                                setEditForm({ ...editForm, stock: Number(e.target.value) })
-                              }
+                              onChange={(e) => setEditForm({ ...editForm, stock: Number(e.target.value) })}
                               className="w-20"
                             />
                           ) : (
-                            <span>{product.stock}</span>
+                            <span className="text-sm">{product.stock}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                              product.is_active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              product.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                             }`}
                           >
                             {product.is_active ? "Active" : "Inactive"}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex gap-2">
+                          <div className="flex justify-end gap-2">
                             {editingProduct === product.id ? (
                               <Button size="sm" onClick={handleSave}>
                                 <Save className="h-4 w-4" />
                               </Button>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEdit(product)}
-                              >
+                              <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDelete(product.id)}
-                            >
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(product.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -743,60 +765,45 @@ export default function Admin() {
                 </table>
               </div>
             </div>
-          </TabsContent>
+          </div>
+        );
 
-          <TabsContent value="hero-slides" className="mt-6">
-            <HeroSlidesManager />
-          </TabsContent>
-
-          <TabsContent value="promo-banners" className="mt-6">
-            <PromoBannersManager />
-          </TabsContent>
-          <TabsContent value="faqs" className="mt-6">
-            <FAQManager />
-          </TabsContent>
-
-          <TabsContent value="features" className="mt-6">
-            <FeaturesManager />
-          </TabsContent>
-
-          <TabsContent value="testimonials" className="mt-6">
-            <TestimonialsManager />
-          </TabsContent>
-
-          <TabsContent value="newsletter" className="mt-6">
-            <NewsletterManager />
-          </TabsContent>
-
-          <TabsContent value="instagram" className="mt-6">
-            <InstagramManager />
-          </TabsContent>
-
-          <TabsContent value="orders" className="mt-6">
-            <div className="rounded-lg border border-border">
+      case "orders":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold">Orders</h2>
+              <p className="text-sm text-muted-foreground">{orders.length} orders total</p>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-border">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="border-b border-border bg-muted/50">
+                  <thead className="border-b border-border bg-muted/30">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Order</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Total</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Order</th>
+                      <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-border">
-                        <td className="px-4 py-3 font-medium">{order.order_number}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                      <tr key={order.id} className="transition-colors hover:bg-muted/20">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium">{order.order_number}</span>
+                          <p className="text-xs text-muted-foreground sm:hidden">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </p>
+                        </td>
+                        <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
                           {new Date(order.created_at).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-3">₹{order.total.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-sm font-medium">₹{order.total.toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <select
                             value={order.status}
                             onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                            className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                            className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-medium"
                           >
                             <option value="pending">Pending</option>
                             <option value="confirmed">Confirmed</option>
@@ -812,101 +819,87 @@ export default function Admin() {
                 </table>
               </div>
             </div>
-          </TabsContent>
+          </div>
+        );
 
-          <TabsContent value="courier" className="mt-6">
-            <CourierPanel />
-          </TabsContent>
+      // ─── Content sections (render existing manager components) ──
+      case "hero-slides":
+        return <HeroSlidesManager />;
+      case "promo-banners":
+        return <PromoBannersManager />;
+      case "faqs":
+        return <FAQManager />;
+      case "features":
+        return <FeaturesManager />;
+      case "testimonials":
+        return <TestimonialsManager />;
+      case "newsletter":
+        return <NewsletterManager />;
+      case "instagram":
+        return <InstagramManager />;
+      case "gallery":
+        return <GalleryManager />;
 
-          <TabsContent value="sla" className="mt-6">
-            <DeliverySLADashboard />
-          </TabsContent>
+      // ─── Marketing sections ──
+      case "coupons":
+        return <CouponsManager />;
+      case "flash-sales":
+        return <FlashSalesManager />;
+      case "bundles":
+        return <ProductBundlesManager />;
+      case "pricing":
+        return <DynamicPricingManager />;
+      case "campaigns":
+        return <CampaignManager />;
+      case "influencers":
+        return <InfluencerManager />;
 
-          <TabsContent value="gallery" className="mt-6">
-            <GalleryManager />
-          </TabsContent>
+      // ─── Operations sections ──
+      case "courier":
+        return <CourierPanel />;
+      case "sla":
+        return <DeliverySLADashboard />;
+      case "returns":
+        return <ReturnsManager />;
+      case "rto":
+        return <RTOAnalytics />;
+      case "support":
+        return <SupportManager />;
+      case "abandoned":
+        return <AbandonedCartsManager />;
+      case "stock":
+        return <LowStockAlerts />;
 
-          <TabsContent value="moderation" className="mt-6">
-            <ImageModerationLogs />
-          </TabsContent>
+      // ─── Analytics sections ──
+      case "analytics":
+        return <AnalyticsDashboard />;
+      case "revenue":
+        return <RevenueDashboard />;
+      case "locations":
+        return <CustomerLocationHeatmap />;
+      case "payments":
+        return <PaymentReconciliation />;
+      case "satisfaction":
+        return <SatisfactionDashboard />;
 
-          <TabsContent value="influencers" className="mt-6">
-            <InfluencerManager />
-          </TabsContent>
+      // ─── System sections ──
+      case "moderation":
+        return <ImageModerationLogs />;
+      case "rate-limits":
+        return <RateLimitDashboard />;
+      case "gdpr":
+        return <GDPRRequestsManager />;
+      case "logs":
+        return <AuditLogsViewer />;
 
-          <TabsContent value="returns" className="mt-6">
-            <ReturnsManager />
-          </TabsContent>
+      default:
+        return <div className="text-muted-foreground">Select a section from the sidebar.</div>;
+    }
+  };
 
-          <TabsContent value="rto" className="mt-6">
-            <RTOAnalytics />
-          </TabsContent>
-
-          <TabsContent value="support" className="mt-6">
-            <SupportManager />
-          </TabsContent>
-
-          <TabsContent value="coupons" className="mt-6">
-            <CouponsManager />
-          </TabsContent>
-
-          <TabsContent value="flash-sales" className="mt-6">
-            <FlashSalesManager />
-          </TabsContent>
-
-          <TabsContent value="bundles" className="mt-6">
-            <ProductBundlesManager />
-          </TabsContent>
-
-          <TabsContent value="pricing" className="mt-6">
-            <DynamicPricingManager />
-          </TabsContent>
-
-          <TabsContent value="abandoned" className="mt-6">
-            <AbandonedCartsManager />
-          </TabsContent>
-
-          <TabsContent value="stock" className="mt-6">
-            <LowStockAlerts />
-          </TabsContent>
-
-          <TabsContent value="payments" className="mt-6">
-            <PaymentReconciliation />
-          </TabsContent>
-
-          <TabsContent value="revenue" className="mt-6">
-            <RevenueDashboard />
-          </TabsContent>
-
-          <TabsContent value="campaigns" className="mt-6">
-            <CampaignManager />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="mt-6">
-            <AnalyticsDashboard />
-          </TabsContent>
-
-          <TabsContent value="locations" className="mt-6">
-            <CustomerLocationHeatmap />
-          </TabsContent>
-
-          <TabsContent value="rate-limits" className="mt-6">
-            <RateLimitDashboard />
-          </TabsContent>
-
-          <TabsContent value="satisfaction" className="mt-6">
-            <SatisfactionDashboard />
-          </TabsContent>
-
-          <TabsContent value="gdpr" className="mt-6">
-            <GDPRRequestsManager />
-          </TabsContent>
-
-          <TabsContent value="logs" className="mt-6">
-            <AuditLogsViewer />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </PageLayout>
+  return (
+    <AdminLayout activeSection={activeSection} onSectionChange={setActiveSection}>
+      {renderSection()}
+    </AdminLayout>
   );
 }

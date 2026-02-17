@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/client";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -15,7 +16,7 @@ const loginSchema = z.object({
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, isAdmin, isLoading: authLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,10 +24,10 @@ export default function Login() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   useEffect(() => {
-    if (user) {
-      navigate("/");
+    if (user && !authLoading) {
+      navigate(isAdmin ? "/admin" : "/");
     }
-  }, [user, navigate]);
+  }, [user, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +66,16 @@ export default function Login() {
     toast.success("Welcome back!", {
       description: "You have successfully logged in.",
     });
-    navigate("/");
+
+    // Check if this user is admin to redirect to admin panel
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "")
+      .eq("role", "admin")
+      .maybeSingle();
+
+    navigate(roleData ? "/admin" : "/");
   };
 
   return (

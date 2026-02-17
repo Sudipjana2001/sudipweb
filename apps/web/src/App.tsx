@@ -21,6 +21,7 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import AdminChat from "./pages/AdminChat";
+import { AdminRoute, UserRoute } from "@/components/AdminRoute";
 import Orders from "./pages/Orders";
 import Documentation from "./pages/Documentation";
 import Pets from "./pages/Pets";
@@ -48,36 +49,41 @@ const App = () => (
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/collection/:slug" element={<Collection />} />
-              <Route path="/summer" element={<Collection />} />
-              <Route path="/winter" element={<Collection />} />
-              <Route path="/rainy" element={<Collection />} />
-              <Route path="/product/:slug" element={<Product />} />
-              <Route path="/product/:slug/reviews" element={<ProductReviewsPage />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/wishlist" element={<Wishlist />} />
+              {/* Auth routes - accessible to everyone */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/pets" element={<Pets />} />
-              <Route path="/loyalty" element={<Loyalty />} />
-              <Route path="/compare" element={<Compare />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/tracking" element={<Tracking />} />
-              <Route path="/gallery" element={<Gallery />} />
-              <Route path="/referrals" element={<Referrals />} />
-              <Route path="/subscriptions" element={<Subscriptions />} />
-              <Route path="/returns" element={<Returns />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/chat" element={<AdminChat />} />
-              <Route path="/docs" element={<Documentation />} />
+
+              {/* Admin-only routes */}
+              <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/admin/chat" element={<AdminRoute><AdminChat /></AdminRoute>} />
+
+              {/* User routes - admin users get redirected to /admin */}
+              <Route path="/" element={<UserRoute><Index /></UserRoute>} />
+              <Route path="/shop" element={<UserRoute><Shop /></UserRoute>} />
+              <Route path="/collection/:slug" element={<UserRoute><Collection /></UserRoute>} />
+              <Route path="/summer" element={<UserRoute><Collection /></UserRoute>} />
+              <Route path="/winter" element={<UserRoute><Collection /></UserRoute>} />
+              <Route path="/rainy" element={<UserRoute><Collection /></UserRoute>} />
+              <Route path="/product/:slug" element={<UserRoute><Product /></UserRoute>} />
+              <Route path="/product/:slug/reviews" element={<UserRoute><ProductReviewsPage /></UserRoute>} />
+              <Route path="/cart" element={<UserRoute><Cart /></UserRoute>} />
+              <Route path="/checkout" element={<UserRoute><Checkout /></UserRoute>} />
+              <Route path="/wishlist" element={<UserRoute><Wishlist /></UserRoute>} />
+              <Route path="/about" element={<UserRoute><About /></UserRoute>} />
+              <Route path="/contact" element={<UserRoute><Contact /></UserRoute>} />
+              <Route path="/orders" element={<UserRoute><Orders /></UserRoute>} />
+              <Route path="/pets" element={<UserRoute><Pets /></UserRoute>} />
+              <Route path="/loyalty" element={<UserRoute><Loyalty /></UserRoute>} />
+              <Route path="/compare" element={<UserRoute><Compare /></UserRoute>} />
+              <Route path="/faq" element={<UserRoute><FAQ /></UserRoute>} />
+              <Route path="/tracking" element={<UserRoute><Tracking /></UserRoute>} />
+              <Route path="/gallery" element={<UserRoute><Gallery /></UserRoute>} />
+              <Route path="/referrals" element={<UserRoute><Referrals /></UserRoute>} />
+              <Route path="/subscriptions" element={<UserRoute><Subscriptions /></UserRoute>} />
+              <Route path="/returns" element={<UserRoute><Returns /></UserRoute>} />
+              <Route path="/support" element={<UserRoute><Support /></UserRoute>} />
+              <Route path="/profile" element={<UserRoute><Profile /></UserRoute>} />
+              <Route path="/docs" element={<UserRoute><Documentation /></UserRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <CompareBar />

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -196,11 +195,9 @@ export default function AdminChat() {
 
   if (isLoading) {
     return (
-      <PageLayout>
-        <div className="container mx-auto px-6 py-12 text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
-        </div>
-      </PageLayout>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
     );
   }
 
@@ -209,64 +206,70 @@ export default function AdminChat() {
   }
 
   return (
-    <PageLayout showNewsletter={false}>
-      <div className="container mx-auto px-6 py-6">
-        <div className="mb-6">
-          <h1 className="font-display text-3xl font-medium flex items-center gap-3">
-            <MessageCircle className="h-8 w-8" />
-            Live Chat Support
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Respond to customer inquiries in real-time
-          </p>
+    <div className="flex h-screen flex-col bg-background">
+      {/* Top Bar */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
+        <h1 className="flex items-center gap-3 text-lg font-semibold">
+          <MessageCircle className="h-5 w-5" />
+          Live Chat Support
+        </h1>
+        <a href="/admin" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Back to Dashboard
+        </a>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sessions List — hidden on mobile when a chat is active */}
+        <div className={`w-full border-r border-border overflow-y-auto bg-card md:w-[320px] lg:w-[350px] ${
+          activeSession ? "hidden md:block" : "block"
+        }`}>
+          <div className="border-b border-border bg-muted/30 px-4 py-3">
+            <h2 className="text-sm font-semibold">Active Chats ({sessions.length})</h2>
+          </div>
+          {isSessionsLoading ? (
+            <div className="p-4 text-center text-muted-foreground">Loading...</div>
+          ) : sessions.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <MessageCircle className="mx-auto mb-3 h-12 w-12 opacity-50" />
+              <p>No active chats</p>
+              <p className="mt-1 text-sm">Chats will appear here when customers message you</p>
+            </div>
+          ) : (
+            sessions.map((session) => (
+              <ChatSessionItem
+                key={session.id}
+                session={session}
+                isActive={activeSession?.id === session.id}
+                onClick={() => setActiveSession(session)}
+              />
+            ))
+          )}
         </div>
 
-        <div className="grid grid-cols-[350px_1fr] gap-0 rounded-lg border border-border overflow-hidden bg-card min-h-[600px]">
-          {/* Sessions List */}
-          <div className="border-r border-border overflow-y-auto">
-            <div className="p-4 border-b border-border bg-muted/50">
-              <h2 className="font-medium">Active Chats ({sessions.length})</h2>
-            </div>
-            {isSessionsLoading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Loading...
-              </div>
-            ) : sessions.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No active chats</p>
-                <p className="text-sm mt-1">
-                  Chats will appear here when customers message you
-                </p>
-              </div>
-            ) : (
-              sessions.map((session) => (
-                <ChatSessionItem
-                  key={session.id}
-                  session={session}
-                  isActive={activeSession?.id === session.id}
-                  onClick={() => setActiveSession(session)}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Chat Window */}
-          {activeSession ? (
+        {/* Chat Window */}
+        {activeSession ? (
+          <div className="flex flex-1 flex-col">
+            {/* Mobile back button */}
+            <button
+              onClick={() => setActiveSession(null)}
+              className="border-b border-border px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground md:hidden"
+            >
+              ← Back to chats
+            </button>
             <ChatWindow
               session={activeSession}
               onClose={() => setActiveSession(null)}
             />
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg">Select a chat to start responding</p>
-              </div>
+          </div>
+        ) : (
+          <div className="hidden flex-1 items-center justify-center text-muted-foreground md:flex">
+            <div className="text-center">
+              <MessageCircle className="mx-auto mb-4 h-16 w-16 opacity-50" />
+              <p className="text-lg">Select a chat to start responding</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </PageLayout>
+    </div>
   );
 }
