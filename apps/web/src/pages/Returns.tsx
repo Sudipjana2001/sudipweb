@@ -103,7 +103,7 @@ export default function Returns() {
                       <div className="flex items-center gap-2 pt-2 border-t">
                         <span className="text-sm font-medium">Refund Amount:</span>
                         <span className="text-sm text-green-600 font-medium">
-                          ${returnReq.refund_amount.toFixed(2)}
+                          ₹{returnReq.refund_amount.toFixed(2)}
                         </span>
                       </div>
                     )}

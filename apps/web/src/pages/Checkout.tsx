@@ -14,6 +14,7 @@ import { SavedAddressSelector } from "@/components/SavedAddressSelector";
 import { PaymentMethodSelector, PaymentMethod } from "@/components/PaymentMethodSelector";
 import { useCreatePayment } from "@/hooks/usePayments";
 import { useOrderTotal } from "@/hooks/useOrderTotal";
+import { useRazorpay, RazorpayResponse } from "@/hooks/useRazorpay";
 import { toast } from "sonner";
 
 export default function Checkout() {
@@ -57,9 +58,10 @@ export default function Checkout() {
   const validateCoupon = useValidateCoupon();
   const applyCouponMutation = useApplyCoupon();
   const createPayment = useCreatePayment();
+  const { openCheckout, verifyPayment, isLoading: isRazorpayLoading } = useRazorpay();
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
   const codAvailable = activeTotal <= 500;
 
   // Gift wrap state
@@ -128,9 +130,59 @@ export default function Checkout() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const buildShippingAddress = () => ({
+    full_name: `${formData.firstName} ${formData.lastName}`,
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    address: formData.address,
+    city: formData.city,
+    postal_code: formData.postalCode,
+    postalCode: formData.postalCode,
+    country: formData.country,
+    phone: formData.phone,
+    email: formData.email,
+  });
+
+  const buildOrderItems = () =>
+    checkoutItems.map((item) => ({
+      productId: item.id.toString(),
+      productName: item.name,
+      productImage: item.image,
+      quantity: item.quantity,
+      unitPrice: item.price,
+      size: item.ownerSize,
+      petSize: item.petSize,
+    }));
+
+  const finalizeOrder = async (transactionId?: string, gatewayPaymentMethod?: string) => {
+    const order = await createOrder.mutateAsync({
+      items: buildOrderItems(),
+      subtotal: activeTotal,
+      shippingCost,
+      tax,
+      total,
+      shippingAddress: buildShippingAddress(),
+    });
+
+    if (order) {
+      await createPayment.mutateAsync({
+        orderId: order.id,
+        amount: total,
+        paymentMethod: gatewayPaymentMethod || paymentMethod,
+        transactionId,
+      });
+    }
+
+    if (!buyNowItem) {
+      clearCart();
+    }
+
+    return order;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast.error("Please sign in to complete your order");
       navigate("/login");
@@ -144,71 +196,64 @@ export default function Checkout() {
 
     setIsSubmitting(true);
 
-    const shippingAddress = {
-      full_name: `${formData.firstName} ${formData.lastName}`,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      address: formData.address,
-      city: formData.city,
-      postal_code: formData.postalCode,
-      postalCode: formData.postalCode,
-      country: formData.country,
-      phone: formData.phone,
-      email: formData.email,
-    };
-
-    try {
-      const order = await createOrder.mutateAsync({
-        items: checkoutItems.map(item => ({
-          productId: item.id.toString(),
-          productName: item.name,
-          productImage: item.image,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          size: item.ownerSize,
-          petSize: item.petSize,
-        })),
-        subtotal: cartTotal,
-        shippingCost,
-        tax,
-        total,
-        shippingAddress,
-      });
-
-      // Create payment record
-      if (order) {
-        await createPayment.mutateAsync({
-          orderId: order.id,
-          amount: total,
-          paymentMethod,
-        });
-      }
-
-      // Conditionally clear cart if not a "buy now" item
-      if (!buyNowItem) {
-        clearCart();
-      }
-      
-      if (paymentMethod === "cod") {
+    // COD flow — direct order creation
+    if (paymentMethod === "cod") {
+      try {
+        await finalizeOrder();
         toast.success("Order placed successfully!", {
           description: "Pay when you receive your order.",
         });
-      } else {
-        toast.success("Order placed successfully!", {
-          description: "Payment will be processed shortly.",
+        navigate("/orders");
+      } catch (error) {
+        toast.error("Failed to place order", {
+          description: "Please try again later.",
         });
+      } finally {
+        setIsSubmitting(false);
       }
-      navigate("/orders");
-    } catch (error) {
-      toast.error("Failed to place order", {
-        description: "Please try again later.",
-      });
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    // UPI flow — Razorpay checkout
+    openCheckout({
+      amount: total,
+      customerName: `${formData.firstName} ${formData.lastName}`,
+      customerEmail: formData.email,
+      customerPhone: formData.phone,
+      onSuccess: async (response: RazorpayResponse) => {
+        try {
+          const verified = await verifyPayment(response);
+          if (!verified) {
+            toast.error("Payment verification failed", {
+              description: "Please contact support if amount was deducted.",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          await finalizeOrder(response.razorpay_payment_id, "upi");
+          toast.success("Payment successful! Order placed.", {
+            description: `Transaction ID: ${response.razorpay_payment_id}`,
+          });
+          navigate("/orders");
+        } catch (error) {
+          toast.error("Failed to save order after payment", {
+            description: "Payment was successful. Please contact support with your transaction ID.",
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+      onFailure: (error: string) => {
+        toast.error("Payment failed", {
+          description: error,
+        });
+        setIsSubmitting(false);
+      },
+    });
   };
 
-  if (cartItems.length === 0) {
+  if (checkoutItems.length === 0) {
     return (
       <PageLayout showNewsletter={false}>
         <div className="container mx-auto px-6 py-32 text-center">
@@ -440,7 +485,7 @@ export default function Checkout() {
                 <div className="space-y-3 border-b border-border pb-6">
                   <div className="flex justify-between font-body text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>₹{cartTotal.toFixed(2)}</span>
+                    <span>₹{activeTotal.toFixed(2)}</span>
                   </div>
                   {couponDiscount > 0 && (
                     <div className="flex justify-between font-body text-sm text-green-600">
@@ -469,7 +514,7 @@ export default function Checkout() {
                   className="w-full" 
                   disabled={isSubmitting || !user}
                 >
-                  {isSubmitting ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
+                  {isSubmitting || isRazorpayLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
                 </Button>
 
                 {!user && (

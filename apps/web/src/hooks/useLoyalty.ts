@@ -243,6 +243,6 @@ export function getPointsToNextTier(lifetimePoints: number, currentTier: Loyalty
 }
 
 export function pointsToDiscount(points: number): number {
-  // 100 points = $1 discount
+  // 100 points = ₹1 discount
   return points / 100;
 }
