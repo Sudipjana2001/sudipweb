@@ -8,9 +8,17 @@ import { Sparkles } from "lucide-react";
 export function PersonalizedRecommendations() {
   const { user } = useAuth();
 
-  const { data: recommendations = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["personalized-recommendations", user?.id],
     queryFn: async () => {
+      // 1. Fetch user's primary pet
+      const { data: pet } = user ? await supabase
+        .from("pets")
+        .select("name, species")
+        .eq("user_id", user.id)
+        .eq("is_primary", true)
+        .maybeSingle() : { data: null };
+
       // Get user's purchase history and browsing behavior
       const [ordersRes, viewedRes, wishlistRes] = await Promise.all([
         user ? supabase
@@ -66,11 +74,12 @@ export function PersonalizedRecommendations() {
         .map(([id]) => id);
 
       // Fetch recommended products
+      // Fetch a larger pool to filter by species if needed
       let query = supabase
         .from("products")
         .select("*")
         .eq("is_active", true)
-        .limit(8);
+        .limit(50); 
 
       if (topCategories.length > 0 || topCollections.length > 0) {
         // Build OR filter for categories and collections
@@ -83,38 +92,59 @@ export function PersonalizedRecommendations() {
         }
         query = query.or(filters.join(","));
       } else {
-        // Fallback to best sellers and new arrivals for new users
-        query = query.or("is_best_seller.eq.true,is_new_arrival.eq.true");
+        // Fallback to best sellers and new arrivals for new users (ensure we get enough items)
+        query = query.or("is_best_seller.eq.true,is_new_arrival.eq.true,is_featured.eq.true");
       }
 
       const { data: products, error } = await query;
 
       if (error) throw error;
 
-      // Filter out products user has already viewed/purchased
-      const filtered = products?.filter(p => !viewedProductIds.has(p.id)) || [];
+      let filtered = products?.filter(p => !viewedProductIds.has(p.id)) || [];
 
-      // If not enough, add some best sellers
+      // SPECIES FILTERING LOGIC
+      if (pet) {
+        const species = pet.species.toLowerCase();
+        // keyword matching
+        const speciesMatches = filtered.filter(p => {
+          const text = (p.name + " " + (p.description || "")).toLowerCase();
+          return text.includes(species);
+        });
+
+        // If we found matches, prioritize them. 
+        if (speciesMatches.length > 0) {
+          filtered = speciesMatches;
+        }
+        // If NO matches found, we keep the original 'filtered' list based on history/popularity
+        // This ensures we show *something* instead of nothing.
+      }
+
+      // If not enough, add some best sellers (filtered by species if pet exists)
       if (filtered.length < 4) {
         const { data: fallback } = await supabase
           .from("products")
           .select("*")
           .eq("is_active", true)
-          .eq("is_best_seller", true)
-          .limit(8 - filtered.length);
+          //.eq("is_best_seller", true) // Removed restrictive filter to ensure we get results
+          .order("is_best_seller", { ascending: false }) // Prioritize best sellers but allow others
+          .limit(20); 
 
         const existingIds = new Set(filtered.map(p => p.id));
+        
         fallback?.forEach(p => {
-          if (!existingIds.has(p.id) && !viewedProductIds.has(p.id)) {
-            filtered.push(p);
-          }
+           if (!existingIds.has(p.id) && !viewedProductIds.has(p.id)) {
+              filtered.push(p); // Just add them to fill the list
+           }
         });
       }
 
-      return filtered.slice(0, 8) as Product[];
+      return { products: filtered.slice(0, 8), petName: pet?.name };
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
+
+  const recommendations = data?.products || [];
+  const petName = data?.petName;
 
   if (isLoading) {
     return (
@@ -137,14 +167,17 @@ export function PersonalizedRecommendations() {
           <div className="inline-flex items-center gap-2 mb-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-              Just For You
+              {petName ? `Selected for ${petName}` : "Just For You"}
             </p>
           </div>
           <h2 className="font-display text-3xl font-medium">
             Recommended For You
           </h2>
           <p className="mt-2 text-muted-foreground max-w-md mx-auto">
-            Handpicked styles based on your preferences and browsing history
+            {petName 
+              ? `Handpicked styles we think ${petName} will love`
+              : "Handpicked styles based on your preferences and browsing history"
+            }
           </p>
         </div>
 

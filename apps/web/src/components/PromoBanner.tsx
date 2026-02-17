@@ -15,21 +15,15 @@ export function PromoBanner() {
     seconds: 0,
   });
 
-  // Hardcoded banner for immediate revert
-  const banner = {
-    badge_text: "Limited Time Offer",
-    headline: "Spring Sale is Live",
-    subheadline: "Get 20% off all new arrivals with code SPRING20",
-    end_date: new Date(Date.now() + 86400000).toISOString(), // 24 hours from now
-    background_color: "#f3f4f6",
-    text_color: "#1f2937",
-    cta_text: "Shop Now",
-    cta_link: "/shop"
-  };
+  // Use the first active banner from the database, or fall back to a default if loading/empty
+  // strictly for development/demo purposes if needed, but ideally we show nothing if no banner.
+  const currentBanner = dbBanners?.[0];
 
   useEffect(() => {
+    if (!currentBanner) return;
+
     const calculateTimeLeft = () => {
-      const endDate = new Date(banner.end_date).getTime();
+      const endDate = new Date(currentBanner.end_date).getTime();
       const now = new Date().getTime();
       const difference = endDate - now;
 
@@ -54,14 +48,16 @@ export function PromoBanner() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [currentBanner]);
+
+  if (isLoading || !currentBanner) return null;
 
   return (
     <section 
       className="py-16 md:py-20 overflow-hidden"
       style={{ 
-        backgroundColor: banner.background_color,
-        color: banner.text_color
+        backgroundColor: currentBanner.background_color,
+        color: currentBanner.text_color
       }}
     >
       <div className="container mx-auto px-6">
@@ -73,45 +69,46 @@ export function PromoBanner() {
         >
           {/* Badge */}
           <span 
-            className="mb-6 inline-block border px-4 py-1.5 font-body text-[10px] uppercase tracking-[0.3em] animate-pulse"
+            className="mb-6 inline-block border-2 px-5 py-2 font-body text-xs font-semibold uppercase tracking-[0.25em]"
             style={{
-              borderColor: `${banner.text_color}30`,
-              color: `${banner.text_color}70`
+              borderColor: currentBanner.text_color,
+              color: currentBanner.text_color,
+              backgroundColor: `${currentBanner.text_color}10`
             }}
           >
-            {banner.badge_text}
+            {currentBanner.badge_text}
           </span>
 
           {/* Headline */}
           <h2 className="mb-4 font-display text-4xl font-medium tracking-tight md:text-6xl">
-            {banner.headline}
+            {currentBanner.headline}
           </h2>
-          {banner.subheadline && (
+          {currentBanner.subheadline && (
             <p className="mb-10 font-display text-xl md:text-2xl opacity-80">
-              {banner.subheadline}
+              {currentBanner.subheadline}
             </p>
           )}
 
           {/* Countdown Timer */}
           <div className="mb-10 flex gap-4 md:gap-8">
-            <TimeUnit value={timeLeft.days} label="Days" index={0} isVisible={isVisible} color={banner.text_color} bgColor={banner.background_color} />
-            <TimeUnit value={timeLeft.hours} label="Hours" index={1} isVisible={isVisible} color={banner.text_color} bgColor={banner.background_color} />
-            <TimeUnit value={timeLeft.minutes} label="Minutes" index={2} isVisible={isVisible} color={banner.text_color} bgColor={banner.background_color} />
-            <TimeUnit value={timeLeft.seconds} label="Seconds" index={3} isVisible={isVisible} color={banner.text_color} bgColor={banner.background_color} />
+            <TimeUnit value={timeLeft.days} label="Days" index={0} isVisible={isVisible} color={currentBanner.text_color} bgColor={currentBanner.background_color} />
+            <TimeUnit value={timeLeft.hours} label="Hours" index={1} isVisible={isVisible} color={currentBanner.text_color} bgColor={currentBanner.background_color} />
+            <TimeUnit value={timeLeft.minutes} label="Minutes" index={2} isVisible={isVisible} color={currentBanner.text_color} bgColor={currentBanner.background_color} />
+            <TimeUnit value={timeLeft.seconds} label="Seconds" index={3} isVisible={isVisible} color={currentBanner.text_color} bgColor={currentBanner.background_color} />
           </div>
 
           {/* CTA */}
-          {banner.cta_text && banner.cta_link && (
+          {currentBanner.cta_text && currentBanner.cta_link && (
             <Button 
               variant="hero-outline" 
               style={{
-                borderColor: banner.text_color,
-                color: banner.text_color
+                borderColor: currentBanner.text_color,
+                color: currentBanner.text_color
               }}
               className="hover:opacity-90"
-              onClick={() => navigate(banner.cta_link)}
+              onClick={() => navigate(currentBanner.cta_link!)}
             >
-              {banner.cta_text}
+              {currentBanner.cta_text}
             </Button>
           )}
         </div>

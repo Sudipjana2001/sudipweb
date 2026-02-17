@@ -512,7 +512,7 @@ export default function Checkout() {
                   type="submit" 
                   variant="hero" 
                   className="w-full" 
-                  disabled={isSubmitting || !user}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting || isRazorpayLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
                 </Button>

@@ -24,8 +24,7 @@ export default function FAQ() {
   const filteredFAQs = faqs.filter((faq) => {
     const matchesSearch =
       !searchQuery.trim() ||
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = !selectedCategory || faq.category === selectedCategory;
     

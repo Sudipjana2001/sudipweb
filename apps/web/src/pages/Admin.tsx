@@ -37,6 +37,7 @@ import { ImageModerationLogs } from "@/components/admin/ImageModerationLogs";
 import { RateLimitDashboard } from "@/components/admin/RateLimitDashboard";
 import { HeroSlidesManager } from "@/components/admin/HeroSlidesManager";
 import { PromoBannersManager } from "@/components/admin/PromoBannersManager";
+import { FAQManager } from "@/components/admin/FAQManager";
 import { FeaturesManager } from "@/components/admin/FeaturesManager";
 import { TestimonialsManager } from "@/components/admin/TestimonialsManager";
 import { NewsletterManager } from "@/components/admin/NewsletterManager";
@@ -599,6 +600,7 @@ export default function Admin() {
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="hero-slides"><Image className="h-3 w-3 mr-1" />Hero Slides</TabsTrigger>
             <TabsTrigger value="promo-banners"><Zap className="h-3 w-3 mr-1" />Promo Banners</TabsTrigger>
+            <TabsTrigger value="faqs">FAQs</TabsTrigger>
             <TabsTrigger value="features"><Star className="h-3 w-3 mr-1" />Features</TabsTrigger>
             <TabsTrigger value="testimonials"><MessageCircle className="h-3 w-3 mr-1" />Testimonials</TabsTrigger>
             <TabsTrigger value="newsletter"><MessageCircle className="h-3 w-3 mr-1" />Newsletter</TabsTrigger>
@@ -749,6 +751,9 @@ export default function Admin() {
 
           <TabsContent value="promo-banners" className="mt-6">
             <PromoBannersManager />
+          </TabsContent>
+          <TabsContent value="faqs" className="mt-6">
+            <FAQManager />
           </TabsContent>
 
           <TabsContent value="features" className="mt-6">

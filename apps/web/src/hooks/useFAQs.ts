@@ -28,3 +28,19 @@ export function useFAQs() {
     },
   });
 }
+
+export function useAllFAQs() {
+  return useQuery({
+    queryKey: ["all-faqs"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("faqs")
+        .select("*")
+        .order("category")
+        .order("sort_order");
+
+      if (error) throw error;
+      return data as FAQ[];
+    },
+  });
+}

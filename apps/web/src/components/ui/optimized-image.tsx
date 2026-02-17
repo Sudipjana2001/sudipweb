@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface OptimizedImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -21,16 +21,39 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const [isVisible, setIsVisible] = useState(priority); // If priority, visible immediately
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  // If priority is true (eager), we might want to skip fade-in entirely or check immediately
-  // But standard way for cached images is checking .complete ref
-  const imgRef = (node: HTMLImageElement | null) => {
-    if (node && node.complete) {
-      setIsLoaded(true);
+  useEffect(() => {
+    if (priority) return; // Skip observer if priority
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: "200px", // Start loading 200px before items enter viewport
+        threshold: 0.01,
+      }
+    );
+
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
     }
-  };
 
-  // Fallback to simpler loading if error
+    return () => {
+      observer.disconnect();
+    };
+  }, [priority]);
+
+  // Standard caching: Once the browser fetches the image via the `src` attribute (which we set when visible), 
+  // it automatically stores it in the Disk Cache. Next time, it loads instantly from disk.
+
   if (error) {
     return (
       <img
@@ -45,9 +68,9 @@ export function OptimizedImage({
   return (
     <img
       ref={imgRef}
-      src={src}
+      src={isVisible ? src : undefined} // Only set src when near viewport
       alt={alt}
-      loading={priority ? "eager" : "lazy"}
+      loading={priority ? "eager" : undefined} // Custom lazy loader handles "lazy"
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
       sizes={sizes}
@@ -55,7 +78,9 @@ export function OptimizedImage({
       onError={() => setError(true)}
       className={cn(
         "transition-opacity duration-500",
-        isLoaded ? "opacity-100" : "opacity-0",
+        isLoaded ? "opacity-100" : "opacity-0", // Fade in effect
+        // Add a placeholder color/style while loading if not loaded
+        !isLoaded && "bg-muted/20", 
         className
       )}
       {...props}

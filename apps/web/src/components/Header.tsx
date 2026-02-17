@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams, useLocation } from "react-router-do
 import { Menu, X, ShoppingBag, Heart, Search, User, LogOut, Dog, Award, GitCompare, Truck, HelpCircle, MessageCircle } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProducts } from "@/hooks/useProducts";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,10 +34,17 @@ export function Header() {
 
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 50);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -65,8 +72,8 @@ export function Header() {
       <header
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
           isScrolled || isMobileMenuOpen
-            ? "bg-white dark:bg-zinc-950 shadow-soft"
-            : "bg-transparent"
+            ? "bg-background/80 backdrop-blur-md shadow-sm"
+            : "bg-gradient-to-b from-background/90 via-background/50 to-transparent pt-2"
         }`}
       >
 
