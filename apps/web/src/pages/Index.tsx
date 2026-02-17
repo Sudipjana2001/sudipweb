@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { FeaturedCollections } from "@/components/FeaturedCollections";
 import { BestSellers } from "@/components/BestSellers";
 import { PromoBanner } from "@/components/PromoBanner";
+import { FlashSale } from "@/components/FlashSale";
 import { WhyChooseUs } from "@/components/WhyChooseUs";
 import { Testimonials } from "@/components/Testimonials";
 import { InstagramFeed } from "@/components/InstagramFeed";
@@ -20,6 +21,7 @@ const Index = () => {
         <BestSellers />
         <PersonalizedRecommendations />
         <PromoBanner />
+        <FlashSale />
         <WhyChooseUs />
         <Testimonials />
         <InstagramFeed />
