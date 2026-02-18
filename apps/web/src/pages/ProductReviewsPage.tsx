@@ -11,6 +11,7 @@ import {
 import { Star, ThumbsUp, ChevronLeft, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function ProductReviews() {
   const { slug } = useParams<{ slug: string }>();
@@ -49,6 +50,11 @@ export default function ProductReviews() {
 
   return (
     <PageLayout>
+      <SEOHead
+        title={`Reviews for ${product.name}`}
+        description={`Read customer reviews for ${product.name}. See ratings, photos, and verified purchase feedback from Pebric shoppers.`}
+        keywords={`${product.name} reviews, Pebric reviews, pet outfit reviews, customer feedback`}
+      />
       <div className="container mx-auto px-6 py-8">
         {/* Back Button */}
         <button

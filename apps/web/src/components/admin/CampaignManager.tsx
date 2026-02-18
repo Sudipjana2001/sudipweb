@@ -150,7 +150,7 @@ export function CampaignManager() {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="start">Start Date</Label>
                   <Input

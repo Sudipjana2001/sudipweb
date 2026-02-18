@@ -1,8 +1,42 @@
+# Pebric — robots.txt
+
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /admin/chat
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /signup
+Disallow: /profile
+Disallow: /orders
+Disallow: /pets
+Disallow: /wishlist
+Disallow: /tracking
+Disallow: /referrals
+Disallow: /subscriptions
+Disallow: /returns
+Disallow: /loyalty
+Disallow: /compare
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /admin/chat
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /signup
+Disallow: /profile
+Disallow: /orders
+Disallow: /pets
+Disallow: /wishlist
+Disallow: /tracking
+Disallow: /referrals
+Disallow: /subscriptions
+Disallow: /returns
+Disallow: /loyalty
+Disallow: /compare
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +46,21 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/chat
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /signup
+Disallow: /profile
+Disallow: /orders
+Disallow: /pets
+Disallow: /wishlist
+Disallow: /tracking
+Disallow: /referrals
+Disallow: /subscriptions
+Disallow: /returns
+Disallow: /loyalty
+Disallow: /compare
+
+Sitemap: https://pebric.vercel.app/sitemap.xml

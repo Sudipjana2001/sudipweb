@@ -8,6 +8,7 @@ import { useReferralCode, useCreateReferralCode, useReferrals, useApplyReferralC
 import { Copy, Check, Users, Gift, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Referrals() {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ export default function Referrals() {
 
   return (
     <PageLayout>
+      <SEOHead title="Referral Program" description="Share Pebric with friends and earn rewards together." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-medium">Referral Program</h1>

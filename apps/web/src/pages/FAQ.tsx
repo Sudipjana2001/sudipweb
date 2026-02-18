@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useFAQs } from "@/hooks/useFAQs";
 import { ChevronDown, Search, HelpCircle, Package, Truck, RotateCcw, Ruler, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SEOHead } from "@/components/SEOHead";
 
 const categoryConfig: Record<string, { label: string; icon: React.ElementType }> = {
   ordering: { label: "Ordering", icon: Package },
@@ -39,8 +40,27 @@ export default function FAQ() {
     return acc;
   }, {} as Record<string, typeof faqs>);
 
+  const faqJsonLd = useMemo(() => ({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  }), [faqs]);
+
   return (
     <PageLayout>
+      <SEOHead
+        title="Frequently Asked Questions"
+        description="Find answers to common questions about Pebric orders, shipping, returns, sizing, and payments. Get quick help from our FAQ."
+        keywords="Pebric FAQ, pet clothing questions, order help, shipping info, returns policy, sizing guide"
+        jsonLd={faqJsonLd}
+      />
       <section className="bg-muted py-16 md:py-24">
         <div className="container mx-auto px-6 text-center">
           <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">

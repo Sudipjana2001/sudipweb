@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from "@/integrations/client";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Crown, Dog, Cat, Upload, Ruler } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 const speciesOptions = [
   { value: "dog", label: "Dog", icon: Dog },
@@ -331,6 +332,7 @@ export default function Pets() {
 
   return (
     <PageLayout>
+      <SEOHead title="My Pets" description="Manage your pet profiles for personalized size recommendations." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8 flex items-center justify-between">
           <div>

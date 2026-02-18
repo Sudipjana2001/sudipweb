@@ -26,13 +26,13 @@ export function InstagramFeed() {
           }`}
         >
           <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            @TwinningPets
+            @PebricPets
           </p>
           <h2 className="mb-4 font-display text-4xl font-medium tracking-tight text-foreground md:text-5xl">
             Join Our Community
           </h2>
           <p className="font-body text-lg text-muted-foreground">
-            Tag us in your twinning moments for a chance to be featured
+            Tag us in your Pebric moments for a chance to be featured
           </p>
         </div>
 

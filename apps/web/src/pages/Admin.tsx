@@ -41,6 +41,7 @@ import { FeaturesManager } from "@/components/admin/FeaturesManager";
 import { TestimonialsManager } from "@/components/admin/TestimonialsManager";
 import { NewsletterManager } from "@/components/admin/NewsletterManager";
 import { InstagramManager } from "@/components/admin/InstagramManager";
+import { SEOHead } from "@/components/SEOHead";
 
 interface Product {
   id: string;
@@ -899,6 +900,7 @@ export default function Admin() {
 
   return (
     <AdminLayout activeSection={activeSection} onSectionChange={setActiveSection}>
+      <SEOHead title="Admin Dashboard" description="Pebric admin panel." noindex={true} />
       {renderSection()}
     </AdminLayout>
   );

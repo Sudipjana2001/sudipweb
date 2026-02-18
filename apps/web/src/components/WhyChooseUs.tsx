@@ -23,7 +23,7 @@ const DEFAULT_FEATURES = [
   },
   {
     icon_name: "RefreshCw",
-    title: "Perfect Twinning Fit",
+    title: "Perfect Pebric Fit",
     description: "Our sizing system ensures you and your pet match perfectly, every single time.",
   },
   {

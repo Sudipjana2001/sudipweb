@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Contact() {
   const [name, setName] = useState("");
@@ -31,6 +32,18 @@ export default function Contact() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Contact Us"
+        description="Get in touch with the Pebric team. Reach us by email, phone, or visit our store. We respond within 24 hours."
+        keywords="contact Pebric, customer support, pet fashion help, reach us"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          name: "Contact Pebric",
+          description: "Get in touch with the Pebric team.",
+          url: "https://pebric.vercel.app/contact",
+        }}
+      />
       {/* Hero */}
       <section className="bg-muted py-16 md:py-24">
         <div className="container mx-auto px-6 text-center">
@@ -60,8 +73,8 @@ export default function Contact() {
                     </div>
                     <div>
                       <p className="font-body text-sm font-medium">Email</p>
-                      <a href="mailto:hello@twinning.com" className="font-body text-muted-foreground hover:text-foreground">
-                        hello@twinning.com
+                      <a href="mailto:hello@pebric.com" className="font-body text-muted-foreground hover:text-foreground">
+                        hello@pebric.com
                       </a>
                     </div>
                   </div>

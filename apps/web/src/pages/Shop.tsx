@@ -5,6 +5,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { SlidersHorizontal, X, Search, ChevronDown } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -129,6 +130,18 @@ export default function Shop() {
 
   return (
     <PageLayout>
+      <SEOHead
+        title="Shop All Products"
+        description="Browse the complete Pebric collection of premium matching outfits for pets and owners. Filter by collection, price, pet size, and more."
+        keywords="shop pet outfits, buy matching pet clothes, Pebric shop, pet fashion store, dog matching outfits"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Shop All Products — Pebric",
+          description: "Browse the complete Pebric collection of premium matching outfits for pets and owners.",
+          url: "https://pebric.vercel.app/shop",
+        }}
+      />
       {/* Hero */}
       <section className="bg-muted py-16 md:py-24">
         <div className="container mx-auto px-6 text-center">
@@ -141,7 +154,7 @@ export default function Shop() {
           <p className="mx-auto max-w-xl font-body text-lg text-muted-foreground">
             {searchQuery 
               ? `Found ${sortedProducts.length} result${sortedProducts.length !== 1 ? "s" : ""}`
-              : "Discover our complete collection of premium twinning outfits for you and your pet."
+              : "Discover our complete collection of premium Pebric outfits for you and your pet."
             }
           </p>
         </div>

@@ -15,6 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Award, Gift, Star, TrendingUp, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
 import { format } from "date-fns";
+import { SEOHead } from "@/components/SEOHead";
 
 const tierColors = {
   bronze: "from-amber-600 to-amber-800",
@@ -73,6 +74,11 @@ export default function Loyalty() {
 
   return (
     <PageLayout>
+      <SEOHead
+        title="Loyalty Rewards"
+        description="Earn points on every Pebric purchase and unlock exclusive member benefits and discounts."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-medium">Loyalty Rewards</h1>
@@ -83,17 +89,17 @@ export default function Loyalty() {
           {/* Main Points Card */}
           <div className="lg:col-span-2">
             <div className={`rounded-2xl bg-gradient-to-br ${tierColors[tier]} p-8 text-white`}>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm opacity-80">Available Points</p>
-                  <p className="font-display text-5xl font-bold">{points.toLocaleString()}</p>
+                  <p className="font-display text-3xl font-bold sm:text-5xl">{points.toLocaleString()}</p>
                   <p className="mt-1 text-sm opacity-80">
                     Worth ₹{discountValue.toFixed(2)} in discounts
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-6xl">{tierIcons[tier]}</div>
-                  <p className="mt-2 font-display text-xl font-medium capitalize">{tier} Member</p>
+                <div className="text-left sm:text-right">
+                  <div className="text-4xl sm:text-6xl">{tierIcons[tier]}</div>
+                  <p className="mt-2 font-display text-lg font-medium capitalize sm:text-xl">{tier} Member</p>
                 </div>
               </div>
 

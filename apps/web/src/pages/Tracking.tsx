@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrdersWithTracking, useShipmentTracking } from "@/hooks/useShipmentTracking";
 import { Package, Truck, CheckCircle, MapPin, Clock, Search, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SEOHead } from "@/components/SEOHead";
 
 const statusSteps = [
   { key: "confirmed", label: "Order Confirmed", icon: CheckCircle },
@@ -70,6 +71,7 @@ export default function Tracking() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead title="Track Your Order" description="Track your Pebric order shipment status in real-time." noindex={true} />
       <section className="bg-muted py-16">
         <div className="container mx-auto px-6 text-center">
           <p className="mb-3 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">

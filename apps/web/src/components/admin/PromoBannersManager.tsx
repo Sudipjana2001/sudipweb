@@ -246,7 +246,7 @@ export function PromoBannersManager() {
                   id="subheadline"
                   value={newBanner.subheadline}
                   onChange={(e) => setNewBanner({ ...newBanner, subheadline: e.target.value })}
-                  placeholder="On All Twinning Sets"
+                  placeholder="On All Pebric Sets"
                 />
               </div>
 

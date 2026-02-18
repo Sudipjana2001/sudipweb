@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Cart() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
@@ -30,6 +31,11 @@ export default function Cart() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Shopping Cart"
+        description="Review items in your Pebric shopping cart."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-6 md:py-8">
         <h1 className="mb-12 font-display text-4xl font-medium md:text-5xl">Shopping Cart</h1>
 

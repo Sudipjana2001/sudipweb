@@ -3,7 +3,7 @@ import { Instagram, Facebook, Twitter, Youtube, Mail, Phone, MapPin } from "luci
 
 const footerLinks = {
   shop: [
-    { name: "Twinning Sets", href: "/shop" },
+    { name: "Pebric Sets", href: "/shop" },
     { name: "Summer Collection", href: "/summer" },
     { name: "Winter Collection", href: "/winter" },
     { name: "Rainy Collection", href: "/rainy" },
@@ -39,7 +39,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link to="/" className="mb-6 inline-block">
-              <h3 className="font-display text-2xl font-medium">Twinning</h3>
+              <h3 className="font-display text-2xl font-medium">Pebric</h3>
             </Link>
             <p className="mb-6 max-w-xs font-body text-sm leading-relaxed text-background/70">
               Premium matching outfits for pets and their humans. Because the best moments are the ones we share.
@@ -129,7 +129,7 @@ export function Footer() {
               <li className="flex items-start gap-3">
                 <Mail className="mt-0.5 h-4 w-4 text-background/50" />
                 <span className="font-body text-sm text-background/70">
-                  hello@twinning.com
+                  hello@pebric.com
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -153,7 +153,7 @@ export function Footer() {
       <div className="border-t border-background/10">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-6 py-6 md:flex-row">
           <p className="font-body text-xs text-background/50">
-            © {new Date().getFullYear()} Twinning. All rights reserved.
+            © {new Date().getFullYear()} Pebric. All rights reserved.
           </p>
           <div className="flex gap-6">
             {footerLinks.legal.map((link) => (

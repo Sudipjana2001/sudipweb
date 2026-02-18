@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/client";
 import { z } from "zod";
+import { SEOHead } from "@/components/SEOHead";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Invalid email address"),
@@ -80,6 +81,11 @@ export default function Login() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Sign In"
+        description="Sign in to your Pebric account to manage orders, wishlist, and more."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-10 md:py-12">
         <div className="mx-auto max-w-md space-y-8">
           <div className="text-center">

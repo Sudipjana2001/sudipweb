@@ -96,7 +96,7 @@ export function Header() {
             {/* Logo */}
             <Link to="/" className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
               <h1 className="font-display text-2xl font-medium tracking-tight text-foreground">
-                Twinning
+                Pebric
               </h1>
             </Link>
 

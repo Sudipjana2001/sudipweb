@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
+import { SEOHead } from "@/components/SEOHead";
 
 const signupSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
@@ -66,19 +67,24 @@ export default function Signup() {
     }
 
     toast.success("Account created!", {
-      description: "Welcome to the Twinning Club.",
+      description: "Welcome to the Pebric Club.",
     });
     navigate("/");
   };
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Create Account"
+        description="Join Pebric — create your account to access exclusive pet fashion collections and rewards."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-10 md:py-12">
         <div className="mx-auto max-w-md space-y-8">
           <div className="text-center">
             <h1 className="mb-3 font-display text-4xl font-medium">Join the Club</h1>
             <p className="font-body text-muted-foreground">
-              Create an account to start your twinning journey
+              Create an account to start your pebric journey
             </p>
           </div>
 

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Heart, Star, Shield, Truck, RotateCcw, Leaf } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
+import { SEOHead } from "@/components/SEOHead";
 
 const values = [
   {
@@ -23,7 +24,7 @@ const values = [
 
 const stats = [
   { value: "50K+", label: "Happy Families" },
-  { value: "100+", label: "Twinning Designs" },
+  { value: "100+", label: "Pebric Designs" },
   { value: "25+", label: "Countries Served" },
   { value: "4.9", label: "Average Rating" },
 ];
@@ -31,12 +32,17 @@ const stats = [
 export default function About() {
   return (
     <PageLayout>
+      <SEOHead
+        title="About Us — Our Story & Values"
+        description="Learn about Pebric — born from a love for pets and fashion. Discover our story, values, and commitment to premium matching outfits for pets and owners."
+        keywords="about Pebric, pet fashion brand, matching outfit company, our story, pet clothing values"
+      />
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[500px]">
         <div className="absolute inset-0">
           <img
             src="/hero-1.jpg"
-            alt="About Twinning"
+            alt="About Pebric"
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-foreground/50" />
@@ -46,7 +52,7 @@ export default function About() {
             Our Story
           </p>
           <h1 className="mb-6 font-display text-5xl font-medium tracking-tight text-background md:text-7xl">
-            About Twinning
+            About Pebric
           </h1>
           <p className="max-w-2xl font-body text-lg text-background/90">
             Where the bond between pet and owner becomes a fashion statement.
@@ -67,13 +73,13 @@ export default function About() {
               </h2>
               <div className="space-y-4 font-body text-muted-foreground leading-relaxed">
                 <p>
-                  Twinning started with a simple idea: what if pet owners could share more than just love with their furry companions? What if they could share their style too?
+                  Pebric started with a simple idea: what if pet owners could share more than just love with their furry companions? What if they could share their style too?
                 </p>
                 <p>
                   Founded by a pet-loving couple who struggled to find quality matching outfits for themselves and their golden retriever, Luna, we set out to create a brand that celebrates the unique bond between pets and their humans.
                 </p>
                 <p>
-                  Today, we're proud to dress thousands of twinning duos around the world, from sunny California beaches to cozy European winters.
+                  Today, we're proud to dress thousands of matching duos around the world, from sunny California beaches to cozy European winters.
                 </p>
               </div>
             </div>
@@ -161,7 +167,7 @@ export default function About() {
       <section className="py-20 md:py-32">
         <div className="container mx-auto px-6 text-center">
           <h2 className="mb-6 font-display text-4xl font-medium tracking-tight md:text-5xl">
-            Ready to Start Twinning?
+            Ready to Start with Pebric?
           </h2>
           <p className="mb-10 font-body text-lg text-muted-foreground">
             Explore our collections and find the perfect matching look.

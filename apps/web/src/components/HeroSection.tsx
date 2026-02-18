@@ -13,8 +13,8 @@ const fallbackSlides = [
     image_url: "/hero-1.jpg",
     headline: "Where Pets & Style Twin",
     subheadline: "Premium comfort meets perfect design. Matching outfits for you and your best friend.",
-    cta1_text: "Shop Twinning Sets",
-    cta1_link: "/shop?collection=twinning",
+    cta1_text: "Shop Pebric Sets",
+    cta1_link: "/shop?collection=pebric",
     cta2_text: "Explore Collections",
     cta2_link: "/shop",
   },
@@ -45,7 +45,8 @@ export function HeroSection() {
   const navigate = useNavigate();
   
   // Use database slides if available, otherwise use fallback
-  const slides = fallbackSlides;
+  // Use database slides if available, otherwise use fallback
+  const slides = dbSlides && dbSlides.length > 0 ? dbSlides : fallbackSlides;
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5000, stopOnInteraction: false })

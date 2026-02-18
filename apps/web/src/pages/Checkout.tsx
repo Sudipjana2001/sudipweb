@@ -16,6 +16,7 @@ import { useCreatePayment } from "@/hooks/usePayments";
 import { useOrderTotal } from "@/hooks/useOrderTotal";
 import { useRazorpay, RazorpayResponse } from "@/hooks/useRazorpay";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -271,6 +272,11 @@ export default function Checkout() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Checkout"
+        description="Complete your Pebric order securely."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-6 md:py-8">
         <Link 
           to="/cart" 

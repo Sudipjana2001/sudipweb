@@ -6,6 +6,7 @@ import { X, Plus, Check, ShoppingBag } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useCompare } from "@/hooks/useCompare";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -110,6 +111,12 @@ export default function Compare() {
 
   return (
     <PageLayout>
+      <SEOHead
+        title="Compare Products"
+        description="Compare Pebric products side by side — prices, sizes, features, and availability at a glance."
+        keywords="compare pet outfits, product comparison, Pebric compare"
+        noindex={true}
+      />
       <section className="bg-muted py-12 md:py-16">
         <div className="container mx-auto px-6">
           <button 
@@ -140,6 +147,8 @@ export default function Compare() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
+            <>
+            <p className="mb-2 text-center font-body text-xs text-muted-foreground md:hidden">← Swipe to compare →</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] border-collapse table-fixed">
                 <thead>
@@ -234,6 +243,7 @@ export default function Compare() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {compareProducts.length === 0 && !isLoading && (

@@ -144,7 +144,7 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
           <span className="text-sm font-bold text-background">T</span>
         </div>
         <div>
-          <h2 className="text-sm font-semibold tracking-tight">Twinning</h2>
+          <h2 className="text-sm font-semibold tracking-tight">Pebric</h2>
           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Admin Panel</p>
         </div>
       </div>

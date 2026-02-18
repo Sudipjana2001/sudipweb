@@ -301,33 +301,41 @@ export function useLikeGalleryPost() {
         .maybeSingle();
 
       if (existing) {
-        // Unlike
-        await supabase.from("gallery_likes").delete().eq("id", existing.id);
-        // Decrement likes count
-        const { data: post } = await supabase
-          .from("pet_gallery")
-          .select("likes_count")
-          .eq("id", postId)
-          .single();
-        if (post) {
-          await supabase
-            .from("pet_gallery")
-            .update({ likes_count: Math.max(0, (post.likes_count || 0) - 1) })
-            .eq("id", postId);
-        }
+        // Unlike - just remove the like row
+        const { error } = await supabase.from("gallery_likes").delete().eq("id", existing.id);
+        if (error) throw error;
         return { liked: false };
       } else {
-        // Like
-        await supabase.from("gallery_likes").insert({
+        // Like - just insert a like row
+        const { error } = await supabase.from("gallery_likes").insert({
           user_id: user.id,
           gallery_post_id: postId,
         });
+        if (error) throw error;
         return { liked: true };
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["gallery-like"] });
+      queryClient.invalidateQueries({ queryKey: ["gallery-likes-count"] });
     },
+  });
+}
+
+export function usePostLikesCount(postId: string) {
+  return useQuery({
+    queryKey: ["gallery-likes-count", postId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("gallery_likes")
+        .select("*", { count: "exact", head: true })
+        .eq("gallery_post_id", postId);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!postId,
   });
 }
 

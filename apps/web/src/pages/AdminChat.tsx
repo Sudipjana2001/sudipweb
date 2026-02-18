@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { MessageCircle, Send, X, User, Clock } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 function ChatSessionItem({
   session,
@@ -207,6 +208,10 @@ export default function AdminChat() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
+      <Helmet>
+        <title>Live Chat Support | Admin</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Top Bar */}
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
         <h1 className="flex items-center gap-3 text-lg font-semibold">

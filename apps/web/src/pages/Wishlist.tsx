@@ -4,6 +4,7 @@ import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Wishlist() {
   const { wishlistItems, removeFromWishlist } = useCart();
@@ -11,6 +12,7 @@ export default function Wishlist() {
   if (wishlistItems.length === 0) {
     return (
       <PageLayout showNewsletter={false}>
+        <SEOHead title="My Wishlist" description="Your saved favorite items on Pebric." noindex={true} />
         <div className="container mx-auto px-6 py-32 text-center">
           <Heart className="mx-auto mb-6 h-16 w-16 text-muted-foreground" />
           <h1 className="mb-4 font-display text-4xl font-medium">Your Wishlist is Empty</h1>
@@ -27,6 +29,7 @@ export default function Wishlist() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead title="My Wishlist" description="Your saved favorite items on Pebric." noindex={true} />
       <div className="container mx-auto px-6 py-6 md:py-8">
         <h1 className="mb-12 font-display text-4xl font-medium md:text-5xl">My Wishlist</h1>
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Pause, Play, X, Package } from "lucide-react";
 import { format } from "date-fns";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Subscriptions() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export default function Subscriptions() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead title="My Subscriptions" description="Manage your recurring Pebric deliveries." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <div className="flex items-center justify-between mb-8">
           <div>

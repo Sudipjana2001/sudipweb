@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Heart, Minus, Plus, Star, Truck, Shield, RotateCcw } from "lucide-react";
@@ -16,6 +16,7 @@ import { ProductFabricInfo } from "@/components/ProductFabricInfo";
 import { useTrackProductView } from "@/hooks/useRecentlyViewed";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Product() {
   const { slug } = useParams<{ slug: string }>();
@@ -179,8 +180,39 @@ export default function Product() {
     }
   };
 
+  const productJsonLd = useMemo(() => ({
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description || `Premium matching outfit for you and your pet — ${product.name} by Pebric.`,
+    image: images,
+    brand: { "@type": "Brand", name: "Pebric" },
+    offers: {
+      "@type": "Offer",
+      price: product.price,
+      priceCurrency: "INR",
+      availability: "https://schema.org/InStock",
+      url: `https://pebric.vercel.app/product/${slug}`,
+    },
+    ...(totalReviews > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: averageRating.toFixed(1),
+        reviewCount: totalReviews,
+      },
+    }),
+  }), [product, images, slug, averageRating, totalReviews]);
+
   return (
     <PageLayout>
+      <SEOHead
+        title={product.name}
+        description={product.description || `Shop ${product.name} — premium matching outfit for you and your pet at Pebric.`}
+        keywords={`${product.name}, ${product.category?.name || "pet fashion"}, matching outfit, Pebric, pet clothing`}
+        image={product.image_url || "/product-1.jpg"}
+        type="product"
+        jsonLd={productJsonLd}
+      />
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {/* Breadcrumb */}
         <nav className="mb-8 flex items-center gap-2 font-body text-sm text-muted-foreground">

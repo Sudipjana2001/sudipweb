@@ -7,6 +7,7 @@ import { Package, Clock, CheckCircle, Truck, XCircle } from "lucide-react";
 import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { ReorderButton } from "@/components/ReorderButton";
 import { RefundTracker } from "@/components/RefundTracker";
+import { SEOHead } from "@/components/SEOHead";
 
 const statusConfig = {
   pending: { label: "Pending", icon: Clock, color: "text-yellow-500" },
@@ -42,6 +43,7 @@ export default function Orders() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead title="My Orders" description="View and track your Pebric orders." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <h1 className="mb-8 font-display text-4xl font-medium">My Orders</h1>
 

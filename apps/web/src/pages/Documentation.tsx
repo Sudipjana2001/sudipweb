@@ -30,10 +30,16 @@ import {
   MessageSquare
 } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
+import { SEOHead } from "@/components/SEOHead";
 
 const Documentation = () => {
   return (
     <PageLayout>
+      <SEOHead
+        title="Documentation"
+        description="Complete guide to all features available in Pebric — user guide, admin guide, and quick start instructions."
+        keywords="Pebric documentation, user guide, admin guide, features, help"
+      />
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">

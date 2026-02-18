@@ -14,7 +14,7 @@ export function Newsletter() {
     e.preventDefault();
     if (email) {
       setIsSubmitted(true);
-      toast.success("Welcome to the Twinning Club!", {
+      toast.success("Welcome to the Pebric Club!", {
         description: "Check your inbox for exclusive offers.",
       });
       setTimeout(() => {
@@ -38,7 +38,7 @@ export function Newsletter() {
             Stay Connected
           </p>
           <h2 className="mb-4 font-display text-4xl font-medium tracking-tight text-foreground md:text-5xl">
-            Join the Twinning Club
+            Join the Pebric Club
           </h2>
           <p className="mb-10 font-body text-lg text-muted-foreground">
             Be the first to know about new collections, exclusive offers, and pet fashion tips.

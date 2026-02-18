@@ -3,6 +3,7 @@ import { useParams, useLocation } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { ProductCard } from "@/components/ProductCard";
 import { useProductsByCollection, useCollections } from "@/hooks/useProducts";
+import { SEOHead } from "@/components/SEOHead";
 
 type SortOption = "featured" | "price-low" | "price-high" | "newest";
 
@@ -52,6 +53,19 @@ export default function Collection() {
 
   return (
     <PageLayout>
+      <SEOHead
+        title={`${collectionName} — Matching Pet & Owner Outfits`}
+        description={collectionDescription}
+        keywords={`${collectionSlug} pet outfits, ${collectionSlug} matching clothes, Pebric ${collectionSlug}, pet fashion ${collectionSlug}`}
+        image={collectionImage}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: collectionName,
+          description: collectionDescription,
+          url: `https://pebric.vercel.app/collection/${collectionSlug}`,
+        }}
+      />
       {/* Hero Banner */}
       <section className="relative h-[50vh] min-h-[400px]">
         <div className="absolute inset-0">

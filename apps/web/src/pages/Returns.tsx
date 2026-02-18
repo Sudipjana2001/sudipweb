@@ -6,6 +6,7 @@ import { useReturns } from "@/hooks/useReturns";
 import { Badge } from "@/components/ui/badge";
 import { RotateCcw, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { SEOHead } from "@/components/SEOHead";
 
 const statusConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pending: { label: "Pending Review", icon: Clock, color: "bg-yellow-100 text-yellow-700" },
@@ -49,6 +50,7 @@ export default function Returns() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead title="My Returns" description="Track your Pebric return requests." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-medium">My Returns</h1>

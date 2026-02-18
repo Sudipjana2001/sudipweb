@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { SEOHead } from "@/components/SEOHead";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   open: { label: "Open", color: "bg-blue-100 text-blue-700" },
@@ -47,6 +48,11 @@ export default function Support() {
 
   return (
     <PageLayout showNewsletter={false}>
+      <SEOHead
+        title="Help & Support"
+        description="Get help with your Pebric orders, track shipments, request returns, or contact our support team. We're here to assist you."
+        keywords="Pebric support, help center, customer service, order help, contact support"
+      />
       {/* Hero Section */}
       <section className="bg-muted py-16 md:py-20">
         <div className="container mx-auto px-6 text-center">
@@ -96,8 +102,8 @@ export default function Support() {
               </div>
               <div>
                 <p className="font-medium">Email</p>
-                <a href="mailto:support@twinning.com" className="text-sm text-muted-foreground hover:text-foreground">
-                  support@twinning.com
+                <a href="mailto:support@pebric.com" className="text-sm text-muted-foreground hover:text-foreground">
+                  support@pebric.com
                 </a>
               </div>
             </div>

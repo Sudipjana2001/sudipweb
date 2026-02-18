@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User, Mail, Phone, MapPin, Camera, Save, Loader2 } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -112,6 +113,7 @@ export default function Profile() {
 
   return (
     <PageLayout>
+      <SEOHead title="My Profile" description="Manage your Pebric account information and preferences." noindex={true} />
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-2xl mx-auto">
           <h1 className="font-display text-4xl font-medium mb-2">My Profile</h1>

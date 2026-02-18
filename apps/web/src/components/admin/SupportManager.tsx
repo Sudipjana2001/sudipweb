@@ -43,7 +43,7 @@ export function SupportManager() {
   }
 
   return (
-    <div className="grid gap-6 grid-cols-[350px_1fr]">
+    <div className="grid gap-6 grid-cols-1 lg:grid-cols-[350px_1fr]">
       {/* Ticket List */}
       <div className="space-y-2 h-[500px] overflow-y-auto pr-2">
         {tickets.map((ticket) => (
