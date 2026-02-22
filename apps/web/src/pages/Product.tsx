@@ -93,6 +93,32 @@ export default function Product() {
     }
   }, [product?.id, user]);
 
+  const productJsonLd = useMemo(() => {
+    if (!product) return null;
+    return {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      description: product.description || `Premium matching outfit for you and your pet — ${product.name} by Pebric.`,
+      image: images,
+      brand: { "@type": "Brand", name: "Pebric" },
+      offers: {
+        "@type": "Offer",
+        price: product.price,
+        priceCurrency: "INR",
+        availability: "https://schema.org/InStock",
+        url: `https://pebric.vercel.app/product/${slug}`,
+      },
+      ...(totalReviews > 0 && {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: averageRating.toFixed(1),
+          reviewCount: totalReviews,
+        },
+      }),
+    };
+  }, [product, images, slug, averageRating, totalReviews]);
+
   if (isLoading) {
     return (
       <PageLayout>
@@ -179,29 +205,6 @@ export default function Product() {
       toast.success("Added to wishlist!");
     }
   };
-
-  const productJsonLd = useMemo(() => ({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description || `Premium matching outfit for you and your pet — ${product.name} by Pebric.`,
-    image: images,
-    brand: { "@type": "Brand", name: "Pebric" },
-    offers: {
-      "@type": "Offer",
-      price: product.price,
-      priceCurrency: "INR",
-      availability: "https://schema.org/InStock",
-      url: `https://pebric.vercel.app/product/${slug}`,
-    },
-    ...(totalReviews > 0 && {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: averageRating.toFixed(1),
-        reviewCount: totalReviews,
-      },
-    }),
-  }), [product, images, slug, averageRating, totalReviews]);
 
   return (
     <PageLayout>
