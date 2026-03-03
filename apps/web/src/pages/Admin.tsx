@@ -688,6 +688,195 @@ export default function Admin() {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Edit Product Dialog */}
+              <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit Product: {editForm.name}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="edit-name">Product Name *</Label>
+                        <Input
+                          id="edit-name"
+                          value={editForm.name || ""}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-slug">Slug *</Label>
+                        <Input
+                          id="edit-slug"
+                          value={editForm.slug || ""}
+                          onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="edit-price">Price *</Label>
+                        <Input
+                          id="edit-price"
+                          type="number"
+                          value={editForm.price || ""}
+                          onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-original_price">Original Price</Label>
+                        <Input
+                          id="edit-original_price"
+                          type="number"
+                          value={editForm.original_price || ""}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, original_price: e.target.value ? Number(e.target.value) : null })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-description">Description</Label>
+                      <Textarea
+                        id="edit-description"
+                        value={editForm.description || ""}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="edit-collection">Collection</Label>
+                        <select
+                          id="edit-collection"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={editForm.collection_id || ""}
+                          onChange={(e) => setEditForm({ ...editForm, collection_id: e.target.value })}
+                        >
+                          <option value="">Select collection</option>
+                          {collections.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="edit-category">Category</Label>
+                        <select
+                          id="edit-category"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={editForm.category_id || ""}
+                          onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value })}
+                        >
+                          <option value="">Select category</option>
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Product Images</Label>
+                      <div className="mt-2 flex flex-wrap gap-4">
+                        {editForm.images &&
+                          editForm.images.length > 0 &&
+                          editForm.images.map((img, index) => (
+                            <div key={index} className="relative h-20 w-20 overflow-hidden rounded-lg bg-muted group">
+                              <img src={img} alt={`Preview ${index}`} className="h-full w-full object-cover" />
+                              <button
+                                onClick={() => removeImage(index, true)}
+                                className="absolute right-1 top-1 rounded-full bg-background p-1 opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                              {editForm.image_url === img && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-[10px] text-white text-center py-0.5">
+                                  Main
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {uploading ? "Uploading..." : "Upload Images"}
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handleImageUpload(e, true)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="edit-stock">Stock</Label>
+                        <Input
+                          id="edit-stock"
+                          type="number"
+                          min="0"
+                          value={editForm.stock ?? ""}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            setEditForm({
+                              ...editForm,
+                              stock: val,
+                              is_active: val === 0 ? false : (editForm.stock === 0 && val > 0 ? true : editForm.is_active)
+                            });
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-4 pt-6 sm:col-span-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editForm.is_active || false}
+                            onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                          />
+                          <span className="text-sm font-medium">Active Status</span>
+                        </label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={editForm.is_best_seller || false}
+                              onChange={(e) => setEditForm({ ...editForm, is_best_seller: e.target.checked })}
+                            />
+                            <span className="text-sm">Best Seller</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={editForm.is_new_arrival || false}
+                              onChange={(e) => setEditForm({ ...editForm, is_new_arrival: e.target.checked })}
+                            />
+                            <span className="text-sm">New Arrival</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-border">
+                      <Button variant="outline" onClick={() => setEditingProduct(null)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSave}>
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-border">
@@ -714,80 +903,30 @@ export default function Admin() {
                               <img src={product.image_url} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
                             )}
                             <div>
-                              {editingProduct === product.id ? (
-                                <Input
-                                  value={editForm.name || ""}
-                                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                  className="w-36 sm:w-48"
-                                />
-                              ) : (
-                                <span className="font-medium text-sm">{product.name}</span>
-                              )}
+                              <span className="font-medium text-sm">{product.name}</span>
                               <p className="text-xs text-muted-foreground sm:hidden">₹{product.price}</p>
                             </div>
                           </div>
                         </td>
                         <td className="hidden px-4 py-3 sm:table-cell">
-                          {editingProduct === product.id ? (
-                            <Input
-                              type="number"
-                              value={editForm.price || ""}
-                              onChange={(e) => setEditForm({ ...editForm, price: Number(e.target.value) })}
-                              className="w-24"
-                            />
-                          ) : (
-                            <span className="text-sm">₹{product.price}</span>
-                          )}
+                          <span className="text-sm">₹{product.price}</span>
                         </td>
                         <td className="hidden px-4 py-3 md:table-cell">
-                          {editingProduct === product.id ? (
-                            <Input
-                              type="number"
-                              min="0"
-                              value={editForm.stock ?? ""}
-                              onChange={(e) => {
-                                const val = Math.max(0, Number(e.target.value));
-                                setEditForm({
-                                  ...editForm,
-                                  stock: val,
-                                  is_active: val === 0 ? false : (editForm.stock === 0 && val > 0 ? true : editForm.is_active)
-                                });
-                              }}
-                              className="w-20"
-                            />
-                          ) : (
-                            <span className="text-sm">{product.stock}</span>
-                          )}
+                          <span className="text-sm">{product.stock}</span>
                         </td>
                         <td className="px-4 py-3">
-                          {editingProduct === product.id ? (
-                            <button
-                              onClick={() => setEditForm({ ...editForm, is_active: !editForm.is_active })}
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${editForm.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                                }`}
-                            >
-                              {editForm.is_active ? "Active" : "Inactive"}
-                            </button>
-                          ) : (
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${product.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                                }`}
-                            >
-                              {product.is_active ? "Active" : "Inactive"}
-                            </span>
-                          )}
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${product.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                              }`}
+                          >
+                            {product.is_active ? "Active" : "Inactive"}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
-                            {editingProduct === product.id ? (
-                              <Button size="sm" onClick={handleSave}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                             <Button size="sm" variant="destructive" onClick={() => handleDelete(product.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -797,9 +936,9 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
+              </div >
+            </div >
+          </div >
         );
 
       case "orders":
