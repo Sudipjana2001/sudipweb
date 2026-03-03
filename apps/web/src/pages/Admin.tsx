@@ -217,14 +217,19 @@ export default function Admin() {
   const handleSave = async () => {
     if (!editingProduct) return;
 
+    let finalStock = editForm.stock ?? 0;
+    if (finalStock < 0) finalStock = 0;
+    let finalIsActive = editForm.is_active;
+    if (finalStock === 0) finalIsActive = false;
+
     const { error } = await supabase
       .from("products")
       .update({
         name: editForm.name,
         price: editForm.price,
         original_price: editForm.original_price,
-        stock: editForm.stock,
-        is_active: editForm.is_active,
+        stock: finalStock,
+        is_active: finalIsActive,
         is_best_seller: editForm.is_best_seller,
         is_new_arrival: editForm.is_new_arrival,
         image_url: editForm.image_url,
@@ -282,6 +287,11 @@ export default function Admin() {
       return;
     }
 
+    let finalStock = newProduct.stock ?? 0;
+    if (finalStock < 0) finalStock = 0;
+    let finalIsActive = newProduct.is_active;
+    if (finalStock === 0) finalIsActive = false;
+
     const { error } = await supabase.from("products").insert({
       name: newProduct.name,
       slug: newProduct.slug,
@@ -289,13 +299,13 @@ export default function Admin() {
       original_price: newProduct.original_price,
       description: newProduct.description,
       image_url: newProduct.image_url || null,
-      stock: newProduct.stock,
+      stock: finalStock,
       category_id: newProduct.category_id || null,
       collection_id: newProduct.collection_id || null,
       sizes: newProduct.sizes,
       pet_sizes: newProduct.pet_sizes,
       features: newProduct.features,
-      is_active: newProduct.is_active,
+      is_active: finalIsActive,
       is_best_seller: newProduct.is_best_seller,
       is_new_arrival: newProduct.is_new_arrival,
       images: newProduct.images,
@@ -410,9 +420,8 @@ export default function Admin() {
                 <div
                   key={card.label}
                   onClick={card.onClick}
-                  className={`group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br ${card.gradient} p-5 transition-all duration-200 ${
-                    card.clickable ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
-                  }`}
+                  className={`group relative overflow-hidden rounded-xl border border-border bg-gradient-to-br ${card.gradient} p-5 transition-all duration-200 ${card.clickable ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -470,15 +479,14 @@ export default function Admin() {
                           <td className="px-4 py-3 text-sm font-medium">₹{order.total.toFixed(2)}</td>
                           <td className="px-4 py-3">
                             <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                order.status === "delivered"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : order.status === "cancelled"
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${order.status === "delivered"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : order.status === "cancelled"
                                   ? "bg-red-100 text-red-700"
                                   : order.status === "shipped"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-amber-100 text-amber-700"
-                              }`}
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
                             >
                               {order.status}
                             </span>
@@ -642,8 +650,16 @@ export default function Admin() {
                         <Input
                           id="stock"
                           type="number"
+                          min="0"
                           value={newProduct.stock}
-                          onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            setNewProduct({
+                              ...newProduct,
+                              stock: val,
+                              is_active: val === 0 ? false : (newProduct.stock === 0 && val > 0 ? true : newProduct.is_active)
+                            });
+                          }}
                         />
                       </div>
                       <div className="flex items-center gap-2 pt-6">
@@ -727,8 +743,16 @@ export default function Admin() {
                           {editingProduct === product.id ? (
                             <Input
                               type="number"
-                              value={editForm.stock || ""}
-                              onChange={(e) => setEditForm({ ...editForm, stock: Number(e.target.value) })}
+                              min="0"
+                              value={editForm.stock ?? ""}
+                              onChange={(e) => {
+                                const val = Math.max(0, Number(e.target.value));
+                                setEditForm({
+                                  ...editForm,
+                                  stock: val,
+                                  is_active: val === 0 ? false : (editForm.stock === 0 && val > 0 ? true : editForm.is_active)
+                                });
+                              }}
                               className="w-20"
                             />
                           ) : (
@@ -736,13 +760,22 @@ export default function Admin() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              product.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {product.is_active ? "Active" : "Inactive"}
-                          </span>
+                          {editingProduct === product.id ? (
+                            <button
+                              onClick={() => setEditForm({ ...editForm, is_active: !editForm.is_active })}
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${editForm.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                }`}
+                            >
+                              {editForm.is_active ? "Active" : "Inactive"}
+                            </button>
+                          ) : (
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${product.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                }`}
+                            >
+                              {product.is_active ? "Active" : "Inactive"}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">

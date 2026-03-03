@@ -139,13 +139,21 @@ export function useProductById(id: string) {
 }
 
 export function useProductsByCollection(collectionSlug: string) {
+  // Map common frontend route slugs to actual database slugs
+  const slugAliasMap: Record<string, string> = {
+    "summer": "summer-vibes",
+    "winter": "cozy-winter",
+    "rainy": "rainy-days"
+  };
+  const actualSlug = slugAliasMap[collectionSlug] || collectionSlug;
+
   return useQuery({
-    queryKey: ["products", "collection", collectionSlug],
+    queryKey: ["products", "collection", actualSlug],
     queryFn: async () => {
       const { data: collection } = await supabase
         .from("collections")
         .select("id")
-        .eq("slug", collectionSlug)
+        .eq("slug", actualSlug)
         .maybeSingle();
 
       if (!collection) return [];
@@ -164,7 +172,7 @@ export function useProductsByCollection(collectionSlug: string) {
       if (error) throw error;
       return data as Product[];
     },
-    enabled: !!collectionSlug,
+    enabled: !!actualSlug,
   });
 }
 

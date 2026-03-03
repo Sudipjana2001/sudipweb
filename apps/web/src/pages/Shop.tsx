@@ -22,7 +22,7 @@ export default function Shop() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   const [selectedPetSize, setSelectedPetSize] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  
+
   const { data: products = [], isLoading } = useProducts();
   const { data: categories = [] } = useCategories();
 
@@ -40,7 +40,7 @@ export default function Shop() {
     const collection = searchParams.get("collection");
     const sort = searchParams.get("sort");
     const search = searchParams.get("search");
-    
+
     if (collection) setSelectedCollection(collection);
     if (sort) setSortBy(sort);
     if (search !== null) setSearchQuery(search);
@@ -54,9 +54,17 @@ export default function Shop() {
   }, [priceBounds, products.length, priceRange]);
 
   const filteredProducts = products.filter((p) => {
+    // Map common frontend route slugs to actual database slugs
+    const slugAliasMap: Record<string, string> = {
+      "summer": "summer-vibes",
+      "winter": "cozy-winter",
+      "rainy": "rainy-days"
+    };
+    const actualSelectedCollection = slugAliasMap[selectedCollection] || selectedCollection;
+
     const matchesCollection =
-      selectedCollection === "all" || p.collection?.slug === selectedCollection;
-    
+      selectedCollection === "all" || p.collection?.slug === actualSelectedCollection;
+
     const matchesSearch =
       !searchQuery.trim() ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -66,12 +74,12 @@ export default function Shop() {
 
     const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
 
-    const matchesPetSize = selectedPetSize === "all" || 
+    const matchesPetSize = selectedPetSize === "all" ||
       (p.pet_sizes && p.pet_sizes.includes(selectedPetSize));
 
-    const matchesCategory = selectedCategory === "all" || 
+    const matchesCategory = selectedCategory === "all" ||
       p.category?.id === selectedCategory;
-    
+
     return matchesCollection && matchesSearch && matchesPrice && matchesPetSize && matchesCategory;
   });
 
@@ -152,7 +160,7 @@ export default function Shop() {
             {searchQuery ? `Search: "${searchQuery}"` : "All Products"}
           </h1>
           <p className="mx-auto max-w-xl font-body text-lg text-muted-foreground">
-            {searchQuery 
+            {searchQuery
               ? `Found ${sortedProducts.length} result${sortedProducts.length !== 1 ? "s" : ""}`
               : "Discover our complete collection of premium Pebric outfits for you and your pet."
             }
@@ -196,23 +204,6 @@ export default function Shop() {
               <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Desktop Collection Filters */}
-            <div className="hidden items-center gap-2 lg:flex">
-              <span className="font-body text-sm text-muted-foreground">Collection:</span>
-              {["all", "summer", "winter", "rainy"].map((col) => (
-                <button
-                  key={col}
-                  onClick={() => handleCollectionChange(col)}
-                  className={`px-4 py-2 font-body text-sm capitalize transition-colors ${
-                    selectedCollection === col
-                      ? "bg-foreground text-background"
-                      : "bg-muted hover:bg-muted/80"
-                  }`}
-                >
-                  {col === "all" ? "All" : col}
-                </button>
-              ))}
-            </div>
 
             <div className="flex items-center gap-4">
               <span className="font-body text-sm text-muted-foreground">
@@ -240,7 +231,7 @@ export default function Shop() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              
+
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {/* Collection Filter */}
                 <div>
@@ -252,11 +243,10 @@ export default function Shop() {
                       <button
                         key={col}
                         onClick={() => handleCollectionChange(col)}
-                        className={`px-3 py-1.5 font-body text-sm capitalize transition-colors ${
-                          selectedCollection === col
-                            ? "bg-foreground text-background"
-                            : "bg-background border border-border hover:border-foreground"
-                        }`}
+                        className={`px-3 py-1.5 font-body text-sm capitalize transition-colors ${selectedCollection === col
+                          ? "bg-foreground text-background"
+                          : "bg-background border border-border hover:border-foreground"
+                          }`}
                       >
                         {col === "all" ? "All" : col}
                       </button>
@@ -291,11 +281,10 @@ export default function Shop() {
                       <button
                         key={size}
                         onClick={() => setSelectedPetSize(size)}
-                        className={`px-3 py-1.5 font-body text-sm transition-colors ${
-                          selectedPetSize === size
-                            ? "bg-foreground text-background"
-                            : "bg-background border border-border hover:border-foreground"
-                        }`}
+                        className={`px-3 py-1.5 font-body text-sm transition-colors ${selectedPetSize === size
+                          ? "bg-foreground text-background"
+                          : "bg-background border border-border hover:border-foreground"
+                          }`}
                       >
                         {size === "all" ? "All" : size}
                       </button>
@@ -373,8 +362,8 @@ export default function Shop() {
               {/* Products Grid */}
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
                 {sortedProducts.map((product) => (
-                  <ProductCard 
-                    key={product.id} 
+                  <ProductCard
+                    key={product.id}
                     product={product}
                   />
                 ))}
