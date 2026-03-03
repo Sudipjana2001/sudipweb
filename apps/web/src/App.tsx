@@ -23,6 +23,8 @@ import Admin from "./pages/Admin";
 import AdminChat from "./pages/AdminChat";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { AdminRoute, UserRoute } from "@/components/AdminRoute";
 import Orders from "./pages/Orders";
 import Documentation from "./pages/Documentation";
@@ -54,6 +56,8 @@ const App = () => (
               {/* Auth routes - accessible to everyone */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Admin-only routes */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
