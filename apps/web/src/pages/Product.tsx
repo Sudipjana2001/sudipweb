@@ -26,7 +26,7 @@ export default function Product() {
   const { data: reviews = [] } = useProductReviews(product?.id || "");
   const averageRating = getAverageRating(reviews);
   const totalReviews = reviews.length;
-  
+
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPetSize, setSelectedPetSize] = useState("");
@@ -42,10 +42,10 @@ export default function Product() {
   const sizes = product?.sizes || ["XS", "S", "M", "L", "XL"];
   const petSizes = product?.pet_sizes || ["XS", "S", "M", "L"];
   const features = product?.features || ["Premium quality materials", "Matching design for you and your pet", "Machine washable"];
-  
+
   /* Removed numericId hack */
   const inWishlist = isInWishlist(product?.id || "");
-  
+
   const relatedProducts = collectionProducts
     .filter((p) => p.id !== product?.id)
     .slice(0, 3);
@@ -77,7 +77,7 @@ export default function Product() {
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
-    
+
     if (isLeftSwipe && images.length > 1) {
       setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
     }
@@ -217,25 +217,12 @@ export default function Product() {
         jsonLd={productJsonLd}
       />
       <div className="container mx-auto px-4 md:px-6 py-6 md:py-8">
-        {/* Breadcrumb */}
-        <nav className="mb-8 flex items-center gap-2 font-body text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Home</Link>
-          <span>/</span>
-          {product.collection && (
-            <>
-              <Link to={`/collection/${product.collection.slug}`} className="capitalize hover:text-foreground">
-                {product.collection.name}
-              </Link>
-              <span>/</span>
-            </>
-          )}
-          <span className="text-foreground">{product.name}</span>
-        </nav>
+
 
         <div className="grid gap-12 lg:grid-cols-[30%_1fr]">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div 
+            <div
               className="relative aspect-square overflow-hidden bg-muted cursor-grab active:cursor-grabbing touch-pan-y"
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
@@ -256,17 +243,15 @@ export default function Product() {
                 className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 transition-colors hover:bg-background z-10"
               >
                 <Heart
-                  className={`h-5 w-5 ${
-                    inWishlist ? "fill-destructive text-destructive" : "text-foreground"
-                  }`}
+                  className={`h-5 w-5 ${inWishlist ? "fill-destructive text-destructive" : "text-foreground"
+                    }`}
                 />
               </button>
-              
+
               {/* Swipe Hint Overlay */}
-              <div 
-                className={`absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none transition-opacity duration-500 ${
-                  showSwipeHint ? "opacity-100" : "opacity-0"
-                }`}
+              <div
+                className={`absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none transition-opacity duration-500 ${showSwipeHint ? "opacity-100" : "opacity-0"
+                  }`}
               >
                 <div className="bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
                   <p className="text-xs font-medium text-foreground flex items-center gap-2">
@@ -282,11 +267,10 @@ export default function Product() {
                     <button
                       key={idx}
                       onClick={() => setCurrentImage(idx)}
-                      className={`h-2 w-2 rounded-full transition-all ${
-                        currentImage === idx 
-                          ? "bg-foreground w-4" 
+                      className={`h-2 w-2 rounded-full transition-all ${currentImage === idx
+                          ? "bg-foreground w-4"
                           : "bg-foreground/40 hover:bg-foreground/60"
-                      }`}
+                        }`}
                       aria-label={`View image ${idx + 1}`}
                     />
                   ))}
@@ -298,15 +282,14 @@ export default function Product() {
                 <button
                   key={idx}
                   onClick={() => setCurrentImage(idx)}
-                  className={`relative flex-shrink-0 aspect-square w-20 overflow-hidden border-2 transition-colors ${
-                    currentImage === idx ? "border-foreground" : "border-transparent"
-                  }`}
+                  className={`relative flex-shrink-0 aspect-square w-20 overflow-hidden border-2 transition-colors ${currentImage === idx ? "border-foreground" : "border-transparent"
+                    }`}
                 >
-                  <OptimizedImage 
-                    src={img} 
-                    alt={`View ${idx + 1}`} 
+                  <OptimizedImage
+                    src={img}
+                    alt={`View ${idx + 1}`}
                     sizes="80px"
-                    className="h-full w-full object-cover" 
+                    className="h-full w-full object-cover"
                   />
                 </button>
               ))}
@@ -327,15 +310,14 @@ export default function Product() {
                   {[1, 2, 3, 4, 5].map((star) => {
                     const filled = star <= Math.floor(averageRating);
                     const halfFilled = star === Math.ceil(averageRating) && averageRating % 1 >= 0.3 && averageRating % 1 < 0.8;
-                    
+
                     return (
                       <div key={star} className="relative">
                         <Star
-                          className={`h-4 w-4 ${
-                            filled
+                          className={`h-4 w-4 ${filled
                               ? "fill-foreground text-foreground"
                               : "text-muted"
-                          }`}
+                            }`}
                         />
                         {halfFilled && (
                           <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
@@ -371,11 +353,10 @@ export default function Product() {
                     <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
-                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${
-                        selectedSize === size
+                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${selectedSize === size
                           ? "border-foreground bg-foreground text-background"
                           : "border-border hover:border-foreground"
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
@@ -387,9 +368,9 @@ export default function Product() {
                   <label className="font-body text-xs uppercase tracking-[0.2em] text-foreground">
                     Pet Size
                   </label>
-                  <SizeRecommendation 
-                    onSizeSelect={setSelectedPetSize} 
-                    availableSizes={petSizes} 
+                  <SizeRecommendation
+                    onSizeSelect={setSelectedPetSize}
+                    availableSizes={petSizes}
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -397,11 +378,10 @@ export default function Product() {
                     <button
                       key={size}
                       onClick={() => setSelectedPetSize(size)}
-                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${
-                        selectedPetSize === size
+                      className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${selectedPetSize === size
                           ? "border-foreground bg-foreground text-background"
                           : "border-border hover:border-foreground"
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
