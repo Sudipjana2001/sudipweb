@@ -50,14 +50,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     return [];
   });
-  
+
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const { user } = useAuth();
   const [isMerged, setIsMerged] = useState(false);
 
   // Create service instance (memoized per user)
   const cartService = new CartService(user?.id ?? null);
-  
+
   // Sync guest cart to localStorage
   useEffect(() => {
     if (!user) {

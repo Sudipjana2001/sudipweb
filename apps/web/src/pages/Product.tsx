@@ -268,8 +268,8 @@ export default function Product() {
                       key={idx}
                       onClick={() => setCurrentImage(idx)}
                       className={`h-2 w-2 rounded-full transition-all ${currentImage === idx
-                          ? "bg-foreground w-4"
-                          : "bg-foreground/40 hover:bg-foreground/60"
+                        ? "bg-foreground w-4"
+                        : "bg-foreground/40 hover:bg-foreground/60"
                         }`}
                       aria-label={`View image ${idx + 1}`}
                     />
@@ -315,8 +315,8 @@ export default function Product() {
                       <div key={star} className="relative">
                         <Star
                           className={`h-4 w-4 ${filled
-                              ? "fill-foreground text-foreground"
-                              : "text-muted"
+                            ? "fill-foreground text-foreground"
+                            : "text-muted"
                             }`}
                         />
                         {halfFilled && (
@@ -354,8 +354,8 @@ export default function Product() {
                       key={size}
                       onClick={() => setSelectedSize(size)}
                       className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${selectedSize === size
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border hover:border-foreground"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground"
                         }`}
                     >
                       {size}
@@ -379,8 +379,8 @@ export default function Product() {
                       key={size}
                       onClick={() => setSelectedPetSize(size)}
                       className={`h-12 min-w-[48px] border px-4 font-body text-sm transition-colors ${selectedPetSize === size
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border hover:border-foreground"
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground"
                         }`}
                     >
                       {size}
