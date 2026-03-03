@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, Tag, X, Check } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
@@ -22,11 +22,11 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { cartItems, cartTotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const createOrder = useCreateOrder();
-  
+
   const buyNowItem = location.state?.buyNowItem;
-  
+
   // Use buyNowItem if present, otherwise use cartItems
   const checkoutItems = useMemo(() => {
     return buyNowItem ? [buyNowItem] : cartItems;
@@ -42,15 +42,31 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: user?.email || "",
-    firstName: "",
-    lastName: "",
-    address: "",
-    city: "",
-    postalCode: "",
-    country: "",
-    phone: "",
+    firstName: profile?.full_name?.split(' ')[0] || "",
+    lastName: profile?.full_name?.split(' ').slice(1).join(' ') || "",
+    address: profile?.address || "",
+    city: profile?.city || "",
+    postalCode: profile?.postal_code || "",
+    country: profile?.country || "",
+    phone: profile?.phone || "",
   });
-  
+
+  useEffect(() => {
+    if (profile) {
+      const parts = profile.full_name ? profile.full_name.split(' ') : [];
+      setFormData(prev => ({
+        ...prev,
+        firstName: prev.firstName || (parts.length > 0 ? parts[0] : ""),
+        lastName: prev.lastName || (parts.length > 1 ? parts.slice(1).join(' ') : ""),
+        address: prev.address || profile.address || "",
+        city: prev.city || profile.city || "",
+        postalCode: prev.postalCode || profile.postal_code || "",
+        country: prev.country || profile.country || "",
+        phone: prev.phone || profile.phone || "",
+      }));
+    }
+  }, [profile]);
+
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
@@ -99,10 +115,10 @@ export default function Checkout() {
       phone: address.phone,
     }));
   };
-  
+
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
-    
+
     setIsValidating(true);
     const result = await validateCoupon.mutateAsync({
       code: couponCode,
@@ -278,8 +294,8 @@ export default function Checkout() {
         noindex={true}
       />
       <div className="container mx-auto px-6 py-6 md:py-8">
-        <Link 
-          to="/cart" 
+        <Link
+          to="/cart"
           className="mb-8 inline-flex items-center gap-2 font-body text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -514,10 +530,10 @@ export default function Checkout() {
                   <span className="font-display text-lg font-medium">₹{total.toFixed(2)}</span>
                 </div>
 
-                <Button 
-                  type="submit" 
-                  variant="hero" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  variant="hero"
+                  className="w-full"
                   disabled={isSubmitting}
                 >
                   {isSubmitting || isRazorpayLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
