@@ -30,7 +30,8 @@ export default function Product() {
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPetSize, setSelectedPetSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [ownerQuantity, setOwnerQuantity] = useState(1);
+  const [petQuantity, setPetQuantity] = useState(1);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
@@ -145,48 +146,96 @@ export default function Product() {
 
 
   const handleAddToCart = () => {
-    if (!selectedSize || !selectedPetSize) {
+    if ((ownerQuantity > 0 && !selectedSize) || (petQuantity > 0 && !selectedPetSize)) {
       toast.error("Please select sizes", {
-        description: "Please select both your size and your pet's size.",
+        description: "Please select sizes for the items you want to purchase.",
       });
       return;
     }
-    for (let i = 0; i < quantity; i++) {
+
+    // Determine the base base for a full matching set
+    const basePrice = product.price;
+    const halfPrice = Math.round(basePrice * 0.5);
+
+    // Find how many complete matching pairs they bought
+    const pairs = Math.min(
+      selectedSize ? ownerQuantity : 0,
+      selectedPetSize ? petQuantity : 0
+    );
+
+    // Find leftover extra items
+    const extraOwner = selectedSize ? ownerQuantity - pairs : 0;
+    const extraPet = selectedPetSize ? petQuantity - pairs : 0;
+
+    let totalAdded = 0;
+
+    // Add Matching Pairs (Full Price)
+    for (let i = 0; i < pairs; i++) {
       addToCart({
         id: product.id,
-        name: product.name,
-        price: product.price,
+        name: `${product.name} (Matching Set)`,
+        price: basePrice,
         image: product.image_url || "/product-1.jpg",
         ownerSize: selectedSize,
         petSize: selectedPetSize,
         slug: product.slug,
       });
+      totalAdded++;
     }
-    toast.success("Added to cart!", {
-      description: `${quantity}x ${product.name}`,
-    });
+
+    // Add Extra Owner Shirts (50% Price)
+    for (let i = 0; i < extraOwner; i++) {
+      // Use a composite ID or tag the name so it can be grouped separately 
+      // if needed, though CartService groups by ID + Sizes.
+      addToCart({
+        id: product.id,
+        name: `${product.name} (Owner Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: selectedSize,
+        petSize: "N/A",  // Mark as N/A so it clusters as an owner-only item
+        slug: product.slug,
+      });
+      totalAdded++;
+    }
+
+    // Add Extra Pet Shirts (50% Price)
+    for (let i = 0; i < extraPet; i++) {
+      addToCart({
+        id: product.id,
+        name: `${product.name} (Pet Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: "N/A", // Mark as N/A so it clusters as a pet-only item
+        petSize: selectedPetSize,
+        slug: product.slug,
+      });
+      totalAdded++;
+    }
+
+    if (totalAdded > 0) {
+      toast.success("Added to cart!", {
+        description: `Added ${totalAdded} item(s) to your cart.`,
+      });
+    } else {
+      toast.error("No items selected");
+    }
   };
 
   const handleBuyNow = () => {
-    if (!selectedSize || !selectedPetSize) {
+    if ((ownerQuantity > 0 && !selectedSize) || (petQuantity > 0 && !selectedPetSize)) {
       toast.error("Please select sizes", {
-        description: "Please select both your size and your pet's size.",
+        description: "Please select sizes for the items you want to purchase.",
       });
       return;
     }
 
-    const buyNowItem = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image_url || "/product-1.jpg",
-      ownerSize: selectedSize,
-      petSize: selectedPetSize,
-      slug: product.slug,
-      quantity: quantity,
-    };
-
-    navigate("/checkout", { state: { buyNowItem } });
+    // Instead of completely refactoring the checkout to take an array of buyNowItems,
+    // if Buy Now is clicked, we can just add these items to the cart and redirect to checkout
+    handleAddToCart();
+    setTimeout(() => {
+      navigate("/cart"); // Or redirect to checkout if your cart persists across pages
+    }, 500);
   };
 
   const handleWishlist = () => {
@@ -392,43 +441,54 @@ export default function Product() {
 
             {/* Quantity & Add to Cart */}
             <div className="flex flex-col gap-4">
-              {/* Mobile: Quantity Selector */}
-              <div className="flex items-center gap-3 sm:hidden">
-                <div className="flex h-12 w-32 items-center border border-border">
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="flex h-full flex-1 items-center justify-center transition-colors hover:bg-muted"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="w-8 text-center font-body text-sm">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="flex h-full flex-1 items-center justify-center transition-colors hover:bg-muted"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Owner Quantity */}
+                <div>
+                  <label className="mb-2 block font-body text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Owner Qty
+                  </label>
+                  <div className="flex h-12 items-center border border-border">
+                    <button
+                      onClick={() => setOwnerQuantity((q) => Math.max(0, q - 1))}
+                      className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="flex-1 text-center font-body text-sm">{ownerQuantity}</span>
+                    <button
+                      onClick={() => setOwnerQuantity((q) => q + 1)}
+                      className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pet Quantity */}
+                <div>
+                  <label className="mb-2 block font-body text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    Pet Qty
+                  </label>
+                  <div className="flex h-12 items-center border border-border">
+                    <button
+                      onClick={() => setPetQuantity((q) => Math.max(0, q - 1))}
+                      className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="flex-1 text-center font-body text-sm">{petQuantity}</span>
+                    <button
+                      onClick={() => setPetQuantity((q) => q + 1)}
+                      className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Buttons (and Desktop Layout) */}
-              <div className="flex flex-col gap-4 sm:flex-row">
-                {/* Desktop Quantity - Hidden on Mobile */}
-                <div className="hidden h-14 items-center border border-border sm:flex">
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="w-12 text-center font-body">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="flex h-full w-12 items-center justify-center transition-colors hover:bg-muted"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-4 sm:flex-row mt-2">
 
                 <Button onClick={handleAddToCart} variant="hero" className="h-14 w-full flex-1 sm:w-auto">
                   Add to Cart
