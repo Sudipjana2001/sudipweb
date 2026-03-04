@@ -24,6 +24,19 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [touchedEmail, setTouchedEmail] = useState(false);
+
+  // Real-time email validation
+  useEffect(() => {
+    if (touchedEmail) {
+      const emailValidation = signupSchema.shape.email.safeParse(email);
+      if (!emailValidation.success) {
+        setErrors((prev) => ({ ...prev, email: emailValidation.error.errors[0].message }));
+      } else {
+        setErrors((prev) => ({ ...prev, email: undefined }));
+      }
+    }
+  }, [email, touchedEmail]);
 
   useEffect(() => {
     if (user) {
@@ -55,6 +68,7 @@ export default function Signup() {
 
     if (error) {
       if (error.message.includes("already registered")) {
+        setErrors((prev) => ({ ...prev, email: "Email Already Registered. Please use a different email or sign in." }));
         toast.error("Email already registered", {
           description: "Please use a different email or sign in.",
         });
@@ -63,6 +77,16 @@ export default function Signup() {
           description: error.message,
         });
       }
+      return;
+    }
+
+    // Supabase returns a user but with an empty identities array if the email is already taken
+    // when email confirmations are enabled.
+    if (data?.user && data.user.identities && data.user.identities.length === 0) {
+      setErrors((prev) => ({ ...prev, email: "Email Already Registered. Please use a different email or sign in." }));
+      toast.error("Email already registered", {
+        description: "Please use a different email or sign in.",
+      });
       return;
     }
 
@@ -117,8 +141,9 @@ export default function Signup() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouchedEmail(true)}
                 placeholder="your@email.com"
-                className={`h-12 ${errors.email ? "border-destructive" : ""}`}
+                className={`h-12 ${errors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 required
               />
               {errors.email && (
