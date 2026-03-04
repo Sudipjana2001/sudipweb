@@ -179,6 +179,7 @@ export default function Checkout() {
       tax,
       total,
       shippingAddress: buildShippingAddress(),
+      clearUserCart: !buyNowItem,
     });
 
     if (order) {
@@ -477,6 +478,7 @@ export default function Checkout() {
                         </span>
                       </div>
                       <button
+                        type="button"
                         onClick={handleRemoveCoupon}
                         className="text-muted-foreground hover:text-foreground"
                       >

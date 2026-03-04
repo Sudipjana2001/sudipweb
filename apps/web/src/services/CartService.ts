@@ -167,26 +167,29 @@ export class CartService {
   ): Promise<void> {
     if (!this.userId) return;
 
-    let query = supabase
+    const { data: candidates, error: fetchError } = await supabase
       .from('cart_items')
-      .update({ quantity })
+      .select('id, size, pet_size')
       .eq('user_id', this.userId)
       .eq('product_id', productId as string);
 
-    // Handle N/A size matching using PostgREST OR syntax
-    if (ownerSize === 'N/A') {
-      query = query.or('size.is.null,size.eq.,size.eq.N/A');
-    } else {
-      query = query.eq('size', ownerSize);
-    }
+    if (fetchError) throw fetchError;
+    if (!candidates || candidates.length === 0) return;
 
-    if (petSize === 'N/A') {
-      query = query.or('pet_size.is.null,pet_size.eq.,pet_size.eq.N/A');
-    } else {
-      query = query.eq('pet_size', petSize);
-    }
+    const idsToUpdate = candidates
+      .filter(
+        (c) =>
+          CartItemModel.sizesMatch(ownerSize, c.size) &&
+          CartItemModel.sizesMatch(petSize, c.pet_size)
+      )
+      .map((c) => c.id);
 
-    const { error } = await query;
+    if (idsToUpdate.length === 0) return;
+
+    const { error } = await supabase
+      .from('cart_items')
+      .update({ quantity })
+      .in('id', idsToUpdate);
     if (error) throw error;
   }
 

@@ -175,6 +175,7 @@ interface CreateOrderInput {
   shippingAddress: ShippingAddress;
   billingAddress?: BillingAddress;
   notes?: string;
+  clearUserCart?: boolean;
 }
 
 export function useCreateOrder() {
@@ -222,10 +223,22 @@ export function useCreateOrder() {
         .from("order_items")
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // Best-effort rollback to avoid orphan orders when items insert fails.
+        await supabase.from("orders").delete().eq("id", order.id);
+        throw itemsError;
+      }
 
       // Clear cart
-      await supabase.from("cart_items").delete().eq("user_id", user.id);
+      if (input.clearUserCart !== false) {
+        const { error: clearCartError } = await supabase
+          .from("cart_items")
+          .delete()
+          .eq("user_id", user.id);
+        if (clearCartError) {
+          console.warn("Order placed but failed to clear cart items:", clearCartError);
+        }
+      }
 
       return order;
     },

@@ -25,12 +25,19 @@ export function usePushSubscription() {
       });
 
       const subscriptionJson = subscription.toJSON();
+      const endpoint = subscriptionJson.endpoint;
+      const p256dh = subscriptionJson.keys?.p256dh;
+      const auth = subscriptionJson.keys?.auth;
+
+      if (!endpoint || !p256dh || !auth) {
+        throw new Error("Invalid push subscription payload from browser");
+      }
 
       const { error } = await supabase.from("push_subscriptions").upsert({
         user_id: user.id,
-        endpoint: subscriptionJson.endpoint!,
-        p256dh: subscriptionJson.keys?.p256dh!,
-        auth: subscriptionJson.keys?.auth!,
+        endpoint,
+        p256dh,
+        auth,
       });
 
       if (error) throw error;
