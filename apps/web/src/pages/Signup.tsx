@@ -49,7 +49,7 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, name);
+    const { data, error } = await signUp(email, password, name);
 
     setIsLoading(false);
 
@@ -66,10 +66,17 @@ export default function Signup() {
       return;
     }
 
-    toast.success("Account created!", {
-      description: "Welcome to the Pebric Club.",
-    });
-    navigate("/");
+    if (data?.session === null) {
+      toast.success("Account created!", {
+        description: "Please check your email to confirm your registration.",
+      });
+      navigate("/login");
+    } else {
+      toast.success("Account created!", {
+        description: "Welcome to the Pebric Club.",
+      });
+      navigate("/");
+    }
   };
 
   return (

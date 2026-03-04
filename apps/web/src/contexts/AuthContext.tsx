@@ -20,7 +20,7 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   isAdmin: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ data: any; error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    return { error };
+    return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
