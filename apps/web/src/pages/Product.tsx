@@ -145,9 +145,9 @@ export default function Product() {
 
 
   const handleAddToCart = () => {
-    if (!selectedSize && !selectedPetSize) {
-      toast.error("Please select a size", {
-        description: "Choose either your size or your pet's size.",
+    if (!selectedSize || !selectedPetSize) {
+      toast.error("Please select sizes", {
+        description: "Please select both your size and your pet's size.",
       });
       return;
     }
@@ -157,8 +157,8 @@ export default function Product() {
         name: product.name,
         price: product.price,
         image: product.image_url || "/product-1.jpg",
-        ownerSize: selectedSize || "N/A",
-        petSize: selectedPetSize || "N/A",
+        ownerSize: selectedSize,
+        petSize: selectedPetSize,
         slug: product.slug,
       });
     }
@@ -168,9 +168,9 @@ export default function Product() {
   };
 
   const handleBuyNow = () => {
-    if (!selectedSize && !selectedPetSize) {
-      toast.error("Please select a size", {
-        description: "Choose either your size or your pet's size.",
+    if (!selectedSize || !selectedPetSize) {
+      toast.error("Please select sizes", {
+        description: "Please select both your size and your pet's size.",
       });
       return;
     }
@@ -180,8 +180,8 @@ export default function Product() {
       name: product.name,
       price: product.price,
       image: product.image_url || "/product-1.jpg",
-      ownerSize: selectedSize || "N/A",
-      petSize: selectedPetSize || "N/A",
+      ownerSize: selectedSize,
+      petSize: selectedPetSize,
       slug: product.slug,
       quantity: quantity,
     };
