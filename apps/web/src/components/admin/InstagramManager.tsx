@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAllInstagramPosts } from "@/hooks/useInstagramPosts";
 import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,7 +85,7 @@ export function InstagramManager() {
       return;
     }
 
-    const { error } = await supabase.from("instagram_posts").insert({
+    const { error } = await fromTable("instagram_posts").insert({
       image_url: newPost.image_url,
       caption: newPost.caption || null,
       post_url: newPost.post_url,
@@ -127,8 +128,7 @@ export function InstagramManager() {
   const handleSave = async () => {
     if (!editingId) return;
 
-    const { error } = await supabase
-      .from("instagram_posts")
+    const { error } = await fromTable("instagram_posts")
       .update({
         image_url: editForm.image_url,
         caption: editForm.caption || null,
@@ -153,7 +153,7 @@ export function InstagramManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this post?")) return;
 
-    const { error } = await supabase.from("instagram_posts").delete().eq("id", id);
+    const { error } = await fromTable("instagram_posts").delete().eq("id", id);
 
     if (error) {
       toast.error("Failed to delete post");
@@ -176,12 +176,10 @@ export function InstagramManager() {
     const targetPost = posts[targetIndex];
 
     await Promise.all([
-      supabase
-        .from("instagram_posts")
+      fromTable("instagram_posts")
         .update({ display_order: targetPost.display_order })
         .eq("id", currentPost.id),
-      supabase
-        .from("instagram_posts")
+      fromTable("instagram_posts")
         .update({ display_order: currentPost.display_order })
         .eq("id", targetPost.id),
     ]);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface Testimonial {
   id: string;
@@ -19,8 +19,7 @@ export function useTestimonials() {
   return useQuery({
     queryKey: ["testimonials"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("testimonials_cms")
+      const { data, error } = await fromTable("testimonials_cms")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -36,8 +35,7 @@ export function useAllTestimonials() {
   return useQuery({
     queryKey: ["all-testimonials"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("testimonials_cms")
+      const { data, error } = await fromTable("testimonials_cms")
         .select("*")
         .order("display_order", { ascending: true });
 

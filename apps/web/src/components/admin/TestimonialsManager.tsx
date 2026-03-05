@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAllTestimonials } from "@/hooks/useTestimonials";
 import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +91,7 @@ export function TestimonialsManager() {
       return;
     }
 
-    const { error } = await supabase.from("testimonials_cms").insert({
+    const { error } = await fromTable("testimonials_cms").insert({
       customer_name: newTestimonial.customer_name,
       location: newTestimonial.location || null,
       rating: newTestimonial.rating,
@@ -139,8 +140,7 @@ export function TestimonialsManager() {
   const handleSave = async () => {
     if (!editingId) return;
 
-    const { error } = await supabase
-      .from("testimonials_cms")
+    const { error } = await fromTable("testimonials_cms")
       .update({
         customer_name: editForm.customer_name,
         location: editForm.location || null,
@@ -167,7 +167,7 @@ export function TestimonialsManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this testimonial?")) return;
 
-    const { error } = await supabase.from("testimonials_cms").delete().eq("id", id);
+    const { error } = await fromTable("testimonials_cms").delete().eq("id", id);
 
     if (error) {
       toast.error("Failed to delete testimonial");
@@ -190,12 +190,10 @@ export function TestimonialsManager() {
     const targetTestimonial = testimonials[targetIndex];
 
     await Promise.all([
-      supabase
-        .from("testimonials_cms")
+      fromTable("testimonials_cms")
         .update({ display_order: targetTestimonial.display_order })
         .eq("id", currentTestimonial.id),
-      supabase
-        .from("testimonials_cms")
+      fromTable("testimonials_cms")
         .update({ display_order: currentTestimonial.display_order })
         .eq("id", targetTestimonial.id),
     ]);

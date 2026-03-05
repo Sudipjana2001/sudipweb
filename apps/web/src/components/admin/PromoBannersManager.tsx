@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAllPromoBanners } from "@/hooks/usePromoBanners";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,7 @@ export function PromoBannersManager() {
       return;
     }
 
-    const { error } = await supabase.from("promo_banners").insert({
+    const { error } = await fromTable("promo_banners").insert({
       badge_text: newBanner.badge_text,
       headline: newBanner.headline,
       subheadline: newBanner.subheadline || null,
@@ -122,8 +122,7 @@ export function PromoBannersManager() {
   const handleSave = async () => {
     if (!editingId) return;
 
-    const { error } = await supabase
-      .from("promo_banners")
+    const { error } = await fromTable("promo_banners")
       .update({
         badge_text: editForm.badge_text,
         headline: editForm.headline,
@@ -153,7 +152,7 @@ export function PromoBannersManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this promo banner?")) return;
 
-    const { error } = await supabase.from("promo_banners").delete().eq("id", id);
+    const { error } = await fromTable("promo_banners").delete().eq("id", id);
 
     if (error) {
       toast.error("Failed to delete promo banner");
@@ -176,12 +175,10 @@ export function PromoBannersManager() {
     const targetBanner = banners[targetIndex];
 
     await Promise.all([
-      supabase
-        .from("promo_banners")
+      fromTable("promo_banners")
         .update({ display_order: targetBanner.display_order })
         .eq("id", currentBanner.id),
-      supabase
-        .from("promo_banners")
+      fromTable("promo_banners")
         .update({ display_order: currentBanner.display_order })
         .eq("id", targetBanner.id),
     ]);

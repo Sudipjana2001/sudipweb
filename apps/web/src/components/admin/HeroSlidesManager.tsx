@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useAllHeroSlides } from "@/hooks/useHeroSlides";
 import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +98,7 @@ export function HeroSlidesManager() {
       return;
     }
 
-    const { error } = await supabase.from("hero_slides").insert({
+    const { error } = await fromTable("hero_slides").insert({
       image_url: newSlide.image_url,
       headline: newSlide.headline,
       subheadline: newSlide.subheadline || null,
@@ -149,8 +150,7 @@ export function HeroSlidesManager() {
   const handleSave = async () => {
     if (!editingId) return;
 
-    const { error } = await supabase
-      .from("hero_slides")
+    const { error } = await fromTable("hero_slides")
       .update({
         image_url: editForm.image_url,
         headline: editForm.headline,
@@ -178,7 +178,7 @@ export function HeroSlidesManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this slide?")) return;
 
-    const { error } = await supabase.from("hero_slides").delete().eq("id", id);
+    const { error } = await fromTable("hero_slides").delete().eq("id", id);
 
     if (error) {
       toast.error("Failed to delete slide");
@@ -202,12 +202,10 @@ export function HeroSlidesManager() {
 
     // Swap display_order
     await Promise.all([
-      supabase
-        .from("hero_slides")
+      fromTable("hero_slides")
         .update({ display_order: targetSlide.display_order })
         .eq("id", currentSlide.id),
-      supabase
-        .from("hero_slides")
+      fromTable("hero_slides")
         .update({ display_order: currentSlide.display_order })
         .eq("id", targetSlide.id),
     ]);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface PromoBanner {
   id: string;
@@ -22,8 +22,7 @@ export function usePromoBanners() {
   return useQuery({
     queryKey: ["promo-banners"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("promo_banners")
+      const { data, error } = await fromTable("promo_banners")
         .select("*")
         .eq("is_active", true)
         .gte("end_date", new Date().toISOString()) // Only get banners that haven't expired
@@ -40,8 +39,7 @@ export function useAllPromoBanners() {
   return useQuery({
     queryKey: ["all-promo-banners"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("promo_banners")
+      const { data, error } = await fromTable("promo_banners")
         .select("*")
         .order("display_order", { ascending: true });
 

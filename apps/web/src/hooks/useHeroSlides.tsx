@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface HeroSlide {
   id: string;
@@ -20,8 +20,7 @@ export function useHeroSlides() {
   return useQuery({
     queryKey: ["hero-slides"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hero_slides")
+      const { data, error } = await fromTable("hero_slides")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -37,8 +36,7 @@ export function useAllHeroSlides() {
   return useQuery({
     queryKey: ["all-hero-slides"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hero_slides")
+      const { data, error } = await fromTable("hero_slides")
         .select("*")
         .order("display_order", { ascending: true });
 

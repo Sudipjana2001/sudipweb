@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNewsletterConfig } from "@/hooks/useNewsletterConfig";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,18 +38,17 @@ export function NewsletterManager() {
   }, [config]);
 
   const handleSave = async () => {
-    if (!config) return; // Should create if not exists, but migration creates default
+    const payload = {
+      badge_text: formData.badge_text,
+      headline: formData.headline,
+      description: formData.description,
+      is_active: formData.is_active,
+      updated_at: new Date().toISOString(),
+    };
 
-    const { error } = await supabase
-      .from("newsletter_config")
-      .update({
-        badge_text: formData.badge_text,
-        headline: formData.headline,
-        description: formData.description,
-        is_active: formData.is_active,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", config.id);
+    const { error } = config
+      ? await fromTable("newsletter_config").update(payload).eq("id", config.id)
+      : await fromTable("newsletter_config").insert(payload);
 
     if (error) {
       toast.error("Failed to update newsletter configuration");

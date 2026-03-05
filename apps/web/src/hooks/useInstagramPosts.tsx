@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface InstagramPost {
   id: string;
@@ -17,8 +17,7 @@ export function useInstagramPosts() {
   return useQuery({
     queryKey: ["instagram-posts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("instagram_posts")
+      const { data, error } = await fromTable("instagram_posts")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -34,8 +33,7 @@ export function useAllInstagramPosts() {
   return useQuery({
     queryKey: ["all-instagram-posts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("instagram_posts")
+      const { data, error } = await fromTable("instagram_posts")
         .select("*")
         .order("display_order", { ascending: true });
 

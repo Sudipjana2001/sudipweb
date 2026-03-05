@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAllFeatures } from "@/hooks/useFeatures";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +52,7 @@ export function FeaturesManager() {
       return;
     }
 
-    const { error } = await supabase.from("features").insert({
+    const { error } = await fromTable("features").insert({
       icon_name: newFeature.icon_name,
       title: newFeature.title,
       description: newFeature.description,
@@ -92,8 +92,7 @@ export function FeaturesManager() {
   const handleSave = async () => {
     if (!editingId) return;
 
-    const { error } = await supabase
-      .from("features")
+    const { error } = await fromTable("features")
       .update({
         icon_name: editForm.icon_name,
         title: editForm.title,
@@ -117,7 +116,7 @@ export function FeaturesManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this feature?")) return;
 
-    const { error } = await supabase.from("features").delete().eq("id", id);
+    const { error } = await fromTable("features").delete().eq("id", id);
 
     if (error) {
       toast.error("Failed to delete feature");
@@ -140,12 +139,10 @@ export function FeaturesManager() {
     const targetFeature = features[targetIndex];
 
     await Promise.all([
-      supabase
-        .from("features")
+      fromTable("features")
         .update({ display_order: targetFeature.display_order })
         .eq("id", currentFeature.id),
-      supabase
-        .from("features")
+      fromTable("features")
         .update({ display_order: currentFeature.display_order })
         .eq("id", targetFeature.id),
     ]);

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/client";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface Feature {
   id: string;
@@ -16,8 +16,7 @@ export function useFeatures() {
   return useQuery({
     queryKey: ["features"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("features")
+      const { data, error } = await fromTable("features")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
@@ -33,8 +32,7 @@ export function useAllFeatures() {
   return useQuery({
     queryKey: ["all-features"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("features")
+      const { data, error } = await fromTable("features")
         .select("*")
         .order("display_order", { ascending: true });
 
