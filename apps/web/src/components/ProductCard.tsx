@@ -153,7 +153,7 @@ export function ProductCard({ product }: ProductCardProps) {
             {category}
           </p>
           <h3
-            className="min-h-[3.5rem] overflow-hidden font-display text-lg font-medium leading-tight text-foreground line-clamp-2"
+            className="h-[45px] overflow-hidden font-display text-lg font-medium leading-tight text-foreground line-clamp-2"
           >
             {product.name}
           </h3>
