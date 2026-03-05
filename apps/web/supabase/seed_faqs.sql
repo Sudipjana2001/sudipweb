@@ -27,7 +27,7 @@ INSERT INTO faqs (category, question, answer, sort_order, is_active) VALUES
 
 -- Payments
 ('payments', 'What payment methods do you accept?', 'We accept UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, Net Banking, and Cash on Delivery (COD).', 16, true),
-('payments', 'Is it safe to use my card on your website?', 'Yes, all payments are processed through Razorpay, which is 100% secure and encrypted. We do not store your card details.', 17, true),
+('payments', 'Is it safe to use my card on your website?', 'Yes, all payments are processed through Paytm''s secure and encrypted gateway. We do not store your card details.', 17, true),
 ('payments', 'Is Cash on Delivery (COD) available?', 'Yes, COD is available for most pin codes. There is no extra charge for COD orders.', 18, true),
 ('payments', 'My payment failed but money was deducted. What do I do?', 'Please wait for 24 hours as it is usually auto-refunded. If not, contact our support with the transaction ID.', 19, true),
 

@@ -1,8 +1,8 @@
-import { Banknote, Smartphone } from "lucide-react";
+import { Banknote, CreditCard, Landmark, Smartphone, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export type PaymentMethod = "cod" | "upi";
+export type PaymentMethod = "cod" | "upi" | "card" | "netbanking" | "wallet";
 
 interface PaymentMethodSelectorProps {
   selected: PaymentMethod;
@@ -16,8 +16,29 @@ const paymentMethods = [
     id: "upi" as const,
     name: "UPI",
     icon: Smartphone,
-    description: "GPay, PhonePe, Paytm & more",
+    description: "Any UPI app (GPay, PhonePe, Paytm, BHIM, etc.)",
     badge: "Recommended",
+  },
+  {
+    id: "card" as const,
+    name: "Credit/Debit Card",
+    icon: CreditCard,
+    description: "Visa, Mastercard, RuPay and more",
+    badge: null,
+  },
+  {
+    id: "netbanking" as const,
+    name: "Net Banking",
+    icon: Landmark,
+    description: "Pay directly from your bank account",
+    badge: null,
+  },
+  {
+    id: "wallet" as const,
+    name: "Wallet",
+    icon: WalletCards,
+    description: "Use your wallet balance for faster checkout",
+    badge: null,
   },
   {
     id: "cod" as const,
@@ -99,9 +120,9 @@ export function PaymentMethodSelector({
         ))}
       </div>
 
-      {selected === "upi" && (
+      {selected !== "cod" && (
         <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-          You'll be redirected to Razorpay to complete your UPI payment securely.
+          You'll be redirected to Paytm gateway to complete your payment securely.
         </p>
       )}
 

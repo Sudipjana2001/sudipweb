@@ -14,9 +14,19 @@ import { SavedAddressSelector } from "@/components/SavedAddressSelector";
 import { PaymentMethodSelector, PaymentMethod } from "@/components/PaymentMethodSelector";
 import { useCreatePayment } from "@/hooks/usePayments";
 import { useOrderTotal } from "@/hooks/useOrderTotal";
-import { useRazorpay, RazorpayResponse } from "@/hooks/useRazorpay";
+import { usePaytm, PaytmPaymentResponse } from "@/hooks/usePaytm";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+
+const mapPaytmModeToMethod = (mode?: string | null): PaymentMethod | null => {
+  if (!mode) return null;
+  const normalized = mode.toUpperCase();
+  if (normalized.includes("UPI")) return "upi";
+  if (normalized.includes("CARD") || normalized.includes("CC") || normalized.includes("DC")) return "card";
+  if (normalized.includes("NB") || normalized.includes("NETBANKING")) return "netbanking";
+  if (normalized.includes("WALLET")) return "wallet";
+  return null;
+};
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -75,7 +85,7 @@ export default function Checkout() {
   const validateCoupon = useValidateCoupon();
   const applyCouponMutation = useApplyCoupon();
   const createPayment = useCreatePayment();
-  const { openCheckout, verifyPayment, isLoading: isRazorpayLoading } = useRazorpay();
+  const { openCheckout, verifyPayment, isLoading: isPaytmLoading } = usePaytm();
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
@@ -232,16 +242,25 @@ export default function Checkout() {
       return;
     }
 
-    // UPI flow — Razorpay checkout
+    // Online payment flow — Paytm checkout
     openCheckout({
       amount: total,
-      customerName: `${formData.firstName} ${formData.lastName}`,
       customerEmail: formData.email,
       customerPhone: formData.phone,
-      onSuccess: async (response: RazorpayResponse) => {
+      customerId: user.id,
+      onSuccess: async (response: PaytmPaymentResponse) => {
         try {
-          const verified = await verifyPayment(response);
-          if (!verified) {
+          const orderId = response.ORDERID;
+          if (!orderId) {
+            toast.error("Payment verification failed", {
+              description: "Order reference missing from gateway response.",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          const verification = await verifyPayment(orderId);
+          if (!verification.verified) {
             toast.error("Payment verification failed", {
               description: "Please contact support if amount was deducted.",
             });
@@ -249,9 +268,13 @@ export default function Checkout() {
             return;
           }
 
-          await finalizeOrder(response.razorpay_payment_id, "upi");
+          const transactionId = verification.transactionId || response.TXNID;
+          const resolvedMethod =
+            mapPaytmModeToMethod(verification.paymentMode || response.PAYMENTMODE) || paymentMethod;
+
+          await finalizeOrder(transactionId || undefined, resolvedMethod);
           toast.success("Payment successful! Order placed.", {
-            description: `Transaction ID: ${response.razorpay_payment_id}`,
+            description: transactionId ? `Transaction ID: ${transactionId}` : "Paid via Paytm",
           });
           navigate("/orders");
         } catch (error) {
@@ -538,7 +561,7 @@ export default function Checkout() {
                   className="w-full"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting || isRazorpayLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
+                  {isSubmitting || isPaytmLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
                 </Button>
 
                 {!user && (
