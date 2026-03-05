@@ -65,7 +65,7 @@ export default function Cart() {
                     </Link>
                     <div className="flex-1">
                       <Link to={`/product/${item.slug}`}>
-                        <h3 className="font-display text-lg font-medium hover:underline">{item.name}</h3>
+                        <h3 className="font-display text-lg font-medium hover:underline line-clamp-2">{item.name}</h3>
                       </Link>
                       <p className="font-body text-sm text-muted-foreground">
                         Size: {item.ownerSize} / Pet: {item.petSize}

@@ -51,7 +51,7 @@ export default function Wishlist() {
                   {item.category}
                 </p>
                 <Link to={`/product/${item.slug}`}>
-                  <h3 className="font-display text-lg font-medium hover:underline">{item.name}</h3>
+                  <h3 className="font-display text-lg font-medium hover:underline line-clamp-2">{item.name}</h3>
                 </Link>
                 <p className="font-body text-base font-medium">₹{item.price}</p>
               </div>

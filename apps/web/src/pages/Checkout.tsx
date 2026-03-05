@@ -472,7 +472,7 @@ export default function Checkout() {
                         <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-body text-sm font-medium">{item.name}</h3>
+                        <h3 className="font-body text-sm font-medium line-clamp-2">{item.name}</h3>
                         <p className="font-body text-xs text-muted-foreground">
                           Size: {item.ownerSize} / Pet: {item.petSize}
                         </p>
