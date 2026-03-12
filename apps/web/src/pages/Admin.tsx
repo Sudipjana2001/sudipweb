@@ -42,6 +42,7 @@ import { TestimonialsManager } from "@/components/admin/TestimonialsManager";
 import { NewsletterManager } from "@/components/admin/NewsletterManager";
 import { InstagramManager } from "@/components/admin/InstagramManager";
 import { SEOHead } from "@/components/SEOHead";
+import { useRealtimeChannel } from "@/hooks/useRealtime";
 
 interface Product {
   id: string;
@@ -82,6 +83,7 @@ export default function Admin() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const realtimeRefreshTimer = useRef<number | null>(null);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Product>>({});
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -124,6 +126,22 @@ export default function Admin() {
       fetchData();
     }
   }, [isAdmin]);
+
+  useRealtimeChannel(
+    "admin-orders-products-realtime",
+    isAdmin
+      ? [
+          { table: "orders", event: "*" },
+          { table: "products", event: "*" },
+        ]
+      : [],
+    () => {
+      if (!isAdmin) return;
+      if (realtimeRefreshTimer.current) window.clearTimeout(realtimeRefreshTimer.current);
+      realtimeRefreshTimer.current = window.setTimeout(() => fetchData(), 250);
+    },
+    isAdmin,
+  );
 
   const fetchData = async () => {
     if (products.length === 0) setIsLoading(true);
@@ -369,7 +387,7 @@ export default function Admin() {
   // ─── Stat Cards ─────────────────────────────────────────────
   const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
   const activeProducts = products.filter((p) => p.is_active).length;
-  const pendingOrders = orders.filter((o) => o.status === "pending").length;
+  const newOrders = orders.filter((o) => o.status === "confirmed").length;
 
   const statsCards = [
     {
@@ -383,7 +401,7 @@ export default function Admin() {
     {
       label: "Total Orders",
       value: orders.length,
-      sub: `${pendingOrders} pending`,
+      sub: `${newOrders} new`,
       icon: <ShoppingBag className="h-5 w-5" />,
       gradient: "from-amber-500/10 to-amber-600/5",
       iconColor: "text-amber-600",
@@ -485,7 +503,11 @@ export default function Admin() {
                                   ? "bg-red-100 text-red-700"
                                   : order.status === "shipped"
                                     ? "bg-blue-100 text-blue-700"
-                                    : "bg-amber-100 text-amber-700"
+                                    : order.status === "processing"
+                                      ? "bg-purple-100 text-purple-700"
+                                      : order.status === "confirmed"
+                                        ? "bg-indigo-100 text-indigo-700"
+                                        : "bg-amber-100 text-amber-700"
                                 }`}
                             >
                               {order.status}

@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageCircle, Send } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/client";
+import { toast } from "sonner";
 
 const statusOptions = [
   { value: "open", label: "Open" },
@@ -98,8 +100,10 @@ function TicketDetail({
 }) {
   const { data: messages = [] } = useTicketMessages(ticketId);
   const addMessage = useAddTicketMessage();
+  const updateTicketStatus = useUpdateTicketStatus();
   const [reply, setReply] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -114,22 +118,74 @@ function TicketDetail({
     setReply("");
   };
 
+  const isCancelRequest =
+    !!ticket.order_id && ticket.subject.toLowerCase().startsWith("cancellation request:");
+
+  const handleCancelOrder = async () => {
+    if (!ticket.order_id) return;
+
+    setIsCancellingOrder(true);
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .update({ status: "cancelled" })
+        .eq("id", ticket.order_id)
+        .in("status", ["pending", "confirmed", "processing"])
+        .select("id,status");
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.error("Order cannot be cancelled", {
+          description: "It may have already shipped, delivered, or been cancelled.",
+        });
+        return;
+      }
+
+      await addMessage.mutateAsync({
+        ticketId,
+        message: `Order cancelled by admin (Order ID: ${ticket.order_id}).`,
+        isStaff: true,
+      });
+
+      await updateTicketStatus.mutateAsync({ ticketId, status: "resolved" });
+      toast.success("Order cancelled");
+      onStatusChange("resolved");
+    } catch (e: any) {
+      toast.error("Failed to cancel order", { description: e?.message || "Please try again." });
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  };
+
   return (
     <div className="rounded-lg border flex flex-col h-[500px]">
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium">{ticket.subject}</h3>
-          <Select value={ticket.status} onValueChange={onStatusChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            {isCancelRequest && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleCancelOrder}
+                disabled={isCancellingOrder || updateTicketStatus.isPending}
+              >
+                {isCancellingOrder ? "Cancelling..." : "Cancel Order"}
+              </Button>
+            )}
+            <Select value={ticket.status} onValueChange={onStatusChange}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{ticket.email}</p>
         <p className="text-sm mt-2">{ticket.message}</p>

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useRealtimeChannel } from "@/hooks/useRealtime";
 
 export interface SupportTicket {
   id: string;
@@ -30,8 +31,9 @@ export interface TicketMessage {
 
 export function useSupportTickets() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["support-tickets", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -47,6 +49,18 @@ export function useSupportTickets() {
     },
     enabled: !!user,
   });
+
+  useRealtimeChannel(
+    user ? `support-tickets-realtime-${user.id}` : "support-tickets-realtime-guest",
+    user ? [{ table: "support_tickets", event: "*", filter: `user_id=eq.${user.id}` }] : [],
+    () => {
+      if (!user) return;
+      queryClient.invalidateQueries({ queryKey: ["support-tickets", user.id] });
+    },
+    !!user,
+  );
+
+  return query;
 }
 
 

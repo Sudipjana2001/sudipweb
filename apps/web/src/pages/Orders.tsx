@@ -8,6 +8,7 @@ import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { ReorderButton } from "@/components/ReorderButton";
 import { RefundTracker } from "@/components/RefundTracker";
 import { SEOHead } from "@/components/SEOHead";
+import { CancelOrderRequestButton } from "@/components/CancelOrderRequestButton";
 
 const statusConfig = {
   pending: { label: "Pending", icon: Clock, color: "text-yellow-500" },
@@ -134,6 +135,11 @@ export default function Orders() {
                     {order.items && order.items.length > 0 && (
                       <ReorderButton orderItems={order.items} />
                     )}
+                    <CancelOrderRequestButton
+                      orderId={order.id}
+                      orderNumber={order.order_number}
+                      status={order.status}
+                    />
                   </div>
                 </div>
               );

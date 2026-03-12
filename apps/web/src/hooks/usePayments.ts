@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useRealtimeChannel } from "@/hooks/useRealtime";
 
 export interface Payment {
   id: string;
@@ -21,8 +22,9 @@ export interface Payment {
 
 export function useUserPayments() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["payments", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -38,10 +40,24 @@ export function useUserPayments() {
     },
     enabled: !!user,
   });
+
+  useRealtimeChannel(
+    user ? `payments-realtime-${user.id}` : "payments-realtime-guest",
+    user ? [{ table: "payments", event: "*", filter: `user_id=eq.${user.id}` }] : [],
+    () => {
+      if (!user) return;
+      queryClient.invalidateQueries({ queryKey: ["payments", user.id] });
+    },
+    !!user,
+  );
+
+  return query;
 }
 
 export function useAllPayments() {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["all-payments"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -53,6 +69,17 @@ export function useAllPayments() {
       return data as Payment[];
     },
   });
+
+  useRealtimeChannel(
+    "all-payments-realtime",
+    [{ table: "payments", event: "*" }],
+    () => {
+      queryClient.invalidateQueries({ queryKey: ["all-payments"] });
+    },
+    true,
+  );
+
+  return query;
 }
 
 export function useCreatePayment() {

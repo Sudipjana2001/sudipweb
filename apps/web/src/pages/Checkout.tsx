@@ -190,7 +190,11 @@ export default function Checkout() {
       shippingCost,
       tax,
       total,
+      paymentMethod: gatewayPaymentMethod || paymentMethod,
       shippingAddress: buildShippingAddress(),
+      giftWrap,
+      giftMessage,
+      giftWrapPrice,
       clearUserCart: !buyNowItem,
     });
 
@@ -201,6 +205,18 @@ export default function Checkout() {
         paymentMethod: gatewayPaymentMethod || paymentMethod,
         transactionId,
       });
+
+      if (appliedCoupon && couponDiscount > 0) {
+        try {
+          await applyCouponMutation.mutateAsync({
+            coupon_id: appliedCoupon.id,
+            order_id: order.id,
+            discount_applied: couponDiscount,
+          });
+        } catch (e) {
+          console.warn("Order placed but failed to record coupon usage:", e);
+        }
+      }
     }
 
     if (!buyNowItem) {
@@ -301,7 +317,11 @@ export default function Checkout() {
           shippingCost: snapshot.shippingCost,
           tax: snapshot.tax,
           total: snapshot.total,
+          paymentMethod: resolvedMethod,
           shippingAddress,
+          giftWrap: snapshot.giftWrap,
+          giftMessage: snapshot.giftMessage,
+          giftWrapPrice: snapshot.giftWrapPrice ?? giftWrapPrice,
           clearUserCart: !snapshot.buyNowItem,
         });
 
@@ -312,6 +332,18 @@ export default function Checkout() {
             paymentMethod: resolvedMethod,
             transactionId,
           });
+
+          if (snapshot.coupon?.id && snapshot.couponDiscount > 0) {
+            try {
+              await applyCouponMutation.mutateAsync({
+                coupon_id: snapshot.coupon.id,
+                order_id: order.id,
+                discount_applied: snapshot.couponDiscount,
+              });
+            } catch (e) {
+              console.warn("Order placed but failed to record coupon usage:", e);
+            }
+          }
         }
 
         if (!snapshot.buyNowItem) {
@@ -388,8 +420,10 @@ export default function Checkout() {
         tax,
         total,
         couponDiscount,
+        coupon: appliedCoupon ? { id: appliedCoupon.id, code: appliedCoupon.code } : null,
         giftWrap,
         giftMessage,
+        giftWrapPrice,
         buyNowItem: buyNowItem || null,
       };
       sessionStorage.setItem("phonepe_checkout_snapshot", JSON.stringify(checkoutSnapshot));

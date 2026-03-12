@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import { CartService } from "@/services/CartService";
 import { CartItemModel } from "@/domain/models/CartItem";
 import { toast } from "sonner";
+import { useRealtimeChannel } from "@/hooks/useRealtime";
 
 export interface CartItem {
   id: number | string;
@@ -164,6 +165,69 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     syncAndLoadData();
   }, [user]);
+
+  useRealtimeChannel(
+    user ? `cart-wishlist-realtime-${user.id}` : "cart-wishlist-realtime-guest",
+    user
+      ? [
+          { table: "cart_items", event: "*", filter: `user_id=eq.${user.id}` },
+          { table: "wishlist_items", event: "*", filter: `user_id=eq.${user.id}` },
+        ]
+      : [],
+    async () => {
+      if (!user) return;
+
+      // Reload cart
+      const { data: cartData } = await supabase
+        .from("cart_items")
+        .select(`
+          *,
+          product:products (
+            id,
+            name,
+            price,
+            image_url,
+            images,
+            slug
+          )
+        `)
+        .eq("user_id", user.id);
+
+      if (cartData) {
+        const groupedItems = cartService.groupCartItems(cartData as any);
+        setCartItems(groupedItems);
+      }
+
+      // Reload wishlist
+      const { data: wishlistData } = await supabase
+        .from("wishlist_items")
+        .select(`
+          product:products (
+            id,
+            name,
+            price,
+            image_url,
+            slug,
+            category:categories(name)
+          )
+        `)
+        .eq("user_id", user.id);
+
+      if (wishlistData) {
+        setWishlistItems(
+          wishlistData.map((item: any) => ({
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            image: item.product.image_url,
+            category: item.product.category?.name || "Product",
+            slug: item.product.slug,
+          })) as any,
+        );
+      }
+    },
+    !!user,
+  );
 
   const addToCart = async (item: Omit<CartItem, "quantity">) => {
     // Normalize sizes using domain model

@@ -119,13 +119,26 @@ export class CartItemModel {
    * Static: Create from raw database record
    */
   static fromDatabaseRecord(record: RawCartItemRecord): CartItemModel {
+    const ownerSize = CartItemModel.normalizeSize(record.size);
+    const petSize = CartItemModel.normalizeSize(record.pet_size);
+
+    const basePrice = record.product.price;
+    const isMatchingSet = ownerSize !== 'N/A' && petSize !== 'N/A';
+    const price = isMatchingSet ? basePrice : Math.round(basePrice * 0.5);
+
+    const name = isMatchingSet
+      ? record.product.name
+      : ownerSize !== 'N/A'
+        ? `${record.product.name} (Owner Only)`
+        : `${record.product.name} (Pet Only)`;
+
     return new CartItemModel(
       record.product.id,
-      record.product.name,
-      record.product.price,
+      name,
+      price,
       record.product.image_url || record.product.images?.[0] || '',
-      CartItemModel.normalizeSize(record.size),
-      CartItemModel.normalizeSize(record.pet_size),
+      ownerSize,
+      petSize,
       record.quantity,
       record.product.slug
     );

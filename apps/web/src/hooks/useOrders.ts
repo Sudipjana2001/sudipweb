@@ -17,6 +17,17 @@ export interface OrderItem {
   total_price: number;
 }
 
+export interface OrderPayment {
+  payment_method: string;
+  payment_status: string;
+  created_at: string;
+}
+
+export interface OrderCouponUse {
+  discount_applied: number;
+  coupon?: { code: string } | null;
+}
+
 export interface ShippingAddress {
   full_name: string;
   firstName?: string;
@@ -47,12 +58,19 @@ export interface Order {
   shipping_cost: number;
   tax: number;
   total: number;
+  payment_method: string | null;
+  payment_status?: string | null;
   shipping_address: ShippingAddress | null;
   billing_address: BillingAddress | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  gift_wrap?: boolean | null;
+  gift_message?: string | null;
+  gift_wrap_price?: number | null;
   items?: OrderItem[];
+  payments?: OrderPayment[];
+  coupon_uses?: OrderCouponUse[];
 }
 
 export function useOrders() {
@@ -68,7 +86,9 @@ export function useOrders() {
         .from("orders")
         .select(`
           *,
-          items:order_items(*)
+          items:order_items(*),
+          payments:payments(payment_method,payment_status,created_at),
+          coupon_uses:coupon_uses(discount_applied, coupon:coupons(code))
         `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -90,6 +110,30 @@ export function useOrders() {
           event: "*",
           schema: "public",
           table: "orders",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "payments",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "coupon_uses",
           filter: `user_id=eq.${user.id}`,
         },
         () => {
@@ -119,7 +163,9 @@ export function useOrder(orderId: string) {
         .from("orders")
         .select(`
           *,
-          items:order_items(*)
+          items:order_items(*),
+          payments:payments(payment_method,payment_status,created_at),
+          coupon_uses:coupon_uses(discount_applied, coupon:coupons(code))
         `)
         .eq("id", orderId)
         .eq("user_id", user.id)
@@ -143,6 +189,30 @@ export function useOrder(orderId: string) {
           schema: "public",
           table: "orders",
           filter: `id=eq.${orderId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "payments",
+          filter: `order_id=eq.${orderId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "coupon_uses",
+          filter: `order_id=eq.${orderId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["order", orderId] });
@@ -172,9 +242,13 @@ interface CreateOrderInput {
   shippingCost: number;
   tax: number;
   total: number;
+  paymentMethod?: string;
   shippingAddress: ShippingAddress;
   billingAddress?: BillingAddress;
   notes?: string;
+  giftWrap?: boolean;
+  giftMessage?: string;
+  giftWrapPrice?: number;
   clearUserCart?: boolean;
 }
 
@@ -189,13 +263,18 @@ export function useCreateOrder() {
       // Create order
       const orderData = {
         user_id: user.id,
+        status: "confirmed",
         subtotal: input.subtotal,
         shipping_cost: input.shippingCost,
         tax: input.tax,
         total: input.total,
+        payment_method: input.paymentMethod || "cod",
         shipping_address: input.shippingAddress as unknown as Record<string, unknown>,
         billing_address: (input.billingAddress || input.shippingAddress) as unknown as Record<string, unknown>,
         notes: input.notes,
+        gift_wrap: input.giftWrap || false,
+        gift_message: input.giftMessage || null,
+        gift_wrap_price: input.giftWrapPrice || 0,
       };
 
       const { data: order, error: orderError } = await supabase
