@@ -47,7 +47,7 @@ export function SupportManager() {
   return (
     <div className="grid gap-6 grid-cols-1 lg:grid-cols-[350px_1fr]">
       {/* Ticket List */}
-      <div className="space-y-2 h-[500px] overflow-y-auto pr-2">
+      <div className="space-y-2 h-[60vh] min-h-[360px] lg:h-[500px] overflow-y-auto pr-2">
         {tickets.map((ticket) => (
           <button
             key={ticket.id}
@@ -81,7 +81,7 @@ export function SupportManager() {
           onStatusChange={(status) => updateStatus.mutate({ ticketId: selectedTicket, status })}
         />
       ) : (
-        <div className="rounded-lg border border-dashed p-12 flex items-center justify-center">
+        <div className="rounded-lg border border-dashed p-8 sm:p-12 flex items-center justify-center">
           <p className="text-muted-foreground">Select a ticket</p>
         </div>
       )}
@@ -159,12 +159,12 @@ function TicketDetail({
   };
 
   return (
-    <div className="rounded-lg border flex flex-col h-[500px]">
+    <div className="rounded-lg border flex flex-col h-[60vh] min-h-[360px] lg:h-[500px]">
       {/* Header */}
       <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium">{ticket.subject}</h3>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
+          <h3 className="font-medium break-words">{ticket.subject}</h3>
+          <div className="flex flex-wrap items-center gap-2">
             {isCancelRequest && (
               <Button
                 variant="destructive"

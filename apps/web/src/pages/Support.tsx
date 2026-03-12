@@ -325,7 +325,7 @@ function TicketDetail({ ticketId, ticketStatus }: { ticketId: string; ticketStat
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card h-[500px] flex flex-col">
+    <div className="rounded-lg border border-border bg-card h-[60vh] min-h-[360px] sm:h-[500px] flex flex-col">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (

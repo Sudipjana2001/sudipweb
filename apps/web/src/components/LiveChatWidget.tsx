@@ -86,7 +86,9 @@ export function LiveChatWidget() {
       {isOpen && (
         <div
           className={`fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden rounded-lg bg-background shadow-2xl border border-border transition-all ${
-            isMinimized ? "h-14 w-72" : "h-[450px] w-[350px]"
+            isMinimized
+              ? "h-14 w-[calc(100vw-3rem)] max-w-[350px]"
+              : "h-[calc(100vh-8rem)] max-h-[450px] w-[calc(100vw-3rem)] max-w-[350px]"
           }`}
         >
           {/* Header */}
