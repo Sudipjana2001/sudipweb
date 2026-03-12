@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, CreditCard, Truck, ShieldCheck, Tag, X, Check } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
@@ -15,6 +15,7 @@ import { PaymentMethodSelector, PaymentMethod } from "@/components/PaymentMethod
 import { useCreatePayment } from "@/hooks/usePayments";
 import { useOrderTotal } from "@/hooks/useOrderTotal";
 import { usePaytm, PaytmPaymentResponse } from "@/hooks/usePaytm";
+import { usePhonePe } from "@/hooks/usePhonePe";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
 
@@ -85,7 +86,8 @@ export default function Checkout() {
   const validateCoupon = useValidateCoupon();
   const applyCouponMutation = useApplyCoupon();
   const createPayment = useCreatePayment();
-  const { openCheckout, verifyPayment, isLoading: isPaytmLoading } = usePaytm();
+  const { openCheckout: openPaytmCheckout, verifyPayment: verifyPaytmPayment, isLoading: isPaytmLoading } = usePaytm();
+  const { openCheckout: openPhonePeCheckout, verifyPayment: verifyPhonePePayment, isLoading: isPhonePeLoading } = usePhonePe();
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
@@ -208,6 +210,137 @@ export default function Checkout() {
     return order;
   };
 
+  // Handle returning from PhonePe payment
+  // The effect depends on `user` so it fires once the auth session is loaded.
+  // hasHandledCallback ref ensures it only acts once even though user may re-trigger the effect.
+  const hasHandledCallback = useRef(false);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPhonePeCallback = urlParams.get("phonepe_callback") === "true";
+    if (!isPhonePeCallback || hasHandledCallback.current) return;
+
+    // Wait until the user auth session is loaded before proceeding
+    if (!user) return;
+
+    hasHandledCallback.current = true;
+    // Clean up URL immediately so any re-render doesn't re-trigger
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    const handlePhonePeCallback = async () => {
+      const transactionId =
+        urlParams.get("transactionId") ||
+        sessionStorage.getItem("phonepe_merchant_transaction_id");
+
+      if (!transactionId) {
+        toast.error("Payment verification failed", {
+          description: "Missing transaction reference.",
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const verification = await verifyPhonePePayment(transactionId);
+
+        if (!verification.verified) {
+          toast.error("Payment not successful", {
+            description: `Status: ${verification.status}. If amount was deducted, it will be refunded.`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Restore checkout snapshot saved before redirect (cart context not loaded yet)
+        const snapshotJson = sessionStorage.getItem("phonepe_checkout_snapshot");
+        if (!snapshotJson) {
+          toast.error("Could not restore order data. Please contact support.", {
+            description: `Transaction ID: ${transactionId}`,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const snapshot = JSON.parse(snapshotJson);
+        const snapshotItems = snapshot.items as typeof checkoutItems;
+
+        if (!snapshotItems || snapshotItems.length === 0) {
+          toast.error("Your cart is empty, cannot create order post-payment.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Build order items from snapshot (not from live cart context)
+        const orderItems = snapshotItems.map((item) => ({
+          productId: item.id.toString(),
+          productName: item.name,
+          productImage: item.image,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          size: item.ownerSize,
+          petSize: item.petSize,
+        }));
+
+        const shippingAddress = {
+          full_name: `${snapshot.formData.firstName} ${snapshot.formData.lastName}`,
+          firstName: snapshot.formData.firstName,
+          lastName: snapshot.formData.lastName,
+          address: snapshot.formData.address,
+          city: snapshot.formData.city,
+          postal_code: snapshot.formData.postalCode,
+          postalCode: snapshot.formData.postalCode,
+          country: snapshot.formData.country,
+          phone: snapshot.formData.phone,
+          email: snapshot.formData.email,
+        };
+
+        const resolvedMethod = verification.paymentMode || "phonepe";
+
+        const order = await createOrder.mutateAsync({
+          items: orderItems,
+          subtotal: snapshot.subtotal,
+          shippingCost: snapshot.shippingCost,
+          tax: snapshot.tax,
+          total: snapshot.total,
+          shippingAddress,
+          clearUserCart: !snapshot.buyNowItem,
+        });
+
+        if (order) {
+          await createPayment.mutateAsync({
+            orderId: order.id,
+            amount: snapshot.total,
+            paymentMethod: resolvedMethod,
+            transactionId,
+          });
+        }
+
+        if (!snapshot.buyNowItem) {
+          clearCart();
+        }
+
+        // Clean up sessionStorage
+        sessionStorage.removeItem("phonepe_merchant_transaction_id");
+        sessionStorage.removeItem("phonepe_checkout_snapshot");
+
+        toast.success("Payment successful! Order placed.", {
+          description: `Transaction ID: ${transactionId}`,
+        });
+        navigate("/orders");
+      } catch (error: any) {
+        console.error("PhonePe callback error:", error);
+        const errMsg = error?.message || "Unknown error";
+        toast.error("Failed to complete payment", {
+          description: errMsg.length < 120 ? errMsg : "Please contact support with your transaction ID.",
+        });
+        setIsSubmitting(false);
+      }
+    };
+
+    handlePhonePeCallback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Depends on user — waits for auth session to load before creating order
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -242,8 +375,43 @@ export default function Checkout() {
       return;
     }
 
+    // PhonePe payment flow
+    if (paymentMethod === "phonepe") {
+      // Save a full checkout snapshot to sessionStorage BEFORE we navigate away.
+      // When PhonePe redirects back, the cart context will be empty (async reload not done yet),
+      // so we read this snapshot to reconstruct the order.
+      const checkoutSnapshot = {
+        items: checkoutItems,
+        formData,
+        subtotal: activeTotal,
+        shippingCost,
+        tax,
+        total,
+        couponDiscount,
+        giftWrap,
+        giftMessage,
+        buyNowItem: buyNowItem || null,
+      };
+      sessionStorage.setItem("phonepe_checkout_snapshot", JSON.stringify(checkoutSnapshot));
+
+      openPhonePeCheckout({
+        amount: total,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        customerId: user.id || undefined,
+        redirectUrl: `${window.location.origin}/checkout?phonepe_callback=true`,
+        onFailure: (error: string) => {
+          toast.error("Payment failed", {
+            description: error,
+          });
+          setIsSubmitting(false);
+        },
+      });
+      return;
+    }
+
     // Online payment flow — Paytm checkout
-    openCheckout({
+    openPaytmCheckout({
       amount: total,
       customerEmail: formData.email,
       customerPhone: formData.phone,
@@ -259,7 +427,7 @@ export default function Checkout() {
             return;
           }
 
-          const verification = await verifyPayment(orderId);
+          const verification = await verifyPaytmPayment(orderId);
           if (!verification.verified) {
             toast.error("Payment verification failed", {
               description: "Please contact support if amount was deducted.",
@@ -559,9 +727,9 @@ export default function Checkout() {
                   type="submit"
                   variant="hero"
                   className="w-full"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isPhonePeLoading}
                 >
-                  {isSubmitting || isPaytmLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
+                  {isSubmitting || isPaytmLoading || isPhonePeLoading ? "Processing..." : user ? "Place Order" : "Sign in to Checkout"}
                 </Button>
 
                 {!user && (

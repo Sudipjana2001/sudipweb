@@ -245,10 +245,6 @@ export function useCreateOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["cart"] });
-      toast.success("Order placed successfully!");
-    },
-    onError: () => {
-      toast.error("Failed to place order");
     },
   });
 }

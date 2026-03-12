@@ -2,7 +2,7 @@ import { Banknote, CreditCard, Landmark, Smartphone, WalletCards } from "lucide-
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export type PaymentMethod = "cod" | "upi" | "card" | "netbanking" | "wallet";
+export type PaymentMethod = "cod" | "upi" | "card" | "netbanking" | "wallet" | "phonepe";
 
 interface PaymentMethodSelectorProps {
   selected: PaymentMethod;
@@ -32,6 +32,13 @@ const paymentMethods = [
     icon: Landmark,
     description: "Pay directly from your bank account",
     badge: null,
+  },
+  {
+    id: "phonepe" as const,
+    name: "PhonePe Gateway",
+    icon: Smartphone,
+    description: "Pay using PhonePe (UPI, Credit/Debit Card, NetBanking)",
+    badge: "New",
   },
   {
     id: "wallet" as const,
