@@ -13,39 +13,11 @@ interface PaymentMethodSelectorProps {
 
 const paymentMethods = [
   {
-    id: "upi" as const,
-    name: "UPI",
-    icon: Smartphone,
-    description: "Any UPI app (GPay, PhonePe, Paytm, BHIM, etc.)",
-    badge: "Recommended",
-  },
-  {
-    id: "card" as const,
-    name: "Credit/Debit Card",
-    icon: CreditCard,
-    description: "Visa, Mastercard, RuPay and more",
-    badge: null,
-  },
-  {
-    id: "netbanking" as const,
-    name: "Net Banking",
-    icon: Landmark,
-    description: "Pay directly from your bank account",
-    badge: null,
-  },
-  {
     id: "phonepe" as const,
-    name: "PhonePe Gateway",
+    name: "Online Pay",
     icon: Smartphone,
-    description: "Pay using PhonePe (UPI, Credit/Debit Card, NetBanking)",
-    badge: "New",
-  },
-  {
-    id: "wallet" as const,
-    name: "Wallet",
-    icon: WalletCards,
-    description: "Use your wallet balance for faster checkout",
-    badge: null,
+    description: "Pay using UPI, Credit/Debit Card, NetBanking",
+    badge: "Recommended",
   },
   {
     id: "cod" as const,
@@ -129,13 +101,13 @@ export function PaymentMethodSelector({
 
       {selected !== "cod" && (
         <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-          You'll be redirected to Paytm gateway to complete your payment securely.
+          You'll be redirected to a secure payment gateway to complete your payment.
         </p>
       )}
 
       {!codAvailable && (
         <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
-          Cash on Delivery is not available for orders above ₹500
+          Cash on Delivery is only available for orders of ₹500 or more
         </p>
       )}
     </div>

@@ -36,19 +36,19 @@ export default function Checkout() {
   const { user, profile } = useAuth();
   const createOrder = useCreateOrder();
 
-  const buyNowItem = location.state?.buyNowItem;
+  const buyNowItems = location.state?.buyNowItems;
 
-  // Use buyNowItem if present, otherwise use cartItems
+  // Use buyNowItems if present, otherwise use cartItems
   const checkoutItems = useMemo(() => {
-    return buyNowItem ? [buyNowItem] : cartItems;
-  }, [buyNowItem, cartItems]);
+    return (buyNowItems && buyNowItems.length > 0) ? buyNowItems : cartItems;
+  }, [buyNowItems, cartItems]);
 
   const activeTotal = useMemo(() => {
-    if (buyNowItem) {
-      return buyNowItem.price * buyNowItem.quantity;
+    if (buyNowItems && buyNowItems.length > 0) {
+      return buyNowItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
     }
     return cartTotal;
-  }, [buyNowItem, cartTotal]);
+  }, [buyNowItems, cartTotal]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -90,8 +90,8 @@ export default function Checkout() {
   const { openCheckout: openPhonePeCheckout, verifyPayment: verifyPhonePePayment, isLoading: isPhonePeLoading } = usePhonePe();
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("upi");
-  const codAvailable = activeTotal <= 500;
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("phonepe");
+  const codAvailable = activeTotal >= 500;
 
   // Gift wrap state
   const [giftWrap, setGiftWrap] = useState(false);
@@ -195,7 +195,7 @@ export default function Checkout() {
       giftWrap,
       giftMessage,
       giftWrapPrice,
-      clearUserCart: !buyNowItem,
+      clearUserCart: !(buyNowItems && buyNowItems.length > 0),
     });
 
     if (order) {
@@ -219,7 +219,7 @@ export default function Checkout() {
       }
     }
 
-    if (!buyNowItem) {
+    if (!(buyNowItems && buyNowItems.length > 0)) {
       clearCart();
     }
 
@@ -322,7 +322,7 @@ export default function Checkout() {
           giftWrap: snapshot.giftWrap,
           giftMessage: snapshot.giftMessage,
           giftWrapPrice: snapshot.giftWrapPrice ?? giftWrapPrice,
-          clearUserCart: !snapshot.buyNowItem,
+          clearUserCart: !(snapshot.buyNowItems && snapshot.buyNowItems.length > 0),
         });
 
         if (order) {
@@ -346,7 +346,7 @@ export default function Checkout() {
           }
         }
 
-        if (!snapshot.buyNowItem) {
+        if (!(snapshot.buyNowItems && snapshot.buyNowItems.length > 0)) {
           clearCart();
         }
 
@@ -424,7 +424,7 @@ export default function Checkout() {
         giftWrap,
         giftMessage,
         giftWrapPrice,
-        buyNowItem: buyNowItem || null,
+        buyNowItems: buyNowItems || null,
       };
       sessionStorage.setItem("phonepe_checkout_snapshot", JSON.stringify(checkoutSnapshot));
 

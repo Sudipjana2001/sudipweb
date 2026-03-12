@@ -209,12 +209,49 @@ export default function Product() {
       return;
     }
 
-    // Instead of completely refactoring the checkout to take an array of buyNowItems,
-    // if Buy Now is clicked, we can just add these items to the cart and redirect to checkout
-    handleAddToCart();
-    setTimeout(() => {
-      navigate("/cart"); // Or redirect to checkout if your cart persists across pages
-    }, 500);
+    const basePrice = product.price;
+    const halfPrice = Math.round(basePrice * 0.5);
+
+    const buyNowItems = [];
+
+    for (let i = 0; i < quantity; i++) {
+      if (selectedSize && selectedPetSize) {
+        buyNowItems.push({
+          id: product.id,
+          name: `${product.name} (Matching Set)`,
+          price: basePrice,
+          image: product.image_url || "/product-1.jpg",
+          ownerSize: selectedSize,
+          petSize: selectedPetSize,
+          slug: product.slug,
+          quantity: 1,
+        });
+      } else if (selectedSize) {
+        buyNowItems.push({
+          id: product.id,
+          name: `${product.name} (Owner Only)`,
+          price: halfPrice,
+          image: product.image_url || "/product-1.jpg",
+          ownerSize: selectedSize,
+          petSize: "N/A",
+          slug: product.slug,
+          quantity: 1,
+        });
+      } else if (selectedPetSize) {
+        buyNowItems.push({
+          id: product.id,
+          name: `${product.name} (Pet Only)`,
+          price: halfPrice,
+          image: product.image_url || "/product-1.jpg",
+          ownerSize: "N/A",
+          petSize: selectedPetSize,
+          slug: product.slug,
+          quantity: 1,
+        });
+      }
+    }
+
+    navigate("/checkout", { state: { buyNowItems } });
   };
 
   const handleWishlist = () => {
