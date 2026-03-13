@@ -17,7 +17,8 @@ export class OrderTotal {
   constructor(
     private readonly subtotal: number,
     private readonly couponDiscount: number = 0,
-    private readonly giftWrapCost: number = 0
+    private readonly giftWrapCost: number = 0,
+    private readonly codFee: number = 0
   ) {}
 
   /**
@@ -47,7 +48,7 @@ export class OrderTotal {
    * Calculate final total
    */
   get total(): number {
-    return this.taxableAmount + this.shippingCost + this.tax;
+    return this.taxableAmount + this.shippingCost + this.tax + this.codFee;
   }
 
   /**
@@ -74,6 +75,7 @@ export class OrderTotal {
       couponDiscount: this.couponDiscount,
       shippingCost: this.shippingCost,
       giftWrapCost: this.giftWrapCost,
+      codFee: this.codFee,
       tax: this.tax,
       total: this.total,
       hasFreeShipping: this.hasFreeShipping,
@@ -85,14 +87,21 @@ export class OrderTotal {
    * Create a new OrderTotal with updated coupon discount
    */
   withCouponDiscount(discount: number): OrderTotal {
-    return new OrderTotal(this.subtotal, discount, this.giftWrapCost);
+    return new OrderTotal(this.subtotal, discount, this.giftWrapCost, this.codFee);
   }
 
   /**
    * Create a new OrderTotal with gift wrap
    */
   withGiftWrap(cost: number): OrderTotal {
-    return new OrderTotal(this.subtotal, this.couponDiscount, cost);
+    return new OrderTotal(this.subtotal, this.couponDiscount, cost, this.codFee);
+  }
+
+  /**
+   * Create a new OrderTotal with COD fee
+   */
+  withCodFee(fee: number): OrderTotal {
+    return new OrderTotal(this.subtotal, this.couponDiscount, this.giftWrapCost, fee);
   }
 
   /**
@@ -116,6 +125,7 @@ export interface OrderBreakdown {
   shippingCost: number;
   giftWrapCost: number;
   tax: number;
+  codFee: number;
   total: number;
   hasFreeShipping: boolean;
   amountToFreeShipping: number;

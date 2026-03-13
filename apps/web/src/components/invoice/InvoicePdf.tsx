@@ -337,6 +337,12 @@ export function InvoicePdf({ order }: { order: Order }) {
               </Text>
               <Text style={s.totalsValue}>{formatMoney(tax)}</Text>
             </View>
+            {order.payment_method?.toLowerCase() === "cod" && (
+              <View style={s.totalsLine}>
+                <Text style={s.totalsLabel}>COD Fee</Text>
+                <Text style={s.totalsValue}>{formatMoney(11)}</Text>
+              </View>
+            )}
 
             <View style={s.totalsBold}>
               <Text style={s.totalLabelBold}>TOTAL</Text>

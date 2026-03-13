@@ -16,12 +16,13 @@ import { OrderTotal, OrderBreakdown } from '@/domain/valueObjects/OrderTotal';
 export function useOrderTotal(
   subtotal: number,
   couponDiscount: number = 0,
-  giftWrapCost: number = 0
+  giftWrapCost: number = 0,
+  codFee: number = 0
 ) {
   // Create memoized OrderTotal instance
   const orderTotal = useMemo(() => {
-    return new OrderTotal(subtotal, couponDiscount, giftWrapCost);
-  }, [subtotal, couponDiscount, giftWrapCost]);
+    return new OrderTotal(subtotal, couponDiscount, giftWrapCost, codFee);
+  }, [subtotal, couponDiscount, giftWrapCost, codFee]);
 
   // Get breakdown (memoized since it depends on orderTotal)
   const breakdown = useMemo(() => {
@@ -34,6 +35,7 @@ export function useOrderTotal(
     // Convenience accessors
     shippingCost: breakdown.shippingCost,
     tax: breakdown.tax,
+    codFee: breakdown.codFee,
     total: breakdown.total,
     hasFreeShipping: breakdown.hasFreeShipping,
     amountToFreeShipping: breakdown.amountToFreeShipping,

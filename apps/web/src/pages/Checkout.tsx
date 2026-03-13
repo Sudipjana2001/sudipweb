@@ -91,7 +91,8 @@ export default function Checkout() {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("phonepe");
-  const codAvailable = activeTotal >= 500;
+  const codAvailable = true;
+  const codFee = paymentMethod === "cod" ? 11 : 0;
 
   // Gift wrap state
   const [giftWrap, setGiftWrap] = useState(false);
@@ -100,7 +101,7 @@ export default function Checkout() {
 
   // Use OrderTotal domain object for pricing calculations
   const giftWrapCost = giftWrap ? giftWrapPrice : 0;
-  const { shippingCost, tax, total } = useOrderTotal(activeTotal, couponDiscount, giftWrapCost);
+  const { shippingCost, tax, codFee: appliedCodFee, total } = useOrderTotal(activeTotal, couponDiscount, giftWrapCost, codFee);
 
   const handleGiftWrapChange = (enabled: boolean, message: string) => {
     setGiftWrap(enabled);
@@ -750,6 +751,12 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Tax (8%)</span>
                     <span>₹{tax.toFixed(2)}</span>
                   </div>
+                  {appliedCodFee > 0 && (
+                    <div className="flex justify-between font-body text-sm">
+                      <span className="text-muted-foreground">COD Fee</span>
+                      <span>₹{appliedCodFee.toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between py-6">

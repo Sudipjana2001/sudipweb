@@ -34,9 +34,7 @@ export function PaymentMethodSelector({
   codAvailable = true,
   total,
 }: PaymentMethodSelectorProps) {
-  const availableMethods = paymentMethods.filter(
-    (method) => method.id !== "cod" || codAvailable
-  );
+  const availableMethods = paymentMethods;
 
   return (
     <div className="space-y-4">
@@ -75,7 +73,7 @@ export function PaymentMethodSelector({
                 )}
                 {method.id === "cod" && (
                   <Badge variant="secondary" className="text-xs">
-                    No extra charge
+                    ₹11 extra charge
                   </Badge>
                 )}
               </div>
@@ -105,11 +103,7 @@ export function PaymentMethodSelector({
         </p>
       )}
 
-      {!codAvailable && (
-        <p className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
-          Cash on Delivery is only available for orders of ₹500 or more
-        </p>
-      )}
+
     </div>
   );
 }

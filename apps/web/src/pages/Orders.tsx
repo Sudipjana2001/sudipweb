@@ -123,6 +123,12 @@ export default function Orders() {
                       <span>Tax</span>
                       <span>₹{order.tax.toFixed(2)}</span>
                     </div>
+                    {order.payment_method?.toLowerCase() === "cod" && (
+                      <div className="flex justify-between text-sm">
+                        <span>COD Fee</span>
+                        <span>₹11.00</span>
+                      </div>
+                    )}
                     <div className="mt-2 flex justify-between border-t border-border pt-2 font-medium">
                       <span>Total</span>
                       <span>₹{order.total.toFixed(2)}</span>
