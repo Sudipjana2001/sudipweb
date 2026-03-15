@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 // PhonePe configuration (reads from Supabase Secrets first, then falls back to test creds)
-const MERCHANT_ID = Deno.env.get("PHONEPE_MERCHANT_ID") || "PGTESTPAYUAT"
-const SALT_KEY = Deno.env.get("PHONEPE_SALT_KEY") || "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399"
+const MERCHANT_ID = Deno.env.get("PHONEPE_MERCHANT_ID") || "PGTESTPAYUAT86"
+const SALT_KEY = Deno.env.get("PHONEPE_SALT_KEY") || "96434309-7796-489d-8924-ab56988a6076"
 const SALT_INDEX = Deno.env.get("PHONEPE_SALT_INDEX") || "1"
-const PHONEPE_HOST = Deno.env.get("PHONEPE_HOST") || "https://api.phonepe.com/apis/hermes"
+const PHONEPE_HOST = Deno.env.get("PHONEPE_HOST") || "https://api-preprod.phonepe.com/apis/pg-sandbox"
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
