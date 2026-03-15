@@ -35,7 +35,7 @@ export function Footer() {
     <footer className="bg-foreground text-background relative z-50">
       {/* Main Footer */}
       <div className="container mx-auto px-6 py-16 md:py-20">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-10 lg:grid-cols-6">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <Link to="/" className="mb-6 inline-block">
@@ -63,88 +63,91 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Shop Links */}
-          <div>
-            <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
-              Shop
-            </h4>
-            <ul className="space-y-3">
-              {footerLinks.shop.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="font-body text-sm text-background/70 transition-colors hover:text-background"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Links Grid */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:col-span-4 lg:grid-cols-4">
+            {/* Shop Links */}
+            <div>
+              <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
+                Shop
+              </h4>
+              <ul className="space-y-3">
+                {footerLinks.shop.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      className="font-body text-sm text-background/70 transition-colors hover:text-background"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Support Links */}
-          <div>
-            <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
-              Support
-            </h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="font-body text-sm text-background/70 transition-colors hover:text-background"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+            {/* Support Links */}
+            <div>
+              <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
+                Support
+              </h4>
+              <ul className="space-y-3">
+                {footerLinks.support.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      className="font-body text-sm text-background/70 transition-colors hover:text-background"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Company Links */}
-          <div>
-            <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
-              Company
-            </h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    to={link.href}
-                    className="font-body text-sm text-background/70 transition-colors hover:text-background"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+            {/* Company Links */}
+            <div>
+              <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
+                Company
+              </h4>
+              <ul className="space-y-3">
+                {footerLinks.company.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      to={link.href}
+                      className="font-body text-sm text-background/70 transition-colors hover:text-background"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Contact Info */}
-          <div>
-            <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
-              Contact
-            </h4>
-            <ul className="space-y-4">
-              <li className="flex items-start gap-3">
-                <Mail className="mt-0.5 h-4 w-4 text-background/50" />
-                <span className="font-body text-sm text-background/70">
-                  hello@pebric.com
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <Phone className="mt-0.5 h-4 w-4 text-background/50" />
-                <span className="font-body text-sm text-background/70">
-                  +1 (800) 123-4567
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="mt-0.5 h-4 w-4 text-background/50" />
-                <span className="font-body text-sm text-background/70">
-                  New York, NY 10001
-                </span>
-              </li>
-            </ul>
+            {/* Contact Info */}
+            <div>
+              <h4 className="mb-6 font-body text-xs uppercase tracking-[0.2em] text-background/50">
+                Contact
+              </h4>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Mail className="mt-0.5 h-4 w-4 text-background/50" />
+                  <span className="font-body text-sm text-background/70">
+                    hello@pebric.com
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Phone className="mt-0.5 h-4 w-4 text-background/50" />
+                  <span className="font-body text-sm text-background/70">
+                    +1 (800) 123-4567
+                  </span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 text-background/50" />
+                  <span className="font-body text-sm text-background/70">
+                    New York, NY 10001
+                  </span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -155,7 +158,7 @@ export function Footer() {
           <p className="font-body text-xs text-background/50">
             © {new Date().getFullYear()} Pebric. All rights reserved.
           </p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 md:justify-end">
             {footerLinks.legal.map((link) => (
               <Link
                 key={link.name}
