@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { fromTable } from "@/lib/supabaseUntyped";
 
 export interface Review {
   id: string;
@@ -13,6 +14,8 @@ export interface Review {
   content: string | null;
   photos: string[];
   is_verified_purchase: boolean;
+  author_name?: string | null;
+  author_avatar_url?: string | null;
   helpful_count: number;
   created_at: string;
   updated_at: string;
@@ -44,15 +47,6 @@ export function useProductReviews(productId: string) {
 
       if (error) throw error;
 
-      // Fetch profiles separately
-      const userIds = [...new Set(reviews.map(r => r.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .in("id", userIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
       // Fetch user's votes if authenticated
       let userVotes = new Set<string>();
       if (user) {
@@ -67,7 +61,7 @@ export function useProductReviews(productId: string) {
 
       return reviews.map(review => ({
         ...review,
-        profiles: profileMap.get(review.user_id) || null,
+        profiles: null,
         user_has_voted: userVotes.has(review.id),
       })) as ReviewWithUser[];
     },
@@ -150,13 +144,26 @@ export function useAddReview() {
 
       const isVerified = (orderItems?.length ?? 0) > 0;
 
-      const { data, error } = await supabase
-        .from("reviews")
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const authorName =
+        profile?.full_name ??
+        (typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null) ??
+        user.email ??
+        null;
+
+      const { data, error } = await fromTable("reviews")
         .insert({
           ...review,
           user_id: user.id,
           is_verified_purchase: isVerified,
           photos: review.photos || [],
+          author_name: authorName,
+          author_avatar_url: profile?.avatar_url ?? null,
         })
         .select()
         .single();

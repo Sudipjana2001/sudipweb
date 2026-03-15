@@ -7,6 +7,7 @@ import {
   ShoppingCart, AlertTriangle, CreditCard, PieChart, MapPin, Target,
   BarChart3, Shield, ScrollText, UserCheck, LogOut, Menu, X, ChevronDown,
   LayoutDashboard,
+  Users,
 } from "lucide-react";
 
 export interface NavItem {
@@ -35,6 +36,10 @@ export const adminNavGroups: NavGroup[] = [
       { id: "hero-slides", label: "Hero Slides", icon: <Image className="h-4 w-4" /> },
       { id: "promo-banners", label: "Promo Banners", icon: <Zap className="h-4 w-4" /> },
     ],
+  },
+  {
+    title: "Customers",
+    items: [{ id: "users", label: "Users", icon: <Users className="h-4 w-4" /> }],
   },
   {
     title: "Content",
@@ -126,7 +131,8 @@ export function AdminLayout({ children, activeSection, onSectionChange }: AdminL
   const toggleGroup = (title: string) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
-      next.has(title) ? next.delete(title) : next.add(title);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
       return next;
     });
   };

@@ -41,6 +41,7 @@ import { FeaturesManager } from "@/components/admin/FeaturesManager";
 import { TestimonialsManager } from "@/components/admin/TestimonialsManager";
 import { NewsletterManager } from "@/components/admin/NewsletterManager";
 import { InstagramManager } from "@/components/admin/InstagramManager";
+import { UsersManager } from "@/components/admin/UsersManager";
 import { SEOHead } from "@/components/SEOHead";
 import { useRealtimeChannel } from "@/hooks/useRealtime";
 
@@ -277,7 +278,13 @@ export default function Admin() {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const { error } = await supabase.rpc("delete_product_admin" as any, { product_id: id });
+    type UntypedRpcClient = {
+      rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+    };
+
+    const { error } = await (supabase as unknown as UntypedRpcClient).rpc("delete_product_admin", {
+      product_id: id,
+    });
 
     if (error) {
       console.error("Delete error:", error);
@@ -1086,6 +1093,10 @@ export default function Admin() {
         return <GDPRRequestsManager />;
       case "logs":
         return <AuditLogsViewer />;
+
+      // ─── Customers sections ──
+      case "users":
+        return <UsersManager />;
 
       default:
         return <div className="text-muted-foreground">Select a section from the sidebar.</div>;

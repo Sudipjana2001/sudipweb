@@ -291,20 +291,20 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                          {review.profiles?.avatar_url ? (
+                          {review.author_avatar_url ? (
                             <img
-                              src={review.profiles.avatar_url}
+                              src={review.author_avatar_url}
                               alt=""
                               className="h-full w-full rounded-full object-cover"
                             />
                           ) : (
                             <span className="font-medium text-muted-foreground">
-                              {(review.profiles?.full_name || "A")[0].toUpperCase()}
+                              {(review.author_name || "A")[0].toUpperCase()}
                             </span>
                           )}
                         </div>
                         <div>
-                          <p className="font-medium">{review.profiles?.full_name || "Anonymous"}</p>
+                          <p className="font-medium">{review.author_name || "Anonymous"}</p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <div className="flex">
                               {[1, 2, 3, 4, 5].map((star) => (

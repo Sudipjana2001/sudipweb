@@ -15,10 +15,15 @@ DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Anyone can view profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 
--- SELECT: Anyone can view profiles (for reviews to show names)
-CREATE POLICY "Anyone can view profiles"
+-- SELECT: Users can view their own profile
+CREATE POLICY "Users can view their own profile"
 ON public.profiles FOR SELECT
-USING (true);
+USING (auth.uid() = id);
+
+-- SELECT: Admins can view all profiles
+CREATE POLICY "Admins can view all profiles"
+ON public.profiles FOR SELECT
+USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 -- INSERT: Users can create their own profile
 CREATE POLICY "Users can insert their own profile"
