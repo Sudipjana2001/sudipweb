@@ -20,10 +20,20 @@ CREATE POLICY "Anyone can view reviews"
 ON public.reviews FOR SELECT
 USING (true);
 
--- INSERT: Authenticated users can create reviews
+-- INSERT: Users can create reviews only after delivery
 CREATE POLICY "Users can create reviews"
 ON public.reviews FOR INSERT
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (
+  auth.uid() = user_id
+  AND EXISTS (
+    SELECT 1
+    FROM public.order_items oi
+    JOIN public.orders o ON o.id = oi.order_id
+    WHERE o.user_id = auth.uid()
+      AND o.status = 'delivered'
+      AND oi.product_id = product_id
+  )
+);
 
 -- UPDATE: Users can update their own reviews
 CREATE POLICY "Users can update their own reviews"

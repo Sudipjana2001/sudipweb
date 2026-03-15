@@ -8,7 +8,8 @@ import {
   getAverageRating,
   getRatingDistribution,
 } from "@/hooks/useReviews";
-import { useOrders } from "@/hooks/useOrders";
+import { useOrders, type OrderItem } from "@/hooks/useOrders";
+import { supabase } from "@/integrations/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -88,9 +89,13 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
   };
 
   const hasUserReviewed = reviews.some((r) => r.user_id === user?.id);
-  const hasPurchased = user && orders.some(order => 
-    order.items?.some((item: any) => String(item.product_id) === String(productId))
-  );
+  const hasDeliveredPurchase =
+    !!user &&
+    orders.some(
+      (order) =>
+        order.status === "delivered" &&
+        order.items?.some((item: OrderItem) => String(item.product_id) === String(productId))
+    );
 
   return (
     <div className="mt-16 border-t border-border pt-16">
@@ -153,7 +158,7 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
           </div>
 
           {/* Write Review Button */}
-          {user && !hasUserReviewed && hasPurchased && (
+          {user && !hasUserReviewed && hasDeliveredPurchase && (
             <Dialog open={isWriting} onOpenChange={setIsWriting}>
               <DialogTrigger asChild>
                 <Button className="mt-6 w-full">Write a Review</Button>
@@ -253,9 +258,9 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
             </Dialog>
           )}
 
-          {user && !hasPurchased && (
+          {user && !hasUserReviewed && !hasDeliveredPurchase && (
             <p className="mt-6 text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg flex items-start gap-2">
-              <span className="font-semibold">Note:</span> Only customers who have purchased this product can leave a review.
+              <span className="font-semibold">Note:</span> You can write a review after your order is delivered.
             </p>
           )}
 

@@ -139,12 +139,13 @@ export function useAddReview() {
     }) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Check if user has purchased this product
+      // Check if user has a delivered order for this product
       const { data: orderItems } = await supabase
         .from("order_items")
-        .select("id, orders!inner(user_id)")
+        .select("id, orders!inner(user_id,status)")
         .eq("product_id", review.product_id)
         .eq("orders.user_id", user.id)
+        .eq("orders.status", "delivered")
         .limit(1);
 
       const isVerified = (orderItems?.length ?? 0) > 0;

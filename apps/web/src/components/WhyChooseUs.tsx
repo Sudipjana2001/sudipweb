@@ -1,11 +1,11 @@
 import { 
   Sparkles, Heart, RefreshCw, Truck, Shield, Star, 
-  Award, Check, Gift, Zap, Target, TrendingUp 
+  Award, Check, Gift, Zap, Target, TrendingUp, type LucideIcon
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useFeatures } from "@/hooks/useFeatures";
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   Sparkles, Heart, RefreshCw, Truck, Shield, Star,
   Award, Check, Gift, Zap, Target, TrendingUp
 };
@@ -60,7 +60,10 @@ export function WhyChooseUs() {
         </div>
 
         {/* Features Grid */}
-        <div ref={gridRef} className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+        <div
+          ref={gridRef}
+          className="grid grid-cols-2 gap-6 md:grid-cols-2 md:gap-12 lg:grid-cols-4"
+        >
           {features.map((feature, index) => {
             const IconComponent = ICON_MAP[feature.icon_name] || Sparkles;
             
@@ -73,12 +76,12 @@ export function WhyChooseUs() {
                 style={{ transitionDelay: `${index * 100}ms` }}
               >
                 {/* Icon */}
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center border border-border transition-all duration-500 group-hover:border-foreground group-hover:bg-foreground group-hover:scale-110 group-hover:rotate-3">
+                <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center border border-border transition-all duration-500 group-hover:border-foreground group-hover:bg-foreground group-hover:scale-110 group-hover:rotate-3 md:h-16 md:w-16">
                   <IconComponent className="h-6 w-6 text-foreground transition-all duration-500 group-hover:text-background group-hover:scale-110" />
                 </div>
 
                 {/* Content */}
-                <h3 className="mb-3 font-display text-xl font-medium text-foreground transition-transform duration-300 group-hover:-translate-y-1">
+                <h3 className="mb-3 font-display text-base font-medium text-foreground transition-transform duration-300 group-hover:-translate-y-1 md:text-xl">
                   {feature.title}
                 </h3>
                 <p className="font-body text-sm leading-relaxed text-muted-foreground transition-all duration-300 group-hover:text-foreground/70">
