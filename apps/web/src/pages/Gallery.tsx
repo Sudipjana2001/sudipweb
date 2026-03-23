@@ -3,13 +3,45 @@ import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useGalleryPosts, useCreateGalleryPost, useLikeGalleryPost, useIsPostLiked, usePostLikesCount, usePetOfTheWeek } from "@/hooks/useGallery";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  GalleryPost,
+  useGalleryPosts,
+  useCreateGalleryPost,
+  useLikeGalleryPost,
+  useIsPostLiked,
+  usePostLikesCount,
+  usePetOfTheWeek,
+  useUserGalleryPosts,
+} from "@/hooks/useGallery";
 import { usePets } from "@/hooks/usePets";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/contexts/AuthContext";
-import { Heart, MessageCircle, Upload, Camera, Crown, Image as ImageIcon, Download, X, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Upload,
+  Camera,
+  Crown,
+  Image as ImageIcon,
+  Download,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
@@ -23,7 +55,7 @@ function PhotoLightbox({
   hasPrev,
   hasNext,
 }: {
-  post: any;
+  post: GalleryPost;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -37,9 +69,16 @@ function PhotoLightbox({
 
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
 
-  useEffect(() => { setOptimisticLiked(null); }, [isLiked]);
-  useEffect(() => { setOptimisticCount(null); }, [likesCount]);
+  useEffect(() => {
+    setOptimisticLiked(null);
+  }, [isLiked]);
+  useEffect(() => {
+    setOptimisticCount(null);
+  }, [likesCount]);
 
   const displayLiked = optimisticLiked !== null ? optimisticLiked : !!isLiked;
   const displayCount = optimisticCount !== null ? optimisticCount : likesCount;
@@ -60,12 +99,21 @@ function PhotoLightbox({
   }, [onClose, onPrev, onNext, hasPrev, hasNext]);
 
   const handleLike = () => {
-    if (!user) { toast.error("Please log in to like photos"); return; }
+    if (!user) {
+      toast.error("Please log in to like photos");
+      return;
+    }
     const newLiked = !displayLiked;
     setOptimisticLiked(newLiked);
-    setOptimisticCount(newLiked ? displayCount + 1 : Math.max(0, displayCount - 1));
+    setOptimisticCount(
+      newLiked ? displayCount + 1 : Math.max(0, displayCount - 1),
+    );
     likeMutation.mutate(post.id, {
-      onError: () => { setOptimisticLiked(null); setOptimisticCount(null); toast.error("Failed to like"); },
+      onError: () => {
+        setOptimisticLiked(null);
+        setOptimisticCount(null);
+        toast.error("Failed to like");
+      },
     });
   };
 
@@ -87,6 +135,31 @@ function PhotoLightbox({
     }
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (touchStart === null || touchEnd === null) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && hasNext) {
+      onNext();
+    }
+
+    if (isRightSwipe && hasPrev) {
+      onPrev();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
@@ -103,7 +176,10 @@ function PhotoLightbox({
       {/* Prev / Next arrows */}
       {hasPrev && (
         <button
-          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrev();
+          }}
           className="absolute left-4 z-50 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20 md:left-6"
         >
           <ChevronLeft className="h-6 w-6" />
@@ -111,7 +187,10 @@ function PhotoLightbox({
       )}
       {hasNext && (
         <button
-          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNext();
+          }}
           className="absolute right-4 z-50 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20 md:right-6"
         >
           <ChevronRight className="h-6 w-6" />
@@ -124,7 +203,12 @@ function PhotoLightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
-        <div className="flex max-h-[50vh] flex-1 items-center justify-center md:max-h-[85vh]">
+        <div
+          className="flex max-h-[50vh] flex-1 items-center justify-center touch-pan-y md:max-h-[85vh]"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <img
             src={post.image_url}
             alt={post.caption || "Pet photo"}
@@ -136,7 +220,9 @@ function PhotoLightbox({
         <div className="w-full max-h-[30vh] flex-shrink-0 space-y-3 overflow-y-auto rounded-lg bg-white/5 p-4 text-white backdrop-blur-sm md:max-h-none md:w-72 md:overflow-visible">
           {post.pet?.name && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-white/50">Pet</p>
+              <p className="text-xs uppercase tracking-wider text-white/50">
+                Pet
+              </p>
               <p className="text-lg font-medium">{post.pet.name}</p>
               {post.pet.breed && (
                 <p className="text-sm text-white/60">{post.pet.breed}</p>
@@ -146,14 +232,20 @@ function PhotoLightbox({
 
           {post.caption && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-white/50">Caption</p>
-              <p className="text-sm leading-relaxed text-white/80">{post.caption}</p>
+              <p className="text-xs uppercase tracking-wider text-white/50">
+                Caption
+              </p>
+              <p className="text-sm leading-relaxed text-white/80">
+                {post.caption}
+              </p>
             </div>
           )}
 
           {post.product && (
             <div>
-              <p className="text-xs uppercase tracking-wider text-white/50">Wearing</p>
+              <p className="text-xs uppercase tracking-wider text-white/50">
+                Wearing
+              </p>
               <Link
                 to={`/product/${post.product.slug}`}
                 className="text-sm text-white/80 underline underline-offset-2 hover:text-white"
@@ -171,7 +263,9 @@ function PhotoLightbox({
               disabled={likeMutation.isPending}
               className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm transition-colors hover:bg-white/20"
             >
-              <Heart className={`h-4 w-4 ${displayLiked ? "fill-red-500 text-red-500" : ""}`} />
+              <Heart
+                className={`h-4 w-4 ${displayLiked ? "fill-red-500 text-red-500" : ""}`}
+              />
               {displayCount}
             </button>
             {user && (
@@ -198,7 +292,15 @@ function PhotoLightbox({
 }
 
 /* ─── Gallery Card ─── */
-function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
+function GalleryCard({
+  post,
+  onOpen,
+  showApprovalStatus = false,
+}: {
+  post: GalleryPost;
+  onOpen: () => void;
+  showApprovalStatus?: boolean;
+}) {
   const { user } = useAuth();
   const { data: isLiked } = useIsPostLiked(post.id);
   const { data: likesCount = 0 } = usePostLikesCount(post.id);
@@ -209,8 +311,12 @@ function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
   const [optimisticCount, setOptimisticCount] = useState<number | null>(null);
 
   // Sync optimistic state with server data when it arrives
-  useEffect(() => { setOptimisticLiked(null); }, [isLiked]);
-  useEffect(() => { setOptimisticCount(null); }, [likesCount]);
+  useEffect(() => {
+    setOptimisticLiked(null);
+  }, [isLiked]);
+  useEffect(() => {
+    setOptimisticCount(null);
+  }, [likesCount]);
 
   const displayLiked = optimisticLiked !== null ? optimisticLiked : !!isLiked;
   const displayCount = optimisticCount !== null ? optimisticCount : likesCount;
@@ -226,7 +332,9 @@ function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
     // Instant optimistic update
     const newLiked = !displayLiked;
     setOptimisticLiked(newLiked);
-    setOptimisticCount(newLiked ? displayCount + 1 : Math.max(0, displayCount - 1));
+    setOptimisticCount(
+      newLiked ? displayCount + 1 : Math.max(0, displayCount - 1),
+    );
 
     likeMutation.mutate(post.id, {
       onError: (error) => {
@@ -280,7 +388,9 @@ function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
           className="flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-sm text-white backdrop-blur-sm transition-all hover:bg-black/70 hover:scale-105"
           disabled={likeMutation.isPending}
         >
-          <Heart className={`h-4 w-4 transition-colors ${displayLiked ? "fill-red-500 text-red-500" : ""}`} />
+          <Heart
+            className={`h-4 w-4 transition-colors ${displayLiked ? "fill-red-500 text-red-500" : ""}`}
+          />
           <span>{displayCount}</span>
         </button>
         {user && (
@@ -296,13 +406,11 @@ function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
 
       {/* Gradient - pointer-events-none so it doesn't block clicks */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-      
+
       {/* Hover info overlay */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0">
         <div className="text-white">
-          {post.pet?.name && (
-            <p className="font-medium">{post.pet.name}</p>
-          )}
+          {post.pet?.name && <p className="font-medium">{post.pet.name}</p>}
           {post.caption && (
             <p className="text-sm text-white/80 line-clamp-2">{post.caption}</p>
           )}
@@ -318,12 +426,25 @@ function GalleryCard({ post, onOpen }: { post: any; onOpen: () => void }) {
         )}
       </div>
 
-      {/* Featured badge */}
-      {post.is_featured && (
-        <div className="absolute top-2 right-2 z-20 rounded-full bg-yellow-500 p-1.5 shadow-lg">
-          <Crown className="h-4 w-4 text-white" />
-        </div>
-      )}
+      {/* Status / featured badges */}
+      <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-2">
+        {showApprovalStatus && (
+          <div
+            className={`rounded-full px-2.5 py-1 text-[11px] font-medium shadow-lg ${
+              post.is_approved
+                ? "bg-emerald-500 text-white"
+                : "bg-amber-500 text-white"
+            }`}
+          >
+            {post.is_approved ? "Live" : "Pending"}
+          </div>
+        )}
+        {post.is_featured && (
+          <div className="rounded-full bg-yellow-500 p-1.5 shadow-lg">
+            <Crown className="h-4 w-4 text-white" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -333,7 +454,7 @@ function UploadDialog() {
   const { data: pets = [] } = usePets();
   const { data: products = [] } = useProducts();
   const createPost = useCreateGalleryPost();
-  
+
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -351,14 +472,14 @@ function UploadDialog() {
 
   const handleSubmit = async () => {
     if (!file) return;
-    
+
     await createPost.mutateAsync({
       imageFile: file,
       petId: petId || undefined,
       productId: productId || undefined,
       caption: caption || undefined,
     });
-    
+
     setOpen(false);
     setFile(null);
     setPreview(null);
@@ -393,9 +514,16 @@ function UploadDialog() {
         <div className="space-y-4">
           {preview ? (
             <div className="relative aspect-square overflow-hidden rounded-lg">
-              <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+              <img
+                src={preview}
+                alt="Preview"
+                className="h-full w-full object-cover"
+              />
               <button
-                onClick={() => { setFile(null); setPreview(null); }}
+                onClick={() => {
+                  setFile(null);
+                  setPreview(null);
+                }}
                 className="absolute top-2 right-2 rounded-full bg-black/50 p-1 text-white"
               >
                 ✕
@@ -404,7 +532,9 @@ function UploadDialog() {
           ) : (
             <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary">
               <Camera className="h-12 w-12 text-muted-foreground" />
-              <span className="mt-2 text-sm text-muted-foreground">Click to upload</span>
+              <span className="mt-2 text-sm text-muted-foreground">
+                Click to upload
+              </span>
               <input
                 type="file"
                 accept="image/*"
@@ -413,7 +543,7 @@ function UploadDialog() {
               />
             </label>
           )}
-          
+
           <Select value={petId} onValueChange={setPetId}>
             <SelectTrigger>
               <SelectValue placeholder="Select your pet (optional)" />
@@ -426,7 +556,7 @@ function UploadDialog() {
               ))}
             </SelectContent>
           </Select>
-          
+
           <Select value={productId} onValueChange={setProductId}>
             <SelectTrigger>
               <SelectValue placeholder="Tag a product (optional)" />
@@ -439,14 +569,14 @@ function UploadDialog() {
               ))}
             </SelectContent>
           </Select>
-          
+
           <Textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Add a caption..."
             rows={3}
           />
-          
+
           <Button
             onClick={handleSubmit}
             disabled={!file || createPost.isPending}
@@ -454,7 +584,7 @@ function UploadDialog() {
           >
             {createPost.isPending ? "Uploading..." : "Submit"}
           </Button>
-          
+
           <p className="text-center text-xs text-muted-foreground">
             Photos are reviewed before appearing in the gallery
           </p>
@@ -465,16 +595,39 @@ function UploadDialog() {
 }
 
 export default function Gallery() {
+  const { user } = useAuth();
   const { data: posts = [], isLoading } = useGalleryPosts();
+  const { data: userPosts = [], isLoading: isUserPostsLoading } =
+    useUserGalleryPosts();
   const { data: petOfTheWeek } = usePetOfTheWeek();
 
   // Lightbox state
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedFeed, setSelectedFeed] = useState<"all" | "user">("all");
+  const activePosts = selectedFeed === "user" ? userPosts : posts;
+  const activePostsLoading =
+    selectedFeed === "user" ? isUserPostsLoading : isLoading;
 
-  const handleOpen = useCallback((index: number) => setSelectedIndex(index), []);
+  const handleOpen = useCallback((index: number, feed: "all" | "user") => {
+    setSelectedFeed(feed);
+    setSelectedIndex(index);
+  }, []);
+  const handleFeedChange = useCallback((feed: "all" | "user") => {
+    setSelectedFeed(feed);
+    setSelectedIndex(null);
+  }, []);
   const handleClose = useCallback(() => setSelectedIndex(null), []);
-  const handlePrev = useCallback(() => setSelectedIndex((i) => (i !== null && i > 0 ? i - 1 : i)), []);
-  const handleNext = useCallback(() => setSelectedIndex((i) => (i !== null && i < posts.length - 1 ? i + 1 : i)), [posts.length]);
+  const handlePrev = useCallback(
+    () => setSelectedIndex((i) => (i !== null && i > 0 ? i - 1 : i)),
+    [],
+  );
+  const handleNext = useCallback(
+    () =>
+      setSelectedIndex((i) =>
+        i !== null && i < activePosts.length - 1 ? i + 1 : i,
+      ),
+    [activePosts.length],
+  );
 
   return (
     <PageLayout>
@@ -484,21 +637,23 @@ export default function Gallery() {
         keywords="pet gallery, pet photos, Pebric pets, pet fashion photos, pet of the week"
       />
       {/* Lightbox */}
-      {selectedIndex !== null && posts[selectedIndex] && (
+      {selectedIndex !== null && activePosts[selectedIndex] && (
         <PhotoLightbox
-          post={posts[selectedIndex]}
+          post={activePosts[selectedIndex]}
           onClose={handleClose}
           onPrev={handlePrev}
           onNext={handleNext}
           hasPrev={selectedIndex > 0}
-          hasNext={selectedIndex < posts.length - 1}
+          hasNext={selectedIndex < activePosts.length - 1}
         />
       )}
 
       {/* Hero */}
       <section className="bg-muted py-16">
         <div className="container mx-auto px-6 text-center">
-          <h1 className="font-display text-4xl font-medium md:text-5xl">Pet Gallery</h1>
+          <h1 className="font-display text-4xl font-medium md:text-5xl">
+            Pet Gallery
+          </h1>
           <p className="mt-4 text-muted-foreground">
             See our adorable customers in their PawStyle outfits
           </p>
@@ -514,7 +669,9 @@ export default function Gallery() {
           <div className="rounded-2xl bg-gradient-to-r from-yellow-100 to-orange-100 p-8 dark:from-yellow-900/20 dark:to-orange-900/20">
             <div className="flex items-center gap-2 mb-4">
               <Crown className="h-6 w-6 text-yellow-600" />
-              <h2 className="font-display text-2xl font-medium">Pet of the Week</h2>
+              <h2 className="font-display text-2xl font-medium">
+                Pet of the Week
+              </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <div className="aspect-square overflow-hidden rounded-lg">
@@ -534,7 +691,9 @@ export default function Gallery() {
                   </p>
                 )}
                 {petOfTheWeek.gallery_post.caption && (
-                  <p className="mt-4 text-lg">{petOfTheWeek.gallery_post.caption}</p>
+                  <p className="mt-4 text-lg">
+                    {petOfTheWeek.gallery_post.caption}
+                  </p>
                 )}
                 <div className="mt-4 flex items-center gap-4">
                   <span className="flex items-center gap-1">
@@ -550,20 +709,68 @@ export default function Gallery() {
 
       {/* Gallery Grid */}
       <section className="container mx-auto px-6 py-6 md:py-8">
-        {isLoading ? (
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="mb-2 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              Community Feed
+            </p>
+            <h2 className="font-display text-2xl font-medium md:text-3xl">
+              {selectedFeed === "user" ? "My Posts" : "All Posts"}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {selectedFeed === "user"
+                ? "Browse all the photos you have shared with the community."
+                : "Browse every post shared by the Pebric community."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={selectedFeed === "all" ? "default" : "outline"}
+              onClick={() => handleFeedChange("all")}
+              className="h-10 px-4 font-body text-[11px] uppercase tracking-[0.18em]"
+            >
+              All Posts
+            </Button>
+            {user && (
+              <Button
+                type="button"
+                variant={selectedFeed === "user" ? "default" : "outline"}
+                onClick={() => handleFeedChange("user")}
+                className="h-10 px-4 font-body text-[11px] uppercase tracking-[0.18em]"
+              >
+                My Posts
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {activePostsLoading ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-        ) : posts.length === 0 ? (
+        ) : activePosts.length === 0 ? (
           <div className="py-16 text-center">
             <ImageIcon className="mx-auto h-16 w-16 text-muted-foreground" />
-            <h3 className="mt-4 font-display text-xl">No photos yet</h3>
-            <p className="mt-2 text-muted-foreground">Be the first to share your pet!</p>
+            <h3 className="mt-4 font-display text-xl">
+              {selectedFeed === "user" ? "No posts yet" : "No photos yet"}
+            </h3>
+            <p className="mt-2 text-muted-foreground">
+              {selectedFeed === "user"
+                ? "Share your first pet photo to see it here."
+                : "Be the first to share your pet!"}
+            </p>
           </div>
         ) : (
           <div className="columns-2 gap-4 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5">
-            {posts.map((post, index) => (
-              <GalleryCard key={post.id} post={post} onOpen={() => handleOpen(index)} />
+            {activePosts.map((post, index) => (
+              <GalleryCard
+                key={post.id}
+                post={post}
+                onOpen={() => handleOpen(index, selectedFeed)}
+                showApprovalStatus={selectedFeed === "user"}
+              />
             ))}
           </div>
         )}
