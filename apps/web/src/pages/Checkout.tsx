@@ -184,7 +184,7 @@ export default function Checkout() {
       petSize: item.petSize,
     }));
 
-  const finalizeOrder = async (transactionId?: string, gatewayPaymentMethod?: string) => {
+  const finalizeOrder = async (transactionId?: string, gatewayPaymentMethod?: string, gatewayPaymentStatus?: string) => {
     const order = await createOrder.mutateAsync({
       items: buildOrderItems(),
       subtotal: activeTotal,
@@ -205,6 +205,7 @@ export default function Checkout() {
         amount: total,
         paymentMethod: gatewayPaymentMethod || paymentMethod,
         transactionId,
+        paymentStatus: gatewayPaymentStatus,
       });
 
       if (appliedCoupon && couponDiscount > 0) {
@@ -332,6 +333,7 @@ export default function Checkout() {
             amount: snapshot.total,
             paymentMethod: resolvedMethod,
             transactionId,
+            paymentStatus: "completed",
           });
 
           if (snapshot.coupon?.id && snapshot.couponDiscount > 0) {
@@ -475,7 +477,7 @@ export default function Checkout() {
           const resolvedMethod =
             mapPaytmModeToMethod(verification.paymentMode || response.PAYMENTMODE) || paymentMethod;
 
-          await finalizeOrder(transactionId || undefined, resolvedMethod);
+          await finalizeOrder(transactionId || undefined, resolvedMethod, "completed");
           toast.success("Payment successful! Order placed.", {
             description: transactionId ? `Transaction ID: ${transactionId}` : "Paid via Paytm",
           });

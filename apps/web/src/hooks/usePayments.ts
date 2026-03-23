@@ -92,11 +92,13 @@ export function useCreatePayment() {
       amount,
       paymentMethod,
       transactionId,
+      paymentStatus,
     }: {
       orderId: string;
       amount: number;
       paymentMethod: string;
       transactionId?: string;
+      paymentStatus?: string;
     }) => {
       if (!user) throw new Error("Must be logged in");
 
@@ -107,7 +109,7 @@ export function useCreatePayment() {
           user_id: user.id,
           amount,
           payment_method: paymentMethod,
-          payment_status: paymentMethod === "cod" ? "pending" : "processing",
+          payment_status: paymentStatus || (paymentMethod === "cod" ? "pending" : "processing"),
           transaction_id: transactionId,
         })
         .select()

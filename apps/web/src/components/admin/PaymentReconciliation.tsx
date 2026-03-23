@@ -41,6 +41,7 @@ export function PaymentReconciliation() {
   const updateStatus = useUpdatePaymentStatus();
   const processRefund = useProcessRefund();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
   const [refundAmount, setRefundAmount] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
 
@@ -52,10 +53,11 @@ export function PaymentReconciliation() {
     );
   }
 
-  const filteredPayments =
-    statusFilter === "all"
-      ? payments
-      : payments?.filter((p) => p.payment_status === statusFilter);
+  const filteredPayments = payments?.filter((p) => {
+    const statusMatch = statusFilter === "all" || p.payment_status === statusFilter;
+    const methodMatch = methodFilter === "all" || p.payment_method === methodFilter;
+    return statusMatch && methodMatch;
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -157,14 +159,21 @@ export function PaymentReconciliation() {
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {Object.entries(stats.methodBreakdown).map(([method, count]) => (
-                <div
+                <button
                   key={method}
-                  className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg"
+                  onClick={() => setMethodFilter(methodFilter === method ? "all" : method)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors cursor-pointer ${
+                    methodFilter === method
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  }`}
                 >
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  <CreditCard className={`h-4 w-4 ${methodFilter === method ? "text-primary-foreground" : "text-muted-foreground"}`} />
                   <span className="font-medium capitalize">{method}</span>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
+                  <Badge variant={methodFilter === method ? "default" : "secondary"} className={methodFilter === method ? "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30 border-transparent" : ""}>
+                    {count}
+                  </Badge>
+                </button>
               ))}
             </div>
           </CardContent>
