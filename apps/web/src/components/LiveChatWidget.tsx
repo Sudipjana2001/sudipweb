@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useChatSession, useChatMessages, useSendMessage, useMarkMessagesRead } from "@/hooks/useLiveChat";
+import {
+  useChatSession,
+  useChatMessages,
+  useSendMessage,
+  useMarkMessagesRead,
+} from "@/hooks/useLiveChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,35 +16,38 @@ export function LiveChatWidget() {
   const [isMinimized, setIsMinimized] = useState(false);
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const { user } = useAuth();
   const { data: session } = useChatSession();
   const { data: messages = [] } = useChatMessages(session?.id);
   const sendMessage = useSendMessage();
-  const markRead = useMarkMessagesRead();
+  const { mutate: markMessagesRead } = useMarkMessagesRead();
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
   }, [messages]);
 
   // Mark messages as read when chat is opened
   useEffect(() => {
     if (isOpen && session?.id && !isMinimized) {
-      markRead.mutate({ sessionId: session.id, senderType: "user" });
+      markMessagesRead({ sessionId: session.id, senderType: "user" });
     }
-  }, [isOpen, session?.id, messages.length, isMinimized]);
+  }, [isOpen, isMinimized, markMessagesRead, messages.length, session?.id]);
 
   const handleSend = async () => {
-    if (!message.trim() || !session?.id) return;
-    
+    if (!message.trim()) return;
+
     await sendMessage.mutateAsync({
-      sessionId: session.id,
+      sessionId: session?.id,
       message: message.trim(),
     });
-    
+
     setMessage("");
   };
 
@@ -52,7 +60,7 @@ export function LiveChatWidget() {
 
   // Count unread messages from admin
   const unreadCount = messages.filter(
-    (m) => m.sender_type === "admin" && !m.is_read
+    (m) => m.sender_type === "admin" && !m.is_read,
   ).length;
 
   if (!user) {
@@ -92,7 +100,7 @@ export function LiveChatWidget() {
           }`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
+          <div className="shrink-0 flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               <span className="font-medium">Live Chat</span>
@@ -121,7 +129,7 @@ export function LiveChatWidget() {
           {!isMinimized && (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
                 {messages.length === 0 ? (
                   <div className="text-center text-sm text-muted-foreground py-8">
                     <p className="font-medium">👋 Hi there!</p>
@@ -132,7 +140,9 @@ export function LiveChatWidget() {
                     <div
                       key={msg.id}
                       className={`flex ${
-                        msg.sender_type === "user" ? "justify-end" : "justify-start"
+                        msg.sender_type === "user"
+                          ? "justify-end"
+                          : "justify-start"
                       }`}
                     >
                       <div
@@ -140,14 +150,16 @@ export function LiveChatWidget() {
                           msg.sender_type === "user"
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-foreground"
-                        }`}
+                        } break-words`}
                       >
                         <p>{msg.message}</p>
-                        <p className={`text-[10px] mt-1 ${
-                          msg.sender_type === "user" 
-                            ? "text-primary-foreground/70" 
-                            : "text-muted-foreground"
-                        }`}>
+                        <p
+                          className={`text-[10px] mt-1 ${
+                            msg.sender_type === "user"
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
+                          }`}
+                        >
                           {new Date(msg.created_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -161,7 +173,7 @@ export function LiveChatWidget() {
               </div>
 
               {/* Input */}
-              <div className="border-t border-border p-3">
+              <div className="shrink-0 border-t border-border p-3">
                 <div className="flex gap-2">
                   <Input
                     value={message}

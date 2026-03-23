@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner"; // Added toast for better error visibility
@@ -26,50 +26,70 @@ export interface ChatSession {
   user_email?: string;
 }
 
+type ChatSessionProfile = {
+  full_name: string | null;
+  email: string | null;
+};
+
+type ChatSessionRow = ChatSession & {
+  profile?: ChatSessionProfile | null;
+};
+
+type ChatSessionMessageMeta = {
+  chat_session_id: string;
+  sender_type: "user" | "admin";
+  is_read: boolean;
+  message: string;
+  created_at: string;
+};
+
+async function fetchActiveSessionForUser(userId: string) {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching session:", error);
+    throw error;
+  }
+
+  return data as ChatSession | null;
+}
+
+async function createChatSessionForUser(userId: string) {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .insert({
+      user_id: userId,
+      status: "active",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating session:", error);
+    throw error;
+  }
+
+  return data as ChatSession;
+}
+
 /**
- * Hook to get or create an active chat session for the current user
+ * Hook to get an active chat session for the current user
  */
 export function useChatSession() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   const sessionQuery = useQuery({
     queryKey: ["chat-session", user?.id],
     queryFn: async () => {
       if (!user) return null;
-
-      // Check for existing active session
-      const { data: existing, error: fetchError } = await supabase
-        .from("chat_sessions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error("Error fetching session:", fetchError);
-        throw fetchError;
-      }
-
-      if (existing) return existing as ChatSession;
-
-      // Create new session
-      const { data: newSession, error } = await supabase
-        .from("chat_sessions")
-        .insert({
-          user_id: user.id,
-          status: "active",
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating session:", error);
-        throw error;
-      }
-      return newSession as ChatSession;
+      return fetchActiveSessionForUser(user.id);
     },
     enabled: !!user,
   });
@@ -82,7 +102,6 @@ export function useChatSession() {
  */
 export function useChatMessages(sessionId: string | undefined) {
   const queryClient = useQueryClient();
-  const [isSubscribed, setIsSubscribed] = useState(false);
 
   const messagesQuery = useQuery({
     queryKey: ["chat-messages", sessionId],
@@ -120,8 +139,10 @@ export function useChatMessages(sessionId: string | undefined) {
         },
         () => {
           // Invalidate and re-fetch - more reliable than manual cache update
-          queryClient.invalidateQueries({ queryKey: ["chat-messages", sessionId] });
-        }
+          queryClient.invalidateQueries({
+            queryKey: ["chat-messages", sessionId],
+          });
+        },
       )
       .subscribe();
 
@@ -145,15 +166,23 @@ export function useSendMessage() {
       sessionId,
       message,
     }: {
-      sessionId: string;
+      sessionId?: string;
       message: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
+      let activeSession = sessionId
+        ? ({ id: sessionId } as ChatSession)
+        : await fetchActiveSessionForUser(user.id);
+
+      if (!activeSession) {
+        activeSession = await createChatSessionForUser(user.id);
+        queryClient.setQueryData(["chat-session", user.id], activeSession);
+      }
 
       const { data, error } = await supabase
         .from("chat_messages")
         .insert({
-          chat_session_id: sessionId,
+          chat_session_id: activeSession.id,
           sender_id: user.id,
           sender_type: "user",
           message,
@@ -168,17 +197,24 @@ export function useSendMessage() {
       await supabase
         .from("chat_sessions")
         .update({ updated_at: new Date().toISOString() })
-        .eq("id", sessionId);
+        .eq("id", activeSession.id);
 
-      return data as ChatMessage;
+      return {
+        message: data as ChatMessage,
+        sessionId: activeSession.id,
+      };
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["chat-messages", variables.sessionId] });
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", result.sessionId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["chat-session", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-chat-sessions"] });
     },
     onError: (error) => {
       console.error("Error sending message:", error);
       toast.error("Failed to send message. Please try again.");
-    }
+    },
   });
 }
 
@@ -187,56 +223,146 @@ export function useSendMessage() {
  */
 export function useAdminChatSessions() {
   const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel("admin-chat-sessions-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chat_sessions",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-chat-sessions"] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chat_messages",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-chat-sessions"] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, queryClient]);
 
   return useQuery({
     queryKey: ["admin-chat-sessions"],
     queryFn: async () => {
-      // NOTE: We join with profiles. If there is no FK between chat_sessions and profiles, this throws error.
-      // We also join with messages to get count/unread.
-      
+      let sessions: ChatSessionRow[] | null = null;
+
       const { data, error } = await supabase
         .from("chat_sessions")
-        .select(`
+        .select(
+          `
           *,
-          messages:chat_messages(count),
           profile:profiles(full_name, email)
-        `)
+        `,
+        )
         .eq("status", "active")
         .order("updated_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching admin session list:", error);
-        // Fallback: This commonly fails if 'profiles' relationship is missing.
-        // If it fails, try fetching without the profile join to at least show the sessions.
         if (error.message.includes("relationship")) {
-           const { data: fallbackData, error: fallbackError } = await supabase
+          const { data: fallbackData, error: fallbackError } = await supabase
             .from("chat_sessions")
-            .select(`
-              *,
-              messages:chat_messages(count)
-            `)
+            .select("*")
             .eq("status", "active")
             .order("updated_at", { ascending: false });
-            
-            if (fallbackError) throw fallbackError;
-            
-            return fallbackData?.map((session: any) => ({
-              ...session,
-              user_name: "Customer (No Profile)",
-              user_email: "Sync Error",
-            })) as ChatSession[];
+
+          if (fallbackError) throw fallbackError;
+
+          sessions =
+            fallbackData?.map((session) => ({
+              ...(session as ChatSession),
+              user_name: "Customer",
+              user_email: "",
+            })) || [];
+        } else {
+          throw error;
         }
-        throw error;
+      } else {
+        sessions =
+          data?.map((session) => {
+            const row = session as unknown as ChatSessionRow;
+            return {
+              ...row,
+              user_name: row.profile?.full_name || "Anonymous",
+              user_email: row.profile?.email || "",
+            };
+          }) || [];
       }
-      
-      return data?.map((session: any) => ({
-        ...session,
-        user_name: session.profile?.full_name || "Anonymous",
-        user_email: session.profile?.email || "",
-      })) as ChatSession[];
+
+      if (!sessions || sessions.length === 0) return [];
+
+      const sessionIds = sessions.map((session) => session.id);
+      const { data: messageRows, error: messagesError } = await supabase
+        .from("chat_messages")
+        .select("chat_session_id, sender_type, is_read, message, created_at")
+        .in("chat_session_id", sessionIds)
+        .order("created_at", { ascending: false });
+
+      if (messagesError) {
+        console.error("Error fetching chat message metadata:", messagesError);
+        throw messagesError;
+      }
+
+      const messageMap = new Map<string, ChatSessionMessageMeta[]>();
+
+      (messageRows as ChatSessionMessageMeta[] | null)?.forEach((row) => {
+        const existingRows = messageMap.get(row.chat_session_id) || [];
+        existingRows.push(row);
+        messageMap.set(row.chat_session_id, existingRows);
+      });
+
+      return sessions
+        .map((session) => {
+          const sessionMessages = messageMap.get(session.id) || [];
+          const hasUserMessage = sessionMessages.some(
+            (row) => row.sender_type === "user",
+          );
+
+          if (!hasUserMessage) return null;
+
+          const unreadCount = sessionMessages.filter(
+            (row) => row.sender_type === "user" && !row.is_read,
+          ).length;
+
+          return {
+            ...session,
+            last_message: sessionMessages[0]?.message || "",
+            unread_count: unreadCount,
+          } as ChatSession;
+        })
+        .filter((session): session is ChatSession => session !== null)
+        .sort((a, b) => {
+          const aHasUnread = (a.unread_count || 0) > 0;
+          const bHasUnread = (b.unread_count || 0) > 0;
+
+          if (aHasUnread !== bHasUnread) {
+            return aHasUnread ? -1 : 1;
+          }
+
+          return (
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          );
+        });
     },
     enabled: isAdmin,
-    refetchInterval: 5000, 
   });
 }
 
@@ -280,7 +406,9 @@ export function useAdminSendMessage() {
       return data as ChatMessage;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["chat-messages", variables.sessionId] });
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", variables.sessionId],
+      });
       queryClient.invalidateQueries({ queryKey: ["admin-chat-sessions"] });
     },
   });
@@ -290,6 +418,8 @@ export function useAdminSendMessage() {
  * Hook to mark messages as read
  */
 export function useMarkMessagesRead() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({
       sessionId,
@@ -299,13 +429,19 @@ export function useMarkMessagesRead() {
       senderType: "user" | "admin";
     }) => {
       const otherType = senderType === "user" ? "admin" : "user";
-      
+
       await supabase
         .from("chat_messages")
         .update({ is_read: true })
         .eq("chat_session_id", sessionId)
         .eq("sender_type", otherType)
         .eq("is_read", false);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["chat-messages", variables.sessionId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-chat-sessions"] });
     },
   });
 }
