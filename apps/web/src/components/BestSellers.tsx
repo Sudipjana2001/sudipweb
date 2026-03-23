@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Heart, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
@@ -10,7 +10,7 @@ import { useBestSellers, Product } from "@/hooks/useProducts";
 export function BestSellers() {
   const { data: products = [], isLoading } = useBestSellers();
   const [startIndex, setStartIndex] = useState(0);
-  
+
   // Responsive visible count
   const [visibleCount, setVisibleCount] = useState(4);
 
@@ -23,22 +23,24 @@ export function BestSellers() {
     };
 
     handleResize(); // Initial check
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const { ref: headerRef, isVisible: headerVisible } = useScrollAnimation();
-  const { ref: sliderRef, isVisible: sliderVisible } = useScrollAnimation({ threshold: 0.05 });
+  const { ref: sliderRef, isVisible: sliderVisible } = useScrollAnimation({
+    threshold: 0.05,
+  });
 
   const nextProducts = () => {
-    setStartIndex((prev) => 
-      prev + visibleCount >= products.length ? 0 : prev + 1
+    setStartIndex((prev) =>
+      prev + visibleCount >= products.length ? 0 : prev + 1,
     );
   };
 
   const prevProducts = () => {
-    setStartIndex((prev) => 
-      prev === 0 ? Math.max(0, products.length - visibleCount) : prev - 1
+    setStartIndex((prev) =>
+      prev === 0 ? Math.max(0, products.length - visibleCount) : prev - 1,
     );
   };
 
@@ -60,10 +62,12 @@ export function BestSellers() {
     <section className="bg-secondary py-24 md:py-32 overflow-hidden">
       <div className="container mx-auto px-6">
         {/* Section Header */}
-        <div 
+        <div
           ref={headerRef}
           className={`mb-12 flex items-end justify-between transition-all duration-700 ${
-            headerVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            headerVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
           }`}
         >
           <div>
@@ -93,22 +97,26 @@ export function BestSellers() {
         </div>
 
         {/* Products Slider */}
-        <div 
+        <div
           ref={sliderRef}
           className={`relative overflow-hidden transition-all duration-700 ${
-            sliderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+            sliderVisible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-12"
           }`}
         >
-          <div 
+          <div
             className="flex gap-6 transition-transform duration-700 ease-out"
-            style={{ transform: `translateX(-${startIndex * (100 / visibleCount)}%)` }}
+            style={{
+              transform: `translateX(-${startIndex * (100 / visibleCount)}%)`,
+            }}
           >
             {products.map((product, index) => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                index={index} 
-                width={`calc(${100 / visibleCount}% - ${24 * (visibleCount - 1) / visibleCount}px)`}
+              <ProductCard
+                key={product.id}
+                product={product}
+                index={index}
+                width={`calc(${100 / visibleCount}% - ${(24 * (visibleCount - 1)) / visibleCount}px)`}
               />
             ))}
           </div>
@@ -136,16 +144,23 @@ export function BestSellers() {
   );
 }
 
-function ProductCard({ product, index, width }: { product: Product; index: number; width: string }) {
+function ProductCard({
+  product,
+  index,
+  width,
+}: {
+  product: Product;
+  index: number;
+  width: string;
+}) {
   const [isHovered, setIsHovered] = useState(false);
   const sizes = product.sizes || ["S", "M", "L"];
   const petSizes = product.pet_sizes || ["S", "M", "L"];
   const [selectedSize, setSelectedSize] = useState(sizes[1] || sizes[0]);
-  const [selectedPetSize, setSelectedPetSize] = useState(petSizes[1] || petSizes[0]);
-  const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } = useCart();
-
-  /* Removed numericId hack */
-  const inWishlist = isInWishlist(product.id);
+  const [selectedPetSize, setSelectedPetSize] = useState(
+    petSizes[1] || petSizes[0],
+  );
+  const { addToCart } = useCart();
   const categoryName = product.category?.name || "Fashion";
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -165,28 +180,9 @@ function ProductCard({ product, index, width }: { product: Product; index: numbe
     });
   };
 
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (inWishlist) {
-      removeFromWishlist(product.id);
-      toast.info("Removed from wishlist");
-    } else {
-      addToWishlist({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image_url || "/product-1.jpg",
-        category: categoryName,
-        slug: product.slug,
-      });
-      toast.success("Added to wishlist!");
-    }
-  };
-
   return (
     <Link to={`/product/${product.slug}`} style={{ width, minWidth: width }}>
-      <div 
+      <div
         className="group w-full flex-shrink-0 transition-transform duration-500"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -196,26 +192,17 @@ function ProductCard({ product, index, width }: { product: Product; index: numbe
         <div className="relative mb-4 overflow-hidden bg-muted aspect-[3/4] transition-shadow duration-500 group-hover:shadow-elevated">
           <div
             className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
-            style={{ backgroundImage: `url(${product.image_url || "/product-1.jpg"})` }}
+            style={{
+              backgroundImage: `url(${product.image_url || "/product-1.jpg"})`,
+            }}
           />
-          
-          {/* Wishlist Button */}
-          <button 
-            onClick={handleWishlist}
-            className={`absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 transition-all duration-300 hover:bg-background hover:scale-110 active:scale-95 ${
-              isHovered || inWishlist ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
-            }`}
-            aria-label="Add to wishlist"
-          >
-            <Heart className={`h-4 w-4 transition-all duration-300 ${
-              inWishlist ? "fill-destructive text-destructive scale-110" : "text-foreground"
-            }`} />
-          </button>
 
           {/* Quick Add Overlay */}
-          <div 
+          <div
             className={`absolute inset-x-0 bottom-0 bg-background/95 p-4 transition-all duration-300 ${
-              isHovered ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+              isHovered
+                ? "translate-y-0 opacity-100"
+                : "translate-y-full opacity-0"
             }`}
           >
             {/* Size Selectors */}
@@ -270,7 +257,12 @@ function ProductCard({ product, index, width }: { product: Product; index: numbe
               </div>
             </div>
 
-            <Button variant="premium" className="w-full" size="sm" onClick={handleAddToCart}>
+            <Button
+              variant="premium"
+              className="w-full"
+              size="sm"
+              onClick={handleAddToCart}
+            >
               <ShoppingBag className="h-3.5 w-3.5" />
               Add to Cart
             </Button>
