@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Package,
@@ -63,6 +64,7 @@ import { InstagramManager } from "@/components/admin/InstagramManager";
 import { UsersManager } from "@/components/admin/UsersManager";
 import { SEOHead } from "@/components/SEOHead";
 import { useRealtimeChannel } from "@/hooks/useRealtime";
+import { Separator } from "@/components/ui/separator";
 
 interface Product {
   id: string;
@@ -87,10 +89,127 @@ interface Product {
 interface Order {
   id: string;
   order_number: string;
-  status: string;
+  status: string | null;
+  subtotal: number;
+  shipping_cost: number | null;
+  tax: number | null;
   total: number;
-  created_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string | null;
+  payment_method: string | null;
+  payment_status: string | null;
+  shipping_address: OrderAddress | null;
+  billing_address: OrderAddress | null;
+  notes: string | null;
+  carrier: string | null;
+  tracking_number: string | null;
+  payment_id: string | null;
+  gift_wrap: boolean | null;
+  gift_message: string | null;
+  gift_wrap_price: number | null;
+  refund_status: string | null;
+  refund_amount: number | null;
+  items?: OrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+  product_id: string | null;
+  product_name: string;
+  product_image: string | null;
+  quantity: number;
+  size: string | null;
+  pet_size: string | null;
+  unit_price: number;
+  total_price: number;
+}
+
+interface OrderAddress {
+  full_name?: string;
+  firstName?: string;
+  lastName?: string;
+  address?: string;
+  city?: string;
+  postal_code?: string;
+  postalCode?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+}
+
+function formatCurrency(value: number | null | undefined) {
+  return `₹${(value ?? 0).toFixed(2)}`;
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "Not available";
+  return new Date(value).toLocaleString();
+}
+
+function formatEnumText(
+  value: string | null | undefined,
+  fallback = "Not available",
+) {
+  if (!value) return fallback;
+
+  return value.replace(/_/g, " ");
+}
+
+function getAddressName(address: OrderAddress | null | undefined) {
+  if (!address) return "Not provided";
+
+  return (
+    address.full_name ||
+    [address.firstName, address.lastName].filter(Boolean).join(" ") ||
+    "Not provided"
+  );
+}
+
+function getAddressLines(address: OrderAddress | null | undefined) {
+  if (!address) return [];
+
+  const postalCode = address.postal_code || address.postalCode;
+
+  return [
+    getAddressName(address),
+    address.address,
+    [address.city, postalCode].filter(Boolean).join(", "),
+    address.country,
+    address.phone ? `Phone: ${address.phone}` : null,
+    address.email ? `Email: ${address.email}` : null,
+  ].filter((line): line is string => Boolean(line));
+}
+
+function getOrderStatusClass(status: string | null) {
+  switch (status) {
+    case "delivered":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "shipped":
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    case "processing":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    case "confirmed":
+      return "border-violet-200 bg-violet-50 text-violet-700";
+    case "cancelled":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
+}
+
+function getPaymentStatusClass(status: string | null) {
+  switch (status) {
+    case "paid":
+    case "completed":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "failed":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    case "pending":
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
 }
 
 const defaultSizes = ["XS", "S", "M", "L", "XL"];
@@ -112,6 +231,8 @@ export default function Admin() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +243,14 @@ export default function Admin() {
     sectionParam && validAdminSections.has(sectionParam)
       ? sectionParam
       : "dashboard";
+  const normalizedOrderSearchQuery = orderSearchQuery.trim().toLowerCase();
+  const filteredOrders = normalizedOrderSearchQuery
+    ? orders.filter((order) =>
+        order.id.toLowerCase().includes(normalizedOrderSearchQuery),
+      )
+    : orders;
+  const selectedOrder =
+    orders.find((order) => order.id === selectedOrderId) ?? null;
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -199,7 +328,7 @@ export default function Admin() {
         .order("created_at", { ascending: false }),
       supabase
         .from("orders")
-        .select("*")
+        .select("*, items:order_items(*)")
         .order("created_at", { ascending: false }),
     ]);
 
@@ -616,33 +745,50 @@ export default function Admin() {
                           key={order.id}
                           className="transition-colors hover:bg-muted/20"
                         >
-                          <td className="px-4 py-3 text-sm font-medium">
-                            {order.order_number}
+                          <td className="px-4 py-3">
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold text-foreground">
+                                {order.order_number}
+                              </p>
+                              <p className="break-all font-mono text-[11px] text-muted-foreground">
+                                {order.id}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {getAddressName(order.shipping_address)}
+                              </p>
+                            </div>
                           </td>
-                          <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-medium">
-                            ₹{order.total.toFixed(2)}
+                          <td className="hidden px-4 py-3 sm:table-cell">
+                            <div className="space-y-1">
+                              <p className="text-sm text-foreground">
+                                {order.created_at
+                                  ? new Date(
+                                      order.created_at,
+                                    ).toLocaleDateString()
+                                  : "Not available"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {order.created_at
+                                  ? new Date(order.created_at).toLocaleTimeString()
+                                  : ""}
+                              </p>
+                            </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                order.status === "delivered"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : order.status === "cancelled"
-                                    ? "bg-red-100 text-red-700"
-                                    : order.status === "shipped"
-                                      ? "bg-blue-100 text-blue-700"
-                                      : order.status === "processing"
-                                        ? "bg-purple-100 text-purple-700"
-                                        : order.status === "confirmed"
-                                          ? "bg-indigo-100 text-indigo-700"
-                                          : "bg-amber-100 text-amber-700"
-                              }`}
+                            <p className="text-sm font-medium text-foreground">
+                              {formatCurrency(order.total)}
+                            </p>
+                            <p className="text-xs capitalize text-muted-foreground">
+                              {formatEnumText(order.payment_method, "Payment n/a")}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              variant="outline"
+                              className={`capitalize ${getOrderStatusClass(order.status)}`}
                             >
-                              {order.status}
-                            </span>
+                              {order.status || "pending"}
+                            </Badge>
                           </td>
                         </tr>
                       ))}
@@ -1255,75 +1401,444 @@ export default function Admin() {
 
       case "orders":
         return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Orders</h2>
-              <p className="text-sm text-muted-foreground">
-                {orders.length} orders total
-              </p>
-            </div>
-            <div className="overflow-hidden rounded-xl border border-border">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b border-border bg-muted/30">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Order
-                      </th>
-                      <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Total
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {orders.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="transition-colors hover:bg-muted/20"
-                      >
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-medium">
-                            {order.order_number}
-                          </span>
-                          <p className="text-xs text-muted-foreground sm:hidden">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </p>
-                        </td>
-                        <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          ₹{order.total.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={order.status}
-                            onChange={(e) =>
-                              handleStatusChange(order.id, e.target.value)
-                            }
-                            className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-medium"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </td>
+          <>
+            <div className="space-y-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Orders</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Showing {filteredOrders.length} of {orders.length} orders
+                  </p>
+                </div>
+                <div className="w-full md:max-w-sm">
+                  <Input
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    placeholder="Search by order ID"
+                    className="h-10"
+                  />
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-border">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b border-border bg-muted/30">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Order
+                        </th>
+                        <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">
+                          Date
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Total
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Details
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredOrders.length > 0 ? (
+                        filteredOrders.map((order) => (
+                          <tr
+                            key={order.id}
+                            className="transition-colors hover:bg-muted/20"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                  {order.order_number}
+                                </p>
+                                <p className="break-all font-mono text-[11px] text-muted-foreground">
+                                  {order.id}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {getAddressName(order.shipping_address)}
+                                </p>
+                                <p className="text-xs text-muted-foreground sm:hidden">
+                                  {order.created_at
+                                    ? formatDateTime(order.created_at)
+                                    : "Not available"}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="hidden px-4 py-3 sm:table-cell">
+                              <div className="space-y-1">
+                                <p className="text-sm text-foreground">
+                                  {order.created_at
+                                    ? new Date(
+                                        order.created_at,
+                                      ).toLocaleDateString()
+                                    : "Not available"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {order.created_at
+                                    ? new Date(order.created_at).toLocaleTimeString()
+                                    : ""}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-sm font-medium text-foreground">
+                                {formatCurrency(order.total)}
+                              </p>
+                              <p className="text-xs capitalize text-muted-foreground">
+                                {formatEnumText(
+                                  order.payment_method,
+                                  "Payment n/a",
+                                )}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <select
+                                value={order.status || "pending"}
+                                onChange={(e) =>
+                                  handleStatusChange(order.id, e.target.value)
+                                }
+                                className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs font-medium"
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="processing">Processing</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedOrderId(order.id)}
+                              >
+                                View Details
+                              </Button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-4 py-10 text-center text-sm text-muted-foreground"
+                          >
+                            No orders found for that order ID.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
+
+            <Dialog
+              open={Boolean(selectedOrder)}
+              onOpenChange={(open) => {
+                if (!open) setSelectedOrderId(null);
+              }}
+            >
+              <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+                {selectedOrder && (
+                  <>
+                    <DialogHeader className="border-b border-border px-6 py-5 pr-14">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="space-y-2 text-left">
+                            <DialogTitle className="text-xl font-semibold">
+                              Order Details
+                            </DialogTitle>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">
+                                Placed on {formatDateTime(selectedOrder.created_at)}
+                              </p>
+                              <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-3">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Order ID
+                                </span>
+                                <span className="break-all font-mono text-xs text-foreground">
+                                  {selectedOrder.id}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className={`capitalize ${getOrderStatusClass(selectedOrder.status)}`}
+                            >
+                              {selectedOrder.status || "pending"}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`capitalize ${getPaymentStatusClass(selectedOrder.payment_status)}`}
+                            >
+                              {selectedOrder.payment_status || "unpaid"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-xl border border-border bg-muted/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Customer
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {getAddressName(selectedOrder.shipping_address)}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {selectedOrder.shipping_address?.email ||
+                                "Email not provided"}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {selectedOrder.shipping_address?.phone ||
+                                "Phone not provided"}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-border bg-muted/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Payment
+                            </p>
+                            <p className="mt-2 text-sm font-medium capitalize text-foreground">
+                              {formatEnumText(
+                                selectedOrder.payment_method,
+                                "Not specified",
+                              )}
+                            </p>
+                            <p className="mt-1 text-sm capitalize text-muted-foreground">
+                              {formatEnumText(
+                                selectedOrder.payment_status,
+                                "Pending",
+                              )}
+                            </p>
+                            {selectedOrder.payment_id && (
+                              <p className="mt-1 break-all text-xs text-muted-foreground">
+                                Payment ID: {selectedOrder.payment_id}
+                              </p>
+                            )}
+                          </div>
+                          <div className="rounded-xl border border-border bg-muted/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Fulfillment
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {selectedOrder.carrier || "Carrier pending"}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {selectedOrder.tracking_number ||
+                                "Tracking number not assigned"}
+                            </p>
+                            {selectedOrder.updated_at && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Updated {formatDateTime(selectedOrder.updated_at)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="rounded-xl border border-border bg-muted/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Order Summary
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {formatCurrency(selectedOrder.total)}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {selectedOrder.items?.length || 0} items
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Customer ID:{" "}
+                              {selectedOrder.user_id || "Guest checkout"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </DialogHeader>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                      <div className="grid gap-6 lg:grid-cols-2">
+                        <div className="rounded-xl border border-border p-4">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Shipping Address
+                          </h3>
+                          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                            {getAddressLines(selectedOrder.shipping_address)
+                              .length > 0 ? (
+                              getAddressLines(selectedOrder.shipping_address).map(
+                                (line) => <p key={line}>{line}</p>,
+                              )
+                            ) : (
+                              <p>Not available</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-border p-4">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Billing Address
+                          </h3>
+                          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                            {getAddressLines(selectedOrder.billing_address)
+                              .length > 0 ? (
+                              getAddressLines(selectedOrder.billing_address).map(
+                                (line) => <p key={line}>{line}</p>,
+                              )
+                            ) : (
+                              <p>Not available</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator className="my-6" />
+
+                      <div className="grid gap-6 lg:grid-cols-[1.8fr_1fr]">
+                        <div className="rounded-xl border border-border p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Order Items
+                            </h3>
+                            <span className="text-xs text-muted-foreground">
+                              {selectedOrder.items?.length || 0} items
+                            </span>
+                          </div>
+                          <div className="mt-4 space-y-3">
+                            {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                              selectedOrder.items.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-start gap-3 rounded-lg border border-border/80 p-3"
+                                >
+                                  {item.product_image ? (
+                                    <img
+                                      src={item.product_image}
+                                      alt={item.product_name}
+                                      className="h-14 w-14 rounded-md border border-border object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-md border border-dashed border-border text-xs text-muted-foreground">
+                                      No image
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-foreground">
+                                      {item.product_name}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Qty {item.quantity}
+                                      {item.size ? ` • Owner ${item.size}` : ""}
+                                      {item.pet_size
+                                        ? ` • Pet ${item.pet_size}`
+                                        : ""}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {formatCurrency(item.total_price)}
+                                  </p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                No order items available.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="rounded-xl border border-border p-4">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Totals
+                            </h3>
+                            <div className="mt-3 space-y-2 text-sm">
+                              <div className="flex items-center justify-between text-muted-foreground">
+                                <span>Subtotal</span>
+                                <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-muted-foreground">
+                                <span>Shipping</span>
+                                <span>
+                                  {formatCurrency(selectedOrder.shipping_cost)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-muted-foreground">
+                                <span>Tax</span>
+                                <span>{formatCurrency(selectedOrder.tax)}</span>
+                              </div>
+                              {(selectedOrder.gift_wrap ||
+                                selectedOrder.gift_wrap_price) && (
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                  <span>Gift Wrap</span>
+                                  <span>
+                                    {formatCurrency(selectedOrder.gift_wrap_price)}
+                                  </span>
+                                </div>
+                              )}
+                              <Separator className="my-3" />
+                              <div className="flex items-center justify-between font-semibold text-foreground">
+                                <span>Total</span>
+                                <span>{formatCurrency(selectedOrder.total)}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border border-border p-4">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Additional Details
+                            </h3>
+                            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Customer ID
+                                </p>
+                                <p className="mt-1 break-all">
+                                  {selectedOrder.user_id || "Guest checkout"}
+                                </p>
+                              </div>
+                              {selectedOrder.notes && (
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Notes
+                                  </p>
+                                  <p className="mt-1 whitespace-pre-wrap">
+                                    {selectedOrder.notes}
+                                  </p>
+                                </div>
+                              )}
+                              {selectedOrder.gift_message && (
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Gift Message
+                                  </p>
+                                  <p className="mt-1 whitespace-pre-wrap">
+                                    {selectedOrder.gift_message}
+                                  </p>
+                                </div>
+                              )}
+                              {selectedOrder.refund_status && (
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Refund
+                                  </p>
+                                  <p className="mt-1 capitalize">
+                                    {selectedOrder.refund_status}
+                                    {selectedOrder.refund_amount
+                                      ? ` • ${formatCurrency(selectedOrder.refund_amount)}`
+                                      : ""}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+          </>
         );
 
       // ─── Content sections (render existing manager components) ──
