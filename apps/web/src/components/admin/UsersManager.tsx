@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Eye, RefreshCw, Users } from "lucide-react";
+import { Eye, RefreshCw, Users, X } from "lucide-react";
 import type { Order } from "@/hooks/useOrders";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -401,14 +401,30 @@ export function UsersManager() {
         </div>
 
         <div className="flex flex-col gap-2 sm:w-[420px] sm:flex-row sm:justify-end">
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search users…"
-          />
+          <div className="relative flex-1">
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search users…"
+              className={search ? "pr-10" : ""}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setPage(0);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Clear user search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <Button
             variant="outline"
             onClick={() => {

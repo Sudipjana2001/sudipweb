@@ -18,6 +18,7 @@ import {
   Upload,
   X,
   MessageCircle,
+  RefreshCw,
   TrendingUp,
   IndianRupee,
 } from "lucide-react";
@@ -233,6 +234,7 @@ export default function Admin() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -284,7 +286,10 @@ export default function Admin() {
 
   useEffect(() => {
     if (isAdmin) {
-      fetchData();
+      void fetchData().catch((error) => {
+        console.error("Failed to load admin data:", error);
+        toast.error("Failed to load admin data");
+      });
     }
   }, [isAdmin]);
 
@@ -300,7 +305,11 @@ export default function Admin() {
       if (!isAdmin) return;
       if (realtimeRefreshTimer.current)
         window.clearTimeout(realtimeRefreshTimer.current);
-      realtimeRefreshTimer.current = window.setTimeout(() => fetchData(), 250);
+      realtimeRefreshTimer.current = window.setTimeout(() => {
+        void fetchData().catch((error) => {
+          console.error("Failed to refresh admin data:", error);
+        });
+      }, 250);
     },
     isAdmin,
   );
@@ -321,20 +330,39 @@ export default function Admin() {
   const fetchData = async () => {
     if (products.length === 0) setIsLoading(true);
 
-    const [productsRes, ordersRes] = await Promise.all([
-      supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("orders")
-        .select("*, items:order_items(*)")
-        .order("created_at", { ascending: false }),
-    ]);
+    try {
+      const [productsRes, ordersRes] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("orders")
+          .select("*, items:order_items(*)")
+          .order("created_at", { ascending: false }),
+      ]);
 
-    if (productsRes.data) setProducts(productsRes.data as Product[]);
-    if (ordersRes.data) setOrders(ordersRes.data as Order[]);
-    setIsLoading(false);
+      if (productsRes.error) throw productsRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+
+      setProducts((productsRes.data ?? []) as Product[]);
+      setOrders((ordersRes.data ?? []) as Order[]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefreshOrders = async () => {
+    setIsRefreshingOrders(true);
+
+    try {
+      await fetchData();
+    } catch (error) {
+      console.error("Failed to refresh orders:", error);
+      toast.error("Failed to refresh orders");
+    } finally {
+      setIsRefreshingOrders(false);
+    }
   };
 
   const handleImageUpload = async (
@@ -1410,13 +1438,37 @@ export default function Admin() {
                     Showing {filteredOrders.length} of {orders.length} orders
                   </p>
                 </div>
-                <div className="w-full md:max-w-sm">
-                  <Input
-                    value={orderSearchQuery}
-                    onChange={(e) => setOrderSearchQuery(e.target.value)}
-                    placeholder="Search by order ID"
-                    className="h-10"
-                  />
+                <div className="flex w-full flex-col gap-2 md:max-w-xl md:flex-row md:justify-end">
+                  <div className="relative flex-1">
+                    <Input
+                      value={orderSearchQuery}
+                      onChange={(e) => setOrderSearchQuery(e.target.value)}
+                      placeholder="Search by order ID"
+                      className={`h-10 ${orderSearchQuery ? "pr-10" : ""}`}
+                    />
+                    {orderSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setOrderSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label="Clear order search"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      void handleRefreshOrders();
+                    }}
+                    disabled={isRefreshingOrders}
+                  >
+                    <RefreshCw
+                      className={`mr-2 h-4 w-4 ${isRefreshingOrders ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </Button>
                 </div>
               </div>
               <div className="overflow-hidden rounded-xl border border-border">
