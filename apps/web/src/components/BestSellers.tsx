@@ -218,7 +218,7 @@ function ProductCard({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedSize(size);
+                        setSelectedSize(selectedSize === size ? "" : size);
                       }}
                       className={`h-7 min-w-[28px] px-2 font-body text-xs transition-colors ${
                         selectedSize === size
@@ -242,7 +242,7 @@ function ProductCard({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedPetSize(size);
+                        setSelectedPetSize(selectedPetSize === size ? "" : size);
                       }}
                       className={`h-7 min-w-[28px] px-2 font-body text-xs transition-colors ${
                         selectedPetSize === size

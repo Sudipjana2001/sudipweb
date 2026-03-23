@@ -535,7 +535,7 @@ export default function Product() {
                   {sizes.map((size) => (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => setSelectedSize(selectedSize === size ? "" : size)}
                       className={`h-10 min-w-[44px] px-3 text-xs md:h-12 md:min-w-[48px] md:px-4 md:text-sm border font-body transition-colors ${
                         selectedSize === size
                           ? "border-foreground bg-foreground text-background"
@@ -561,7 +561,7 @@ export default function Product() {
                   {petSizes.map((size) => (
                     <button
                       key={size}
-                      onClick={() => setSelectedPetSize(size)}
+                      onClick={() => setSelectedPetSize(selectedPetSize === size ? "" : size)}
                       className={`h-10 min-w-[44px] px-3 text-xs md:h-12 md:min-w-[48px] md:px-4 md:text-sm border font-body transition-colors ${
                         selectedPetSize === size
                           ? "border-foreground bg-foreground text-background"
