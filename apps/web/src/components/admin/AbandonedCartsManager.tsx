@@ -1,13 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ShoppingCart, Mail, TrendingDown, DollarSign } from "lucide-react";
-import { useAbandonedCarts, useAbandonedCartStats } from "@/hooks/useAbandonedCarts";
+import {
+  Loader2,
+  ShoppingCart,
+  Mail,
+  TrendingDown,
+  DollarSign,
+} from "lucide-react";
+import {
+  useAbandonedCarts,
+  useAbandonedCartStats,
+  useSendAbandonedCartRecoveryEmail,
+} from "@/hooks/useAbandonedCarts";
 import { format } from "date-fns";
 
 export function AbandonedCartsManager() {
   const { data: carts, isLoading } = useAbandonedCarts();
   const { data: stats } = useAbandonedCartStats();
+  const sendRecoveryEmail = useSendAbandonedCartRecoveryEmail();
 
   if (isLoading) {
     return (
@@ -28,7 +39,9 @@ export function AbandonedCartsManager() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalAbandoned || 0}</div>
+            <div className="text-2xl font-bold">
+              {stats?.totalAbandoned || 0}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -38,7 +51,9 @@ export function AbandonedCartsManager() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats?.recoveredCount || 0}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats?.recoveredCount || 0}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -48,7 +63,9 @@ export function AbandonedCartsManager() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.recoveryRate || 0}%</div>
+            <div className="text-2xl font-bold">
+              {stats?.recoveryRate || 0}%
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -83,28 +100,65 @@ export function AbandonedCartsManager() {
               {carts?.map((cart) => (
                 <div
                   key={cart.id}
-                  className="flex items-center justify-between p-4 rounded-lg border"
+                  className="flex flex-col gap-4 rounded-lg border p-4 lg:flex-row lg:items-start lg:justify-between"
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
                         {cart.email || "Anonymous User"}
                       </span>
-                      {!cart.recovery_email_sent && (
+                      {cart.recovery_email_sent ? (
+                        <Badge>Recovery Email Sent</Badge>
+                      ) : (
                         <Badge variant="outline">Email Not Sent</Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {cart.cart_items.length} items • ₹{cart.cart_total.toLocaleString()}
+                      {cart.cart_items.length} items • ₹
+                      {cart.cart_total.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Abandoned {format(new Date(cart.abandoned_at), "MMM d, yyyy HH:mm")}
+                      Abandoned{" "}
+                      {format(new Date(cart.abandoned_at), "MMM d, yyyy HH:mm")}
                     </p>
+                    <div className="space-y-1 pt-1">
+                      {cart.cart_items.slice(0, 3).map((item, index) => (
+                        <p
+                          key={`${cart.id}-${item.product_id}-${index}`}
+                          className="text-sm text-foreground"
+                        >
+                          {item.product_name} x {item.quantity}
+                        </p>
+                      ))}
+                      {cart.cart_items.length > 3 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{cart.cart_items.length - 3} more items
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Send Recovery Email
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sendRecoveryEmail.mutate(cart)}
+                      disabled={
+                        !cart.email ||
+                        (sendRecoveryEmail.isPending &&
+                          sendRecoveryEmail.variables?.id === cart.id)
+                      }
+                    >
+                      {sendRecoveryEmail.isPending &&
+                      sendRecoveryEmail.variables?.id === cart.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="mr-2 h-4 w-4" />
+                      )}
+                      {!cart.email
+                        ? "No Email Address"
+                        : cart.recovery_email_sent
+                          ? "Resend Recovery Email"
+                          : "Send Recovery Email"}
                     </Button>
                   </div>
                 </div>

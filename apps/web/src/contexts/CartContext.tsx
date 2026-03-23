@@ -1,10 +1,27 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+  useRef,
+} from "react";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "./AuthContext";
 import { CartService } from "@/services/CartService";
-import { CartItemModel } from "@/domain/models/CartItem";
+import {
+  CartItemModel,
+  type RawCartItemRecord,
+} from "@/domain/models/CartItem";
 import { toast } from "sonner";
 import { useRealtimeChannel } from "@/hooks/useRealtime";
+import {
+  clearTrackedAbandonedCart,
+  getAbandonedCartSessionId,
+  trackAbandonedCartSnapshot,
+} from "@/hooks/useAbandonedCarts";
+import type { Database } from "@/integrations/types";
 
 export interface CartItem {
   id: number | string;
@@ -30,8 +47,17 @@ interface CartContextType {
   cartItems: CartItem[];
   wishlistItems: WishlistItem[];
   addToCart: (item: Omit<CartItem, "quantity">) => void;
-  removeFromCart: (id: number | string, ownerSize: string, petSize: string) => void;
-  updateQuantity: (id: number | string, ownerSize: string, petSize: string, quantity: number) => void;
+  removeFromCart: (
+    id: number | string,
+    ownerSize: string,
+    petSize: string,
+  ) => void;
+  updateQuantity: (
+    id: number | string,
+    ownerSize: string,
+    petSize: string,
+    quantity: number,
+  ) => void;
   clearCart: () => void;
   addToWishlist: (item: WishlistItem) => void;
   removeFromWishlist: (id: number | string) => void;
@@ -41,6 +67,36 @@ interface CartContextType {
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+type WishlistQueryRow = {
+  product:
+    | (Pick<
+        Database["public"]["Tables"]["products"]["Row"],
+        "id" | "name" | "price" | "image_url" | "slug"
+      > & {
+        category?: { name: string | null } | null;
+      })
+    | null;
+};
+
+function mapWishlistItems(rows: WishlistQueryRow[]): WishlistItem[] {
+  return rows
+    .filter(
+      (
+        item,
+      ): item is WishlistQueryRow & {
+        product: NonNullable<WishlistQueryRow["product"]>;
+      } => Boolean(item.product),
+    )
+    .map((item) => ({
+      id: item.product.id,
+      name: item.product.name,
+      price: item.product.price,
+      image: item.product.image_url || "",
+      category: item.product.category?.name || "Product",
+      slug: item.product.slug,
+    }));
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   // Load state from localStorage if available (for guests)
@@ -53,11 +109,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
 
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isMerged, setIsMerged] = useState(false);
+  const [isCartReady, setIsCartReady] = useState(false);
+  const abandonedCartSessionIdRef = useRef<string | null>(
+    typeof window !== "undefined" ? getAbandonedCartSessionId() : null,
+  );
+  const previousUserIdRef = useRef<string | null>(user?.id ?? null);
+  const previousEmailRef = useRef<string | null>(
+    profile?.email || user?.email || null,
+  );
+  const previousCartItemsRef = useRef<CartItem[]>(cartItems);
+  const skipNextEmptyCartClearRef = useRef(false);
 
   // Create service instance (memoized per user)
-  const cartService = new CartService(user?.id ?? null);
+  const cartService = useMemo(
+    () => new CartService(user?.id ?? null),
+    [user?.id],
+  );
 
   // Sync guest cart to localStorage
   useEffect(() => {
@@ -70,16 +139,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) {
       // If user logs out, we keep the current state (which effectively becomes the persistent guest cart if they continue shopping)
-      // Or we could revert to the 'guest_cart' from before login? 
-      // Standard behavior: clear or keep empty. 
+      // Or we could revert to the 'guest_cart' from before login?
+      // Standard behavior: clear or keep empty.
       // Let's reload from guest_cart in case there was a session overlap, or just rely on state.
       // But usually logout clears the UI.
       const saved = localStorage.getItem("guest_cart");
       setCartItems(saved ? JSON.parse(saved) : []);
       setWishlistItems([]);
       setIsMerged(false);
+      setIsCartReady(true);
       return;
     }
+
+    setIsCartReady(false);
 
     const syncAndLoadData = async () => {
       // 1. Merge Strategy: Check for guest cart items to sync
@@ -97,11 +169,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
               image: item.image,
               ownerSize: item.ownerSize,
               petSize: item.petSize,
-              slug: item.slug
+              slug: item.slug,
             });
             // Update quantity if > 1
             if (item.quantity > 1) {
-              await cartService.updateQuantity(item.id, item.ownerSize, item.petSize, item.quantity);
+              await cartService.updateQuantity(
+                item.id,
+                item.ownerSize,
+                item.petSize,
+                item.quantity,
+              );
             }
           }
           // Clear guest cart after successful sync
@@ -113,7 +190,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // 2. Load Cart from DB (now includes merged items)
       const { data: cartData } = await supabase
         .from("cart_items")
-        .select(`
+        .select(
+          `
           *,
           product:products (
             id,
@@ -123,19 +201,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
             images,
             slug
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id);
 
       if (cartData) {
         // Use CartService to group items
-        const groupedItems = cartService.groupCartItems(cartData as any);
+        const groupedItems = cartService.groupCartItems(
+          cartData as RawCartItemRecord[],
+        );
         setCartItems(groupedItems);
       }
 
       // 3. Load Wishlist
       const { data: wishlistData } = await supabase
         .from("wishlist_items")
-        .select(`
+        .select(
+          `
           product:products (
             id,
             name,
@@ -146,32 +228,133 @@ export function CartProvider({ children }: { children: ReactNode }) {
             slug,
             category:categories(name)
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id);
 
       if (wishlistData) {
-        setWishlistItems(
-          wishlistData.map((item: any) => ({
-            id: item.product.id,
-            name: item.product.name,
-            price: item.product.price,
-            image: item.product.image_url,
-            category: item.product.category?.name || "Product",
-            slug: item.product.slug,
-          })) as any
-        );
+        setWishlistItems(mapWishlistItems(wishlistData as WishlistQueryRow[]));
       }
     };
 
-    syncAndLoadData();
-  }, [user]);
+    syncAndLoadData().finally(() => {
+      setIsCartReady(true);
+    });
+  }, [cartService, isMerged, user]);
+
+  useEffect(() => {
+    if (!isCartReady || typeof document === "undefined") return;
+
+    if (!abandonedCartSessionIdRef.current) {
+      abandonedCartSessionIdRef.current = getAbandonedCartSessionId();
+    }
+
+    const identity = {
+      userId: user?.id,
+      sessionId: abandonedCartSessionIdRef.current,
+    };
+
+    const clearTrackedCart = () => {
+      void clearTrackedAbandonedCart(identity).catch((error) => {
+        console.warn("Failed to clear abandoned cart tracking:", error);
+      });
+    };
+
+    if (cartItems.length === 0) {
+      if (skipNextEmptyCartClearRef.current) {
+        skipNextEmptyCartClearRef.current = false;
+        return;
+      }
+
+      clearTrackedCart();
+      return;
+    }
+
+    const trackCurrentCart = () => {
+      void trackAbandonedCartSnapshot({
+        ...identity,
+        email: profile?.email || user?.email,
+        cart_total: cartItems.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0,
+        ),
+        cart_items: cartItems.map((item) => ({
+          product_id: String(item.id),
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image_url: item.image,
+        })),
+      }).catch((error) => {
+        console.warn("Failed to track abandoned cart:", error);
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        trackCurrentCart();
+      }
+    };
+
+    const handlePageHide = () => {
+      trackCurrentCart();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [cartItems, isCartReady, profile?.email, user?.email, user?.id]);
+
+  useEffect(() => {
+    const previousUserId = previousUserIdRef.current;
+    const userJustLoggedOut = Boolean(previousUserId) && !user?.id;
+
+    if (
+      userJustLoggedOut &&
+      previousCartItemsRef.current.length > 0 &&
+      abandonedCartSessionIdRef.current
+    ) {
+      skipNextEmptyCartClearRef.current = true;
+
+      void trackAbandonedCartSnapshot({
+        userId: previousUserId,
+        sessionId: abandonedCartSessionIdRef.current,
+        email: previousEmailRef.current || undefined,
+        cart_total: previousCartItemsRef.current.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0,
+        ),
+        cart_items: previousCartItemsRef.current.map((item) => ({
+          product_id: String(item.id),
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          image_url: item.image,
+        })),
+      }).catch((error) => {
+        console.warn("Failed to track abandoned cart on logout:", error);
+      });
+    }
+
+    previousUserIdRef.current = user?.id ?? null;
+    previousEmailRef.current = profile?.email || user?.email || null;
+    previousCartItemsRef.current = cartItems;
+  }, [cartItems, profile?.email, user?.email, user?.id]);
 
   useRealtimeChannel(
     user ? `cart-wishlist-realtime-${user.id}` : "cart-wishlist-realtime-guest",
     user
       ? [
           { table: "cart_items", event: "*", filter: `user_id=eq.${user.id}` },
-          { table: "wishlist_items", event: "*", filter: `user_id=eq.${user.id}` },
+          {
+            table: "wishlist_items",
+            event: "*",
+            filter: `user_id=eq.${user.id}`,
+          },
         ]
       : [],
     async () => {
@@ -180,7 +363,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Reload cart
       const { data: cartData } = await supabase
         .from("cart_items")
-        .select(`
+        .select(
+          `
           *,
           product:products (
             id,
@@ -190,18 +374,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
             images,
             slug
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id);
 
       if (cartData) {
-        const groupedItems = cartService.groupCartItems(cartData as any);
+        const groupedItems = cartService.groupCartItems(
+          cartData as RawCartItemRecord[],
+        );
         setCartItems(groupedItems);
       }
 
       // Reload wishlist
       const { data: wishlistData } = await supabase
         .from("wishlist_items")
-        .select(`
+        .select(
+          `
           product:products (
             id,
             name,
@@ -210,20 +398,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
             slug,
             category:categories(name)
           )
-        `)
+        `,
+        )
         .eq("user_id", user.id);
 
       if (wishlistData) {
-        setWishlistItems(
-          wishlistData.map((item: any) => ({
-            id: item.product.id,
-            name: item.product.name,
-            price: item.product.price,
-            image: item.product.image_url,
-            category: item.product.category?.name || "Product",
-            slug: item.product.slug,
-          })) as any,
-        );
+        setWishlistItems(mapWishlistItems(wishlistData as WishlistQueryRow[]));
       }
     },
     !!user,
@@ -237,16 +417,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Optimistic update
     setCartItems((prev) => {
       const existing = prev.find(
-        (i) => i.id === item.id && i.ownerSize === ownerSize && i.petSize === petSize
+        (i) =>
+          i.id === item.id &&
+          i.ownerSize === ownerSize &&
+          i.petSize === petSize,
       );
       if (existing) {
         return prev.map((i) =>
           i.id === item.id && i.ownerSize === ownerSize && i.petSize === petSize
             ? { ...i, quantity: i.quantity + 1 }
-            : i
+            : i,
         );
       }
-      return [...prev, { ...item, ownerSize, petSize, quantity: 1, slug: item.slug }];
+      return [
+        ...prev,
+        { ...item, ownerSize, petSize, quantity: 1, slug: item.slug },
+      ];
     });
 
     // Sync with database using CartService
@@ -260,27 +446,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removeFromCart = async (id: number | string, ownerSize: string, petSize: string) => {
+  const removeFromCart = async (
+    id: number | string,
+    ownerSize: string,
+    petSize: string,
+  ) => {
     // Normalize sizes
     const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
     const normalizedPetSize = CartItemModel.normalizeSize(petSize);
 
     // Optimistic update
     setCartItems((prev) =>
-      prev.filter((i) => !(i.id === id && i.ownerSize === normalizedOwnerSize && i.petSize === normalizedPetSize))
+      prev.filter(
+        (i) =>
+          !(
+            i.id === id &&
+            i.ownerSize === normalizedOwnerSize &&
+            i.petSize === normalizedPetSize
+          ),
+      ),
     );
 
     // Sync with database using CartService
     if (user) {
       try {
-        await cartService.removeItem(id, normalizedOwnerSize, normalizedPetSize);
+        await cartService.removeItem(
+          id,
+          normalizedOwnerSize,
+          normalizedPetSize,
+        );
       } catch (error) {
         console.error("Failed to sync cart:", error);
       }
     }
   };
 
-  const updateQuantity = async (id: number | string, ownerSize: string, petSize: string, quantity: number) => {
+  const updateQuantity = async (
+    id: number | string,
+    ownerSize: string,
+    petSize: string,
+    quantity: number,
+  ) => {
     const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
     const normalizedPetSize = CartItemModel.normalizeSize(petSize);
 
@@ -292,16 +498,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Optimistic update
     setCartItems((prev) =>
       prev.map((i) =>
-        i.id === id && i.ownerSize === normalizedOwnerSize && i.petSize === normalizedPetSize
+        i.id === id &&
+        i.ownerSize === normalizedOwnerSize &&
+        i.petSize === normalizedPetSize
           ? { ...i, quantity }
-          : i
-      )
+          : i,
+      ),
     );
 
     // Sync with database using CartService
     if (user) {
       try {
-        await cartService.updateQuantity(id, normalizedOwnerSize, normalizedPetSize, quantity);
+        await cartService.updateQuantity(
+          id,
+          normalizedOwnerSize,
+          normalizedPetSize,
+          quantity,
+        );
       } catch (error) {
         console.error("Failed to sync cart:", error);
       }
@@ -346,10 +559,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isInWishlist = (id: number | string) => wishlistItems.some((i) => i.id === id);
+  const isInWishlist = (id: number | string) =>
+    wishlistItems.some((i) => i.id === id);
 
   // Use CartService static method for totals calculation
-  const { subtotal: cartTotal, itemCount: cartCount } = CartService.calculateTotals(cartItems);
+  const { subtotal: cartTotal, itemCount: cartCount } =
+    CartService.calculateTotals(cartItems);
 
   return (
     <CartContext.Provider

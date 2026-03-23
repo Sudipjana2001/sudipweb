@@ -1,8 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
+import type { Database } from "@/integrations/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import {
+  getAbandonedCartSessionId,
+  markTrackedAbandonedCartRecovered,
+} from "@/hooks/useAbandonedCarts";
 
 export interface OrderItem {
   id: string;
@@ -53,7 +58,13 @@ export interface Order {
   id: string;
   user_id: string | null;
   order_number: string;
-  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   subtotal: number;
   shipping_cost: number;
   tax: number;
@@ -84,12 +95,14 @@ export function useOrders() {
 
       const { data, error } = await supabase
         .from("orders")
-        .select(`
+        .select(
+          `
           *,
           items:order_items(*),
           payments:payments(payment_method,payment_status,created_at),
           coupon_uses:coupon_uses(discount_applied, coupon:coupons(code))
-        `)
+        `,
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -114,7 +127,7 @@ export function useOrders() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -126,7 +139,7 @@ export function useOrders() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -138,7 +151,7 @@ export function useOrders() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
-        }
+        },
       )
       .subscribe();
 
@@ -161,12 +174,14 @@ export function useOrder(orderId: string) {
 
       const { data, error } = await supabase
         .from("orders")
-        .select(`
+        .select(
+          `
           *,
           items:order_items(*),
           payments:payments(payment_method,payment_status,created_at),
           coupon_uses:coupon_uses(discount_applied, coupon:coupons(code))
-        `)
+        `,
+        )
         .eq("id", orderId)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -192,7 +207,7 @@ export function useOrder(orderId: string) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -204,7 +219,7 @@ export function useOrder(orderId: string) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -216,7 +231,7 @@ export function useOrder(orderId: string) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["order", orderId] });
-        }
+        },
       )
       .subscribe();
 
@@ -261,7 +276,7 @@ export function useCreateOrder() {
       if (!user) throw new Error("Must be logged in");
 
       // Create order
-      const orderData = {
+      const orderData: Database["public"]["Tables"]["orders"]["Insert"] = {
         user_id: user.id,
         status: "confirmed",
         subtotal: input.subtotal,
@@ -269,8 +284,12 @@ export function useCreateOrder() {
         tax: input.tax,
         total: input.total,
         payment_method: input.paymentMethod || "cod",
-        shipping_address: input.shippingAddress as unknown as Record<string, unknown>,
-        billing_address: (input.billingAddress || input.shippingAddress) as unknown as Record<string, unknown>,
+        shipping_address: input.shippingAddress as unknown as Record<
+          string,
+          unknown
+        >,
+        billing_address: (input.billingAddress ||
+          input.shippingAddress) as unknown as Record<string, unknown>,
         notes: input.notes,
         gift_wrap: input.giftWrap || false,
         gift_message: input.giftMessage || null,
@@ -279,7 +298,7 @@ export function useCreateOrder() {
 
       const { data: order, error: orderError } = await supabase
         .from("orders")
-        .insert(orderData as any)
+        .insert(orderData)
         .select()
         .single();
 
@@ -315,7 +334,23 @@ export function useCreateOrder() {
           .delete()
           .eq("user_id", user.id);
         if (clearCartError) {
-          console.warn("Order placed but failed to clear cart items:", clearCartError);
+          console.warn(
+            "Order placed but failed to clear cart items:",
+            clearCartError,
+          );
+        }
+
+        try {
+          await markTrackedAbandonedCartRecovered({
+            userId: user.id,
+            sessionId: getAbandonedCartSessionId(),
+            orderId: order.id,
+          });
+        } catch (error) {
+          console.warn(
+            "Order placed but failed to mark abandoned cart recovered:",
+            error,
+          );
         }
       }
 
