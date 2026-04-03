@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useRealtimeChannel } from "@/hooks/useRealtime";
+import { enforceRateLimit } from "@/lib/rateLimit";
 
 export interface SupportTicket {
   id: string;
@@ -129,6 +130,8 @@ export function useCreateTicket() {
       orderId?: string;
       priority?: string;
     }) => {
+      await enforceRateLimit("support-ticket");
+
       const { data, error } = await supabase
         .from("support_tickets")
         .insert({

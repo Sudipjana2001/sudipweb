@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createServiceClient, getAuthenticatedUser, isAdminUser } from "../_shared/auth.ts";
+import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 // Future: Configure alternative AI service credentials here
 // Examples: OpenAI API Key, Google AI API Key, Azure OpenAI, etc.
@@ -23,125 +19,95 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { imageUrl, galleryPostId }: ModerationRequest = await req.json();
+    const user = await getAuthenticatedUser(req);
+
+    if (!user) {
+      return jsonResponse({ error: "Authentication required" }, 401);
+    }
+
+    if (typeof imageUrl !== "string" || imageUrl.trim().length === 0 || imageUrl.length > 2048) {
+      return jsonResponse({ error: "A valid image URL is required" }, 400);
+    }
 
     console.log(`Moderating image: ${imageUrl}`);
 
-    // Auto-approve if no AI moderation service is configured
+    const supabase = createServiceClient();
+    const isAdmin = await isAdminUser(user.id, supabase);
+
+    if (galleryPostId) {
+      const { data: post, error: postError } = await supabase
+        .from("pet_gallery")
+        .select("id, user_id")
+        .eq("id", galleryPostId)
+        .maybeSingle();
+
+      if (postError) {
+        console.error("Failed to load gallery post for moderation:", postError);
+        return jsonResponse({ error: "Failed to load gallery post" }, 500);
+      }
+
+      if (!post) {
+        return jsonResponse({ error: "Gallery post not found" }, 404);
+      }
+
+      if (!isAdmin && post.user_id !== user.id) {
+        return jsonResponse({ error: "You cannot moderate this gallery post" }, 403);
+      }
+    }
+
     if (!AI_SERVICE_API_KEY || !AI_SERVICE_ENDPOINT) {
-      console.log("AI moderation service not configured - auto-approving image");
-      
-      const autoApprovalResult = {
-        approved: true,
-        reason: "AI moderation service not configured - auto-approved",
-        confidence: 1.0
+      console.log("AI moderation service not configured - leaving image pending review");
+
+      const pendingResult = {
+        approved: false,
+        reason: "Moderation pending manual review",
+        confidence: 0,
       };
 
-      // Log the auto-approval if we have a gallery post ID
       if (galleryPostId) {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
         await supabase.from("image_moderation_logs").insert({
           gallery_post_id: galleryPostId,
           image_url: imageUrl,
-          moderation_result: autoApprovalResult,
-          is_approved: true,
-          rejection_reason: null,
+          moderation_result: pendingResult,
+          is_approved: false,
+          rejection_reason: pendingResult.reason,
         });
 
-        // Update the gallery post approval status
         await supabase
           .from("pet_gallery")
-          .update({ is_approved: true })
+          .update({ is_approved: false })
           .eq("id", galleryPostId);
       }
 
-      return new Response(
-        JSON.stringify(autoApprovalResult),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse(pendingResult, 200);
     }
 
-    // TODO: Future AI service integration
-    // When ready to integrate an AI moderation service:
-    // 1. Set AI_MODERATION_API_KEY and AI_MODERATION_ENDPOINT environment variables
-    // 2. Implement the API call below based on your chosen service
-    // 3. Parse the response and extract moderation result
-    
-    // Example structure for future AI integration:
-    /*
-    const response = await fetch(AI_SERVICE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${AI_SERVICE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // Configure based on your AI service's API
-        image_url: imageUrl,
-        prompt: "Analyze this image for inappropriate content..."
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI service error:", errorText);
-      // Fallback to auto-approval on error
-      return new Response(
-        JSON.stringify({ approved: true, reason: "AI moderation unavailable", confidence: 0.5 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const aiResponse = await response.json();
-    // Parse response based on your AI service's format
     const moderationResult = {
-      approved: aiResponse.is_safe,
-      reason: aiResponse.reason,
-      confidence: aiResponse.confidence
-    };
-    */
-
-    // For now, default to auto-approval
-    const moderationResult = {
-      approved: true,
-      reason: "AI service configured but not yet implemented",
-      confidence: 0.8
+      approved: false,
+      reason: "Moderation pending manual review",
+      confidence: 0,
     };
 
-    // Log the moderation result if we have a gallery post ID
     if (galleryPostId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       await supabase.from("image_moderation_logs").insert({
         gallery_post_id: galleryPostId,
         image_url: imageUrl,
         moderation_result: moderationResult,
-        is_approved: moderationResult.approved,
-        rejection_reason: moderationResult.approved ? null : moderationResult.reason,
+        is_approved: false,
+        rejection_reason: moderationResult.reason,
       });
 
-      // Update the gallery post approval status
       await supabase
         .from("pet_gallery")
-        .update({ is_approved: moderationResult.approved })
+        .update({ is_approved: false })
         .eq("id", galleryPostId);
     }
 
-    return new Response(JSON.stringify(moderationResult), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(moderationResult, 200);
   } catch (error: unknown) {
     console.error("Moderation error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: errorMessage, approved: true }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ error: errorMessage, approved: false }, 500);
   }
 };
 

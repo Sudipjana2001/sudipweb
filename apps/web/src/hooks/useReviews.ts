@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { fromTable } from "@/lib/supabaseUntyped";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import { REVIEW_SUMMARY_QUERY_OPTIONS } from "@/lib/queryCache";
 
 export interface Review {
@@ -37,25 +38,28 @@ export function useProductReviewSummary(productId: string) {
   return useQuery({
     queryKey: ["reviews", "summary", productId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reviews")
-        .select("rating")
-        .eq("product_id", productId);
+      const rpcClient = supabase as unknown as {
+        rpc: (
+          fn: string,
+          args?: Record<string, unknown>,
+        ) => Promise<{
+          data:
+            | { average_rating: number | null; total_reviews: number | null }[]
+            | null;
+          error: { message: string } | null;
+        }>;
+      };
+      const { data, error } = await rpcClient.rpc("get_review_summary", {
+        p_product_id: productId,
+      });
 
       if (error) throw error;
 
-      const ratings = (data ?? []).map((review) => review.rating);
-      const totalReviews = ratings.length;
-      const averageRating = totalReviews
-        ? Math.round(
-            (ratings.reduce((sum, rating) => sum + rating, 0) / totalReviews) *
-              10,
-          ) / 10
-        : 0;
+      const summary = data?.[0];
 
       return {
-        averageRating,
-        totalReviews,
+        averageRating: summary?.average_rating ?? 0,
+        totalReviews: summary?.total_reviews ?? 0,
       };
     },
     enabled: !!productId,
@@ -80,7 +84,7 @@ export function useProductReviews(productId: string) {
 
       // Fetch user's votes if authenticated
       let userVotes = new Set<string>();
-      if (user) {
+      if (user && reviews.length > 0) {
         const { data: votes } = await supabase
           .from("review_helpful_votes")
           .select("review_id")
@@ -166,6 +170,7 @@ export function useAddReview() {
       photos?: string[];
     }) => {
       if (!user) throw new Error("Not authenticated");
+      await enforceRateLimit("review-submit");
 
       // Check if user has a delivered order for this product
       const { data: orderItems } = await supabase
@@ -274,48 +279,23 @@ export function useMarkReviewHelpful() {
     mutationFn: async ({ id, product_id }: { id: string; product_id: string }) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Get the review to check the author
-      const { data: review, error: reviewError } = await supabase
-        .from("reviews")
-        .select("user_id, helpful_count")
-        .eq("id", id)
-        .single();
+      const rpcClient = supabase as unknown as {
+        rpc: (
+          fn: string,
+          args?: Record<string, unknown>,
+        ) => Promise<{ data: number | null; error: { message: string } | null }>;
+      };
 
-      if (reviewError) throw reviewError;
+      const { data, error } = await rpcClient.rpc("mark_review_helpful", {
+        p_review_id: id,
+      });
 
-      // Prevent author from voting on their own review
-      if (review.user_id === user.id) {
-        throw new Error("You cannot vote on your own review");
-      }
+      if (error) throw new Error(error.message);
 
-      // Check if user has already voted
-      const { data: existingVote } = await supabase
-        .from("review_helpful_votes")
-        .select("id")
-        .eq("review_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (existingVote) {
-        throw new Error("You have already voted on this review");
-      }
-
-      // Insert the vote
-      const { error: voteError } = await supabase
-        .from("review_helpful_votes")
-        .insert({ review_id: id, user_id: user.id });
-
-      if (voteError) throw voteError;
-
-      // Increment the helpful count
-      const { error: updateError } = await supabase
-        .from("reviews")
-        .update({ helpful_count: (review.helpful_count || 0) + 1 })
-        .eq("id", id);
-
-      if (updateError) throw updateError;
-
-      return { product_id };
+      return {
+        product_id,
+        helpfulCount: data ?? null,
+      };
     },
     onMutate: async ({ id, product_id }) => {
       await queryClient.cancelQueries({ queryKey: ["reviews", product_id] });
@@ -341,7 +321,22 @@ export function useMarkReviewHelpful() {
 
       return { previousReviewQueries };
     },
-    onSuccess: () => {
+    onSuccess: ({ product_id, helpfulCount }, variables) => {
+      if (typeof helpfulCount === "number") {
+        queryClient.setQueriesData<ReviewWithUser[]>(
+          { queryKey: ["reviews", product_id] },
+          (currentReviews) =>
+            currentReviews?.map((review) =>
+              review.id === variables.id
+                ? {
+                    ...review,
+                    helpful_count: helpfulCount,
+                    user_has_voted: true,
+                  }
+                : review,
+            ),
+        );
+      }
       toast.success("Thanks for your feedback!");
     },
     onError: (error: Error, _variables, context) => {

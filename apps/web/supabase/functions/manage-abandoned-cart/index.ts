@@ -1,11 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { createServiceClient, getAuthenticatedUser, isAdminUser } from "../_shared/auth.ts";
+import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 type AbandonedCartAction = "track" | "clear" | "recover";
 
@@ -27,8 +22,21 @@ interface ManageAbandonedCartRequest {
   orderId?: string;
 }
 
+function sanitizeCartItems(items: AbandonedCartItem[]) {
+  return items.slice(0, 50).map((item) => ({
+    product_id: String(item.product_id ?? "").slice(0, 128),
+    product_name: String(item.product_name ?? "").slice(0, 255),
+    quantity: Math.max(1, Math.min(Number(item.quantity ?? 1), 99)),
+    price: Math.max(0, Number(item.price ?? 0)),
+    image_url:
+      typeof item.image_url === "string" && item.image_url.length <= 2048
+        ? item.image_url
+        : undefined,
+  }));
+}
+
 async function findActiveCartId(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceClient>,
   {
     userId,
     sessionId,
@@ -65,9 +73,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServiceClient();
+    const user = await getAuthenticatedUser(req);
 
     const {
       action,
@@ -79,13 +86,39 @@ const handler = async (req: Request): Promise<Response> => {
       orderId,
     }: ManageAbandonedCartRequest = await req.json();
 
-    if (!action) {
+    if (!action || !["track", "clear", "recover"].includes(action)) {
       throw new Error("Missing action");
     }
 
     if (!userId && !sessionId) {
       throw new Error("Missing cart identity");
     }
+
+    if (sessionId && sessionId.length > 128) {
+      throw new Error("Invalid cart session");
+    }
+
+    if (userId && !user) {
+      return jsonResponse({ success: false, error: "Authentication required" }, 401);
+    }
+
+    if (userId && user) {
+      const admin = await isAdminUser(user.id, supabase);
+      if (!admin && user.id !== userId) {
+        return jsonResponse({ success: false, error: "Forbidden" }, 403);
+      }
+    }
+
+    if (action === "recover" && !user) {
+      return jsonResponse({ success: false, error: "Authentication required" }, 401);
+    }
+
+    const sanitizedEmail =
+      typeof email === "string" && email.includes("@") && email.length <= 320
+        ? email
+        : null;
+    const sanitizedCartItems = sanitizeCartItems(cart_items);
+    const sanitizedCartTotal = Math.max(0, Number(cart_total ?? 0));
 
     const activeCartId = await findActiveCartId(supabase, {
       userId,
@@ -96,9 +129,9 @@ const handler = async (req: Request): Promise<Response> => {
       const payload = {
         user_id: userId || null,
         session_id: sessionId || null,
-        email: email || null,
-        cart_items,
-        cart_total,
+        email: sanitizedEmail,
+        cart_items: sanitizedCartItems,
+        cart_total: sanitizedCartTotal,
         abandoned_at: new Date().toISOString(),
       };
 
@@ -112,23 +145,11 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (error) throw error;
 
-      return new Response(
-        JSON.stringify({ success: true, action, cartId: activeCartId ?? null }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return jsonResponse({ success: true, action, cartId: activeCartId ?? null }, 200);
     }
 
     if (!activeCartId) {
-      return new Response(
-        JSON.stringify({ success: true, action, cartId: null }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return jsonResponse({ success: true, action, cartId: null }, 200);
     }
 
     if (action === "clear") {
@@ -158,24 +179,15 @@ const handler = async (req: Request): Promise<Response> => {
       if (error) throw error;
     }
 
-    return new Response(
-      JSON.stringify({ success: true, action, cartId: activeCartId }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return jsonResponse({ success: true, action, cartId: activeCartId }, 200);
   } catch (error: unknown) {
     console.error("manage-abandoned-cart error:", error);
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
+      500,
     );
   }
 };

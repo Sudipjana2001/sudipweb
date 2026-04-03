@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
-import type { Database } from "@/integrations/types";
+import type { Json } from "@/integrations/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
@@ -48,10 +48,15 @@ export interface ShippingAddress {
 
 export interface BillingAddress {
   full_name: string;
+  firstName?: string;
+  lastName?: string;
   address: string;
   city: string;
   postal_code: string;
   country: string;
+  phone?: string;
+  email?: string;
+  postalCode?: string;
 }
 
 export interface Order {
@@ -246,26 +251,32 @@ export function useOrder(orderId: string) {
 interface CreateOrderInput {
   items: {
     productId: string;
-    productName: string;
-    productImage: string | null;
     quantity: number;
     size: string | null;
     petSize: string | null;
-    unitPrice: number;
   }[];
-  subtotal: number;
-  shippingCost: number;
-  tax: number;
-  total: number;
   paymentMethod?: string;
+  paymentStatus?: string;
+  transactionId?: string;
   shippingAddress: ShippingAddress;
   billingAddress?: BillingAddress;
   notes?: string;
   giftWrap?: boolean;
   giftMessage?: string;
-  giftWrapPrice?: number;
   clearUserCart?: boolean;
+  couponId?: string;
+  idempotencyKey?: string;
 }
+
+type OrderRpcClient = {
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{
+    data: Order | null;
+    error: { message: string } | null;
+  }>;
+};
 
 export function useCreateOrder() {
   const { user } = useAuth();
@@ -275,71 +286,31 @@ export function useCreateOrder() {
     mutationFn: async (input: CreateOrderInput) => {
       if (!user) throw new Error("Must be logged in");
 
-      // Create order
-      const orderData: Database["public"]["Tables"]["orders"]["Insert"] = {
-        user_id: user.id,
-        status: "confirmed",
-        subtotal: input.subtotal,
-        shipping_cost: input.shippingCost,
-        tax: input.tax,
-        total: input.total,
-        payment_method: input.paymentMethod || "cod",
-        shipping_address: input.shippingAddress as unknown as Record<
-          string,
-          unknown
-        >,
-        billing_address: (input.billingAddress ||
-          input.shippingAddress) as unknown as Record<string, unknown>,
-        notes: input.notes,
-        gift_wrap: input.giftWrap || false,
-        gift_message: input.giftMessage || null,
-        gift_wrap_price: input.giftWrapPrice || 0,
-      };
+      const rpcClient = supabase as unknown as OrderRpcClient;
+      const { data: order, error: orderError } = await rpcClient.rpc(
+        "finalize_checkout",
+        {
+          p_items: input.items as unknown as Json,
+          p_payment_method: input.paymentMethod || "cod",
+          p_payment_status: input.paymentStatus || null,
+          p_transaction_id: input.transactionId || null,
+          p_shipping_address: input.shippingAddress as unknown as Json,
+          p_billing_address: (input.billingAddress ||
+            input.shippingAddress) as unknown as Json,
+          p_notes: input.notes || null,
+          p_gift_wrap: input.giftWrap || false,
+          p_gift_message: input.giftMessage || null,
+          p_clear_cart: input.clearUserCart !== false,
+          p_coupon_id: input.couponId || null,
+          p_idempotency_key: input.idempotencyKey || null,
+        },
+      );
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = input.items.map((item) => ({
-        order_id: order.id,
-        product_id: item.productId,
-        product_name: item.productName,
-        product_image: item.productImage,
-        quantity: item.quantity,
-        size: item.size,
-        pet_size: item.petSize,
-        unit_price: item.unitPrice,
-        total_price: item.unitPrice * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) {
-        // Best-effort rollback to avoid orphan orders when items insert fails.
-        await supabase.from("orders").delete().eq("id", order.id);
-        throw itemsError;
+      if (orderError || !order) {
+        throw new Error(orderError?.message || "Failed to finalize checkout");
       }
 
-      // Clear cart
       if (input.clearUserCart !== false) {
-        const { error: clearCartError } = await supabase
-          .from("cart_items")
-          .delete()
-          .eq("user_id", user.id);
-        if (clearCartError) {
-          console.warn(
-            "Order placed but failed to clear cart items:",
-            clearCartError,
-          );
-        }
-
         try {
           await markTrackedAbandonedCartRecovered({
             userId: user.id,
@@ -359,6 +330,12 @@ export function useCreateOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to place order", {
+        description:
+          error instanceof Error ? error.message : "Please try again later.",
+      });
     },
   });
 }

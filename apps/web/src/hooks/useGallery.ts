@@ -191,19 +191,37 @@ export function useCreateGalleryPost() {
           product_id: productId || null,
           image_url: publicUrl,
           caption: caption || null,
-          is_approved: true, // Auto-approve (admin can still manage)
+          is_approved: false,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      const { error: moderationError } = await supabase.functions.invoke(
+        "moderate-image",
+        {
+          body: {
+            imageUrl: publicUrl,
+            galleryPostId: data.id,
+          },
+        },
+      );
+
+      if (moderationError) {
+        console.warn(
+          "Gallery post created but moderation trigger failed:",
+          moderationError,
+        );
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gallery-posts"] });
       queryClient.invalidateQueries({ queryKey: ["user-gallery-posts"] });
       toast.success("Photo uploaded!", {
-        description: "Your photo is now visible in the gallery.",
+        description: "Your photo is awaiting review before it appears publicly.",
       });
     },
     onError: (error) => {

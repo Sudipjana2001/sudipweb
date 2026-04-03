@@ -17,12 +17,11 @@ import { Label } from "@/components/ui/label";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreateOrder } from "@/hooks/useOrders";
-import { useValidateCoupon, useApplyCoupon, Coupon } from "@/hooks/useCoupons";
+import { useValidateCoupon, Coupon } from "@/hooks/useCoupons";
 import {
   PaymentMethodSelector,
   PaymentMethod,
 } from "@/components/PaymentMethodSelector";
-import { useCreatePayment } from "@/hooks/usePayments";
 import { useOrderTotal } from "@/hooks/useOrderTotal";
 import { usePaytm, PaytmPaymentResponse } from "@/hooks/usePaytm";
 import { usePhonePe } from "@/hooks/usePhonePe";
@@ -45,6 +44,10 @@ const mapPaytmModeToMethod = (mode?: string | null): PaymentMethod | null => {
   return null;
 };
 
+const createCheckoutAttemptId = () =>
+  globalThis.crypto?.randomUUID?.() ??
+  `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
 type AddressFormValues = {
   firstName: string;
   lastName: string;
@@ -57,6 +60,28 @@ type AddressFormValues = {
 type CheckoutFormValues = AddressFormValues & {
   email: string;
   phone: string;
+};
+
+type CheckoutSnapshotItem = {
+  id: string | number;
+  quantity: number;
+  ownerSize: string | null;
+  petSize: string | null;
+  image: string;
+  name: string;
+  price: number;
+};
+
+type CheckoutSnapshot = {
+  items: CheckoutSnapshotItem[];
+  formData: CheckoutFormValues;
+  billingData: CheckoutFormValues | null;
+  sameAsShipping: boolean;
+  coupon?: { id: string; code: string } | null;
+  giftWrap: boolean;
+  giftMessage: string;
+  buyNowItems: CheckoutSnapshotItem[] | null;
+  idempotencyKey?: string;
 };
 
 function ContactFields({
@@ -275,8 +300,6 @@ export default function Checkout() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
   const validateCoupon = useValidateCoupon();
-  const applyCouponMutation = useApplyCoupon();
-  const createPayment = useCreatePayment();
   const {
     openCheckout: openPaytmCheckout,
     verifyPayment: verifyPaytmPayment,
@@ -394,57 +417,45 @@ export default function Checkout() {
   const buildOrderItems = () =>
     checkoutItems.map((item) => ({
       productId: item.id.toString(),
-      productName: item.name,
-      productImage: item.image,
       quantity: item.quantity,
-      unitPrice: item.price,
       size: item.ownerSize,
       petSize: item.petSize,
     }));
 
   const finalizeOrder = async (
-    transactionId?: string,
-    gatewayPaymentMethod?: string,
-    gatewayPaymentStatus?: string,
+    options?: {
+      items?: ReturnType<typeof buildOrderItems>;
+      shippingAddress?: ReturnType<typeof buildShippingAddress>;
+      billingAddress?: ReturnType<typeof buildBillingAddress>;
+      transactionId?: string;
+      paymentMethod?: string;
+      paymentStatus?: string;
+      giftWrap?: boolean;
+      giftMessage?: string;
+      clearUserCart?: boolean;
+      couponId?: string;
+      idempotencyKey?: string;
+    },
   ) => {
     const order = await createOrder.mutateAsync({
-      items: buildOrderItems(),
-      subtotal: activeTotal,
-      shippingCost,
-      tax,
-      total,
-      paymentMethod: gatewayPaymentMethod || paymentMethod,
-      shippingAddress: buildShippingAddress(),
-      billingAddress: buildBillingAddress(),
-      giftWrap,
-      giftMessage,
-      giftWrapPrice,
-      clearUserCart: !(buyNowItems && buyNowItems.length > 0),
+      items: options?.items || buildOrderItems(),
+      paymentMethod: options?.paymentMethod || paymentMethod,
+      paymentStatus: options?.paymentStatus,
+      transactionId: options?.transactionId,
+      shippingAddress: options?.shippingAddress || buildShippingAddress(),
+      billingAddress: options?.billingAddress || buildBillingAddress(),
+      giftWrap: options?.giftWrap ?? giftWrap,
+      giftMessage: options?.giftMessage ?? giftMessage,
+      clearUserCart:
+        options?.clearUserCart ?? !(buyNowItems && buyNowItems.length > 0),
+      couponId: options?.couponId || appliedCoupon?.id,
+      idempotencyKey: options?.idempotencyKey,
     });
 
-    if (order) {
-      await createPayment.mutateAsync({
-        orderId: order.id,
-        amount: total,
-        paymentMethod: gatewayPaymentMethod || paymentMethod,
-        transactionId,
-        paymentStatus: gatewayPaymentStatus,
-      });
-
-      if (appliedCoupon && couponDiscount > 0) {
-        try {
-          await applyCouponMutation.mutateAsync({
-            coupon_id: appliedCoupon.id,
-            order_id: order.id,
-            discount_applied: couponDiscount,
-          });
-        } catch (e) {
-          console.warn("Order placed but failed to record coupon usage:", e);
-        }
-      }
-    }
-
-    if (!(buyNowItems && buyNowItems.length > 0)) {
+    if (
+      order &&
+      (options?.clearUserCart ?? !(buyNowItems && buyNowItems.length > 0))
+    ) {
       clearCart();
     }
 
@@ -503,8 +514,20 @@ export default function Checkout() {
           return;
         }
 
-        const snapshot = JSON.parse(snapshotJson);
-        const snapshotItems = snapshot.items as typeof checkoutItems;
+        let snapshot: CheckoutSnapshot;
+        try {
+          snapshot = JSON.parse(snapshotJson) as CheckoutSnapshot;
+        } catch (error) {
+          console.error("Failed to parse PhonePe checkout snapshot:", error);
+          toast.error("Could not restore your checkout details.", {
+            description: `Transaction ID: ${transactionId}`,
+          });
+          sessionStorage.removeItem("phonepe_checkout_snapshot");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const snapshotItems = snapshot.items;
 
         if (!snapshotItems || snapshotItems.length === 0) {
           toast.error("Your cart is empty, cannot create order post-payment.");
@@ -515,10 +538,7 @@ export default function Checkout() {
         // Build order items from snapshot (not from live cart context)
         const orderItems = snapshotItems.map((item) => ({
           productId: item.id.toString(),
-          productName: item.name,
-          productImage: item.image,
           quantity: item.quantity,
-          unitPrice: item.price,
           size: item.ownerSize,
           petSize: item.petSize,
         }));
@@ -554,51 +574,21 @@ export default function Checkout() {
 
         const resolvedMethod = verification.paymentMode || "phonepe";
 
-        const order = await createOrder.mutateAsync({
+        await finalizeOrder({
           items: orderItems,
-          subtotal: snapshot.subtotal,
-          shippingCost: snapshot.shippingCost,
-          tax: snapshot.tax,
-          total: snapshot.total,
           paymentMethod: resolvedMethod,
+          paymentStatus: "completed",
+          transactionId,
           shippingAddress,
           billingAddress,
           giftWrap: snapshot.giftWrap,
           giftMessage: snapshot.giftMessage,
-          giftWrapPrice: snapshot.giftWrapPrice ?? giftWrapPrice,
           clearUserCart: !(
             snapshot.buyNowItems && snapshot.buyNowItems.length > 0
           ),
+          couponId: snapshot.coupon?.id || undefined,
+          idempotencyKey: snapshot.idempotencyKey,
         });
-
-        if (order) {
-          await createPayment.mutateAsync({
-            orderId: order.id,
-            amount: snapshot.total,
-            paymentMethod: resolvedMethod,
-            transactionId,
-            paymentStatus: "completed",
-          });
-
-          if (snapshot.coupon?.id && snapshot.couponDiscount > 0) {
-            try {
-              await applyCouponMutation.mutateAsync({
-                coupon_id: snapshot.coupon.id,
-                order_id: order.id,
-                discount_applied: snapshot.couponDiscount,
-              });
-            } catch (e) {
-              console.warn(
-                "Order placed but failed to record coupon usage:",
-                e,
-              );
-            }
-          }
-        }
-
-        if (!(snapshot.buyNowItems && snapshot.buyNowItems.length > 0)) {
-          clearCart();
-        }
 
         // Clean up sessionStorage
         sessionStorage.removeItem("phonepe_merchant_transaction_id");
@@ -644,15 +634,11 @@ export default function Checkout() {
     // COD flow — direct order creation
     if (paymentMethod === "cod") {
       try {
-        await finalizeOrder();
+        await finalizeOrder({ idempotencyKey: createCheckoutAttemptId() });
         toast.success("Order placed successfully!", {
           description: "Pay when you receive your order.",
         });
         navigate("/orders");
-      } catch (error) {
-        toast.error("Failed to place order", {
-          description: "Please try again later.",
-        });
       } finally {
         setIsSubmitting(false);
       }
@@ -661,26 +647,23 @@ export default function Checkout() {
 
     // PhonePe payment flow
     if (paymentMethod === "phonepe") {
+      const checkoutAttemptId = createCheckoutAttemptId();
+
       // Save a full checkout snapshot to sessionStorage BEFORE we navigate away.
       // When PhonePe redirects back, the cart context will be empty (async reload not done yet),
       // so we read this snapshot to reconstruct the order.
-      const checkoutSnapshot = {
+      const checkoutSnapshot: CheckoutSnapshot = {
         items: checkoutItems,
         formData,
         billingData,
         sameAsShipping,
-        subtotal: activeTotal,
-        shippingCost,
-        tax,
-        total,
-        couponDiscount,
         coupon: appliedCoupon
           ? { id: appliedCoupon.id, code: appliedCoupon.code }
           : null,
         giftWrap,
         giftMessage,
-        giftWrapPrice,
         buyNowItems: buyNowItems || null,
+        idempotencyKey: checkoutAttemptId,
       };
       sessionStorage.setItem(
         "phonepe_checkout_snapshot",
@@ -704,6 +687,7 @@ export default function Checkout() {
     }
 
     // Online payment flow — Paytm checkout
+    const checkoutAttemptId = createCheckoutAttemptId();
     openPaytmCheckout({
       amount: total,
       customerEmail: formData.email,
@@ -735,11 +719,12 @@ export default function Checkout() {
               verification.paymentMode || response.PAYMENTMODE,
             ) || paymentMethod;
 
-          await finalizeOrder(
-            transactionId || undefined,
-            resolvedMethod,
-            "completed",
-          );
+          await finalizeOrder({
+            transactionId: transactionId || undefined,
+            paymentMethod: resolvedMethod,
+            paymentStatus: "completed",
+            idempotencyKey: checkoutAttemptId,
+          });
           toast.success("Payment successful! Order placed.", {
             description: transactionId
               ? `Transaction ID: ${transactionId}`
@@ -1027,7 +1012,9 @@ export default function Checkout() {
                   type="submit"
                   variant="hero"
                   className="w-full"
-                  disabled={isSubmitting || isPhonePeLoading}
+                  disabled={
+                    isSubmitting || isPaytmLoading || isPhonePeLoading
+                  }
                 >
                   {isSubmitting || isPaytmLoading || isPhonePeLoading
                     ? "Processing..."

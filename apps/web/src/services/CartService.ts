@@ -1,6 +1,13 @@
 import { supabase } from '@/integrations/client';
 import { CartItemModel, CartItemData, RawCartItemRecord } from '@/domain/models/CartItem';
 
+type CartRpcClient = {
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{ error: { message: string } | null }>;
+};
+
 /**
  * CartService handles all cart-related business operations.
  * Encapsulates Supabase interactions and business logic.
@@ -83,35 +90,15 @@ export class CartService {
 
     const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
     const petSize = CartItemModel.normalizeSize(item.petSize);
+    const rpcClient = supabase as unknown as CartRpcClient;
+    const { error } = await rpcClient.rpc('add_cart_item', {
+      p_product_id: item.id as string,
+      p_size: ownerSize,
+      p_pet_size: petSize,
+      p_quantity: 1,
+    });
 
-    // Check if item already exists
-    const { data: existing, error: fetchError } = await supabase
-      .from('cart_items')
-      .select('id, quantity')
-      .eq('user_id', this.userId)
-      .eq('product_id', item.id as string)
-      .eq('size', ownerSize)
-      .eq('pet_size', petSize)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    if (existing) {
-      const { error } = await supabase
-        .from('cart_items')
-        .update({ quantity: existing.quantity + 1 })
-        .eq('id', existing.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from('cart_items').insert({
-        user_id: this.userId,
-        product_id: item.id as string,
-        quantity: 1,
-        size: ownerSize,
-        pet_size: petSize,
-      });
-      if (error) throw error;
-    }
+    if (error) throw error;
   }
 
   /**
@@ -121,35 +108,14 @@ export class CartService {
     if (!this.userId) return;
 
     try {
-      // Fetch candidates first to handle N/A matching
-      const { data: candidates, error: fetchError } = await supabase
-        .from('cart_items')
-        .select('id, size, pet_size')
-        .eq('user_id', this.userId)
-        .eq('product_id', productId as string);
+      const rpcClient = supabase as unknown as CartRpcClient;
+      const { error } = await rpcClient.rpc('remove_cart_item', {
+        p_product_id: productId as string,
+        p_size: CartItemModel.normalizeSize(ownerSize),
+        p_pet_size: CartItemModel.normalizeSize(petSize),
+      });
 
-      if (fetchError) throw fetchError;
-
-      if (!candidates || candidates.length === 0) {
-        return;
-      }
-
-      // Filter using domain model's size matching logic
-      const idsToDelete = candidates
-        .filter((c) =>
-          CartItemModel.sizesMatch(ownerSize, c.size) &&
-          CartItemModel.sizesMatch(petSize, c.pet_size)
-        )
-        .map((c) => c.id);
-
-      if (idsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('cart_items')
-          .delete()
-          .in('id', idsToDelete);
-
-        if (deleteError) throw deleteError;
-      }
+      if (error) throw error;
     } catch (err) {
       console.error('Error in removeItem:', err);
       throw err;
@@ -166,30 +132,14 @@ export class CartService {
     quantity: number
   ): Promise<void> {
     if (!this.userId) return;
+    const rpcClient = supabase as unknown as CartRpcClient;
+    const { error } = await rpcClient.rpc('set_cart_item_quantity', {
+      p_product_id: productId as string,
+      p_size: CartItemModel.normalizeSize(ownerSize),
+      p_pet_size: CartItemModel.normalizeSize(petSize),
+      p_quantity: quantity,
+    });
 
-    const { data: candidates, error: fetchError } = await supabase
-      .from('cart_items')
-      .select('id, size, pet_size')
-      .eq('user_id', this.userId)
-      .eq('product_id', productId as string);
-
-    if (fetchError) throw fetchError;
-    if (!candidates || candidates.length === 0) return;
-
-    const idsToUpdate = candidates
-      .filter(
-        (c) =>
-          CartItemModel.sizesMatch(ownerSize, c.size) &&
-          CartItemModel.sizesMatch(petSize, c.pet_size)
-      )
-      .map((c) => c.id);
-
-    if (idsToUpdate.length === 0) return;
-
-    const { error } = await supabase
-      .from('cart_items')
-      .update({ quantity })
-      .in('id', idsToUpdate);
     if (error) throw error;
   }
 

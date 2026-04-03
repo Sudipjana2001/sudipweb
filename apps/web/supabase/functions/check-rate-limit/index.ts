@@ -1,16 +1,33 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createServiceClient, getAuthenticatedUser } from "../_shared/auth.ts";
+import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 interface RateLimitRequest {
-  identifier: string; // IP or user ID
   endpoint: string;
-  maxRequests?: number;
-  windowMinutes?: number;
+}
+
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  retry_after: number;
+}
+
+const rateLimitConfig: Record<string, { maxRequests: number; windowMinutes: number }> = {
+  "support-ticket": { maxRequests: 10, windowMinutes: 10 },
+  "review-submit": { maxRequests: 10, windowMinutes: 10 },
+  "send-email": { maxRequests: 5, windowMinutes: 10 },
+  "default": { maxRequests: 60, windowMinutes: 1 },
+};
+
+function getClientIdentifier(req: Request, userId?: string) {
+  if (userId) return `user:${userId}`;
+
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const cfIp = req.headers.get("cf-connecting-ip");
+  const realIp = req.headers.get("x-real-ip");
+  const ip = forwardedFor?.split(",")[0]?.trim() || cfIp || realIp;
+
+  return ip ? `ip:${ip}` : "anonymous";
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -19,76 +36,53 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { 
-      identifier, 
-      endpoint, 
-      maxRequests = 60, 
-      windowMinutes = 1 
-    }: RateLimitRequest = await req.json();
+    const { endpoint }: RateLimitRequest = await req.json();
+    const user = await getAuthenticatedUser(req);
+    const supabase = createServiceClient();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
-
-    // Get current request count in the window
-    const { data: existing, error: fetchError } = await supabase
-      .from("rate_limits")
-      .select("request_count")
-      .eq("identifier", identifier)
-      .eq("endpoint", endpoint)
-      .gte("window_start", windowStart)
-      .order("window_start", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error("Rate limit fetch error:", fetchError);
-      // Allow request if we can't check
-      return new Response(
-        JSON.stringify({ allowed: true, remaining: maxRequests }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (typeof endpoint !== "string" || !/^[a-z0-9:_-]{1,100}$/i.test(endpoint)) {
+      return jsonResponse({ allowed: false, error: "Invalid endpoint" }, 400);
     }
 
-    const currentCount = existing?.request_count || 0;
+    const { maxRequests, windowMinutes } = rateLimitConfig[endpoint] ?? rateLimitConfig.default;
+    const identifier = getClientIdentifier(req, user?.id);
 
-    if (currentCount >= maxRequests) {
+    const { data, error } = await supabase.rpc("check_rate_limit_and_increment", {
+      p_identifier: identifier,
+      p_endpoint: endpoint,
+      p_max_requests: maxRequests,
+      p_window_minutes: windowMinutes,
+    });
+
+    if (error) {
+      console.error("Rate limit RPC error:", error);
+      return jsonResponse({ allowed: true, remaining: maxRequests }, 200);
+    }
+
+    const [result] = (data ?? []) as RateLimitResult[];
+
+    if (!result) {
+      return jsonResponse({ allowed: true, remaining: maxRequests }, 200);
+    }
+
+    if (!result.allowed) {
       console.log(`Rate limit exceeded for ${identifier} on ${endpoint}`);
       return new Response(
-        JSON.stringify({ 
-          allowed: false, 
+        JSON.stringify({
+          allowed: false,
           remaining: 0,
-          retryAfter: windowMinutes * 60,
-          message: "Rate limit exceeded. Please try again later."
+          retryAfter: result.retry_after,
+          message: "Rate limit exceeded. Please try again later.",
         }),
-        { 
-          status: 429, 
-          headers: { 
-            ...corsHeaders, 
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
             "Content-Type": "application/json",
-            "Retry-After": String(windowMinutes * 60)
-          } 
-        }
+            "Retry-After": String(result.retry_after),
+          },
+        },
       );
-    }
-
-    // Increment or create the rate limit record
-    if (existing) {
-      await supabase
-        .from("rate_limits")
-        .update({ request_count: currentCount + 1 })
-        .eq("identifier", identifier)
-        .eq("endpoint", endpoint)
-        .gte("window_start", windowStart);
-    } else {
-      await supabase.from("rate_limits").insert({
-        identifier,
-        endpoint,
-        request_count: 1,
-        window_start: new Date().toISOString(),
-      });
     }
 
     // Clean up old records periodically (1% chance)
@@ -97,20 +91,17 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase.from("rate_limits").delete().lt("window_start", cleanupTime);
     }
 
-    return new Response(
-      JSON.stringify({ 
-        allowed: true, 
-        remaining: maxRequests - currentCount - 1 
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    return jsonResponse(
+      {
+        allowed: true,
+        remaining: result.remaining,
+      },
+      200,
     );
   } catch (error: unknown) {
     console.error("Rate limit error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ allowed: true, error: errorMessage }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ allowed: true, error: errorMessage }, 200);
   }
 };
 

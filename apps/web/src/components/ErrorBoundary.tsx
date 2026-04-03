@@ -8,24 +8,20 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null,
-    errorInfo: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+    console.error("Rendering error:", error);
+    return { hasError: true };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    this.setState({ errorInfo });
   }
 
   public render() {
@@ -39,15 +35,9 @@ export class ErrorBoundary extends Component<Props, State> {
             Something went wrong
           </h1>
           <p className="mb-6 max-w-md text-muted-foreground">
-            We're sorry, but an unexpected error has occurred. Please try refreshing the page.
+            We hit an unexpected problem while rendering this page. Refresh to
+            try again, and if it keeps happening please contact support.
           </p>
-          
-          <div className="mb-6 max-w-2xl overflow-auto rounded-lg bg-muted p-4 text-left font-mono text-xs text-muted-foreground">
-            <p className="font-bold text-red-500">{this.state.error?.toString()}</p>
-            {this.state.errorInfo && (
-              <pre className="mt-2">{this.state.errorInfo.componentStack}</pre>
-            )}
-          </div>
 
           <Button onClick={() => window.location.reload()}>
             Refresh Page

@@ -15,7 +15,7 @@ export interface PhonePePaymentResponse {
     transactionId: string;
     paymentMode: string | null;
     providerReferenceId: string | null;
-    rawResponse: any;
+    rawResponse: unknown;
 }
 
 export function usePhonePe() {
