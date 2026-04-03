@@ -38,11 +38,13 @@ const PRODUCT_IMAGE_TRANSFORM = {
 };
 
 const PRODUCT_THUMBNAIL_TRANSFORM = {
-  width: 160,
-  height: 160,
-  quality: 70,
+  width: 120,
+  height: 120,
+  quality: 55,
   resize: "cover" as const,
 };
+
+const PRODUCT_THUMBNAIL_SIZES = "(max-width: 640px) 18vw, 80px";
 const ProductReviews = lazy(() =>
   import("@/components/ProductReviews").then((module) => ({
     default: module.ProductReviews,
@@ -118,13 +120,9 @@ export default function Product() {
   useEffect(() => {
     if (images.length === 0) return;
 
-    const preloadUrls = images.map((image) =>
-      getOptimizedImageSrc(image, PRODUCT_THUMBNAIL_TRANSFORM),
-    );
-
-    preloadUrls.push(
+    const preloadUrls = [
       getOptimizedImageSrc(images[currentImage], PRODUCT_IMAGE_TRANSFORM),
-    );
+    ];
 
     if (images.length > 1) {
       const nextIndex = (currentImage + 1) % images.length;
@@ -499,12 +497,12 @@ export default function Product() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="grid min-w-0 grid-cols-5 gap-3 sm:flex sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide sm:snap-x">
               {images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImage(idx)}
-                  className={`relative flex-shrink-0 aspect-square w-20 overflow-hidden border-2 transition-colors ${
+                  className={`relative aspect-square w-full overflow-hidden border-2 transition-colors sm:w-16 sm:shrink-0 sm:snap-start md:w-20 ${
                     currentImage === idx
                       ? "border-foreground"
                       : "border-transparent"
@@ -513,10 +511,10 @@ export default function Product() {
                   <OptimizedImage
                     src={img}
                     alt={`View ${idx + 1}`}
-                    priority={true}
-                    sizes="80px"
-                    loading="eager"
-                    fetchPriority="low"
+                    priority={idx === currentImage}
+                    sizes={PRODUCT_THUMBNAIL_SIZES}
+                    loading={idx === currentImage ? "eager" : "lazy"}
+                    fetchPriority={idx === currentImage ? "high" : "low"}
                     transform={PRODUCT_THUMBNAIL_TRANSFORM}
                     className="h-full w-full object-cover"
                   />
