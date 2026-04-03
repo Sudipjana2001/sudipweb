@@ -4,9 +4,10 @@ import { Product as DBProduct } from "@/hooks/useProducts";
 
 interface ProductCardProps {
   product: DBProduct;
+  priority?: boolean;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priority = false }: ProductCardProps) {
   const image = product.image_url || "/product-1.jpg";
   const category = product.category?.name || "Fashion";
   const productLink = `/product/${product.slug}`;
@@ -19,7 +20,9 @@ export function ProductCard({ product }: ProductCardProps) {
           <OptimizedImage
             src={image}
             alt={product.name}
+            priority={priority}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            transform={{ width: 560, height: 750, quality: 75, resize: "cover" }}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
 

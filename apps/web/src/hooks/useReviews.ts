@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { fromTable } from "@/lib/supabaseUntyped";
+import { REVIEW_SUMMARY_QUERY_OPTIONS } from "@/lib/queryCache";
 
 export interface Review {
   id: string;
@@ -30,6 +31,36 @@ export interface ReviewWithUser extends Review {
     avatar_url: string | null;
   };
   user_has_voted?: boolean;
+}
+
+export function useProductReviewSummary(productId: string) {
+  return useQuery({
+    queryKey: ["reviews", "summary", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("rating")
+        .eq("product_id", productId);
+
+      if (error) throw error;
+
+      const ratings = (data ?? []).map((review) => review.rating);
+      const totalReviews = ratings.length;
+      const averageRating = totalReviews
+        ? Math.round(
+            (ratings.reduce((sum, rating) => sum + rating, 0) / totalReviews) *
+              10,
+          ) / 10
+        : 0;
+
+      return {
+        averageRating,
+        totalReviews,
+      };
+    },
+    enabled: !!productId,
+    ...REVIEW_SUMMARY_QUERY_OPTIONS,
+  });
 }
 
 export function useProductReviews(productId: string) {
@@ -83,6 +114,9 @@ export function useProductReviews(productId: string) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
+          queryClient.invalidateQueries({
+            queryKey: ["reviews", "summary", productId],
+          });
         }
       )
       .subscribe();
@@ -173,6 +207,9 @@ export function useAddReview() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["reviews", variables.product_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviews", "summary", variables.product_id],
+      });
       toast.success("Review submitted!");
     },
     onError: (error) => {
@@ -202,6 +239,9 @@ export function useUpdateReview() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["reviews", result.product_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviews", "summary", result.product_id],
+      });
       toast.success("Review updated");
     },
   });
@@ -218,6 +258,9 @@ export function useDeleteReview() {
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["reviews", result.product_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["reviews", "summary", result.product_id],
+      });
       toast.success("Review deleted");
     },
   });
@@ -274,11 +317,37 @@ export function useMarkReviewHelpful() {
 
       return { product_id };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["reviews", result.product_id] });
+    onMutate: async ({ id, product_id }) => {
+      await queryClient.cancelQueries({ queryKey: ["reviews", product_id] });
+
+      const previousReviewQueries =
+        queryClient.getQueriesData<ReviewWithUser[]>({
+          queryKey: ["reviews", product_id],
+        });
+
+      queryClient.setQueriesData<ReviewWithUser[]>(
+        { queryKey: ["reviews", product_id] },
+        (currentReviews) =>
+          currentReviews?.map((review) =>
+            review.id === id
+              ? {
+                  ...review,
+                  helpful_count: review.helpful_count + 1,
+                  user_has_voted: true,
+                }
+              : review,
+          ),
+      );
+
+      return { previousReviewQueries };
+    },
+    onSuccess: () => {
       toast.success("Thanks for your feedback!");
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
+      context?.previousReviewQueries?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
       toast.error(error.message);
     },
   });

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/client";
+import { CATALOG_QUERY_OPTIONS } from "@/lib/queryCache";
 
 export interface Product {
   id: string;
@@ -68,6 +69,7 @@ export function useProducts() {
       if (error) throw error;
       return data as Product[];
     },
+    ...CATALOG_QUERY_OPTIONS,
   });
 
   useEffect(() => {
@@ -82,6 +84,11 @@ export function useProducts() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["products"] });
+          queryClient.invalidateQueries({ queryKey: ["product"] });
+          queryClient.invalidateQueries({ queryKey: ["product-by-id"] });
+          queryClient.invalidateQueries({
+            queryKey: ["products", "collection"],
+          });
           queryClient.invalidateQueries({ queryKey: ["products", "best-sellers"] });
           queryClient.invalidateQueries({ queryKey: ["products", "new-arrivals"] });
         }
@@ -97,6 +104,8 @@ export function useProducts() {
 }
 
 export function useProduct(slug: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
@@ -113,11 +122,20 @@ export function useProduct(slug: string) {
       if (error) throw error;
       return data as Product | null;
     },
+    initialData: () =>
+      queryClient
+        .getQueryData<Product[]>(["products"])
+        ?.find((product) => product.slug === slug),
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["products"])?.dataUpdatedAt,
     enabled: !!slug,
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
 export function useProductById(id: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["product-by-id", id],
     queryFn: async () => {
@@ -134,11 +152,20 @@ export function useProductById(id: string) {
       if (error) throw error;
       return data as Product | null;
     },
+    initialData: () =>
+      queryClient
+        .getQueryData<Product[]>(["products"])
+        ?.find((product) => product.id === id),
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["products"])?.dataUpdatedAt,
     enabled: !!id,
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
 export function useProductsByCollection(collectionSlug: string) {
+  const queryClient = useQueryClient();
+
   // Map common frontend route slugs to actual database slugs
   const slugAliasMap: Record<string, string> = {
     "summer": "summer-vibes",
@@ -172,11 +199,28 @@ export function useProductsByCollection(collectionSlug: string) {
       if (error) throw error;
       return data as Product[];
     },
+    initialData: () => {
+      const cachedProducts = queryClient.getQueryData<Product[]>(["products"]);
+
+      if (!cachedProducts) {
+        return undefined;
+      }
+
+      return cachedProducts.filter(
+        (product) =>
+          product.is_active && product.collection?.slug === actualSlug,
+      );
+    },
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["products"])?.dataUpdatedAt,
     enabled: !!actualSlug,
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
 export function useBestSellers() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["products", "best-sellers"],
     queryFn: async () => {
@@ -194,10 +238,20 @@ export function useBestSellers() {
       if (error) throw error;
       return data as Product[];
     },
+    initialData: () =>
+      queryClient
+        .getQueryData<Product[]>(["products"])
+        ?.filter((product) => product.is_best_seller && product.is_active)
+        .slice(0, 6),
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["products"])?.dataUpdatedAt,
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
 export function useNewArrivals() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ["products", "new-arrivals"],
     queryFn: async () => {
@@ -215,6 +269,14 @@ export function useNewArrivals() {
       if (error) throw error;
       return data as Product[];
     },
+    initialData: () =>
+      queryClient
+        .getQueryData<Product[]>(["products"])
+        ?.filter((product) => product.is_new_arrival && product.is_active)
+        .slice(0, 6),
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["products"])?.dataUpdatedAt,
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
@@ -230,6 +292,7 @@ export function useCollections() {
       if (error) throw error;
       return data as Collection[];
     },
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 
@@ -245,6 +308,7 @@ export function useCategories() {
       if (error) throw error;
       return data as Category[];
     },
+    ...CATALOG_QUERY_OPTIONS,
   });
 }
 

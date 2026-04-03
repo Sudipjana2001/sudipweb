@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { ReviewPhotoGallery } from "@/components/ReviewPhotoGallery";
 import { useProduct } from "@/hooks/useProducts";
 import {
   useProductReviews,
@@ -201,13 +202,7 @@ export default function ProductReviews() {
                     )}
 
                     {review.photos && review.photos.length > 0 && (
-                      <div className="mt-2 flex gap-2 flex-wrap">
-                        {review.photos.map((photo, idx) => (
-                          <div key={idx} className="h-24 w-24 rounded-lg overflow-hidden bg-muted">
-                            <img src={photo} alt="" className="h-full w-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
+                      <ReviewPhotoGallery photos={review.photos} thumbnailSize="md" />
                     )}
 
                     <button
@@ -218,7 +213,12 @@ export default function ProductReviews() {
                         }
                         markHelpful.mutate({ id: review.id, product_id: product.id });
                       }}
-                      disabled={!user || review.user_id === user?.id || review.user_has_voted}
+                      disabled={
+                        !user ||
+                        review.user_id === user?.id ||
+                        review.user_has_voted ||
+                        (markHelpful.isPending && markHelpful.variables?.id === review.id)
+                      }
                       className={`mt-2 flex items-center gap-2 text-sm transition-colors ${
                         review.user_has_voted
                           ? "text-primary cursor-default"
@@ -239,7 +239,9 @@ export default function ProductReviews() {
                       <ThumbsUp
                         className={`h-4 w-4 ${review.user_has_voted ? "fill-primary" : ""}`}
                       />
-                      Helpful ({review.helpful_count})
+                      {markHelpful.isPending && markHelpful.variables?.id === review.id
+                        ? "Helpful..."
+                        : `Helpful (${review.helpful_count})`}
                     </button>
                   </div>
                 ))}

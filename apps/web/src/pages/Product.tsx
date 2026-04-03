@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
@@ -18,31 +18,53 @@ import { useCart } from "@/contexts/CartContext";
 import {
   useProduct,
   useProductsByCollection,
-  Product as ProductType,
 } from "@/hooks/useProducts";
-import { useProductReviews, getAverageRating } from "@/hooks/useReviews";
+import { useProductReviewSummary } from "@/hooks/useReviews";
 import { ProductCard } from "@/components/ProductCard";
-import { ProductReviews } from "@/components/ProductReviews";
-import { RecentlyViewed } from "@/components/RecentlyViewed";
-import { BackInStockAlert } from "@/components/BackInStockAlert";
 import { SizeRecommendation } from "@/components/SizeRecommendation";
 import { ProductFabricInfo } from "@/components/ProductFabricInfo";
+import { getOptimizedImageSrc } from "@/lib/image";
 import { useTrackProductView } from "@/hooks/useRecentlyViewed";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
 import { useCompare } from "@/hooks/useCompare";
 
+const PRODUCT_IMAGE_TRANSFORM = {
+  width: 960,
+  height: 960,
+  quality: 80,
+  resize: "cover" as const,
+};
+
+const PRODUCT_THUMBNAIL_TRANSFORM = {
+  width: 160,
+  height: 160,
+  quality: 70,
+  resize: "cover" as const,
+};
+const ProductReviews = lazy(() =>
+  import("@/components/ProductReviews").then((module) => ({
+    default: module.ProductReviews,
+  })),
+);
+const RecentlyViewed = lazy(() =>
+  import("@/components/RecentlyViewed").then((module) => ({
+    default: module.RecentlyViewed,
+  })),
+);
+
 export default function Product() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = useProduct(slug || "");
   const navigate = useNavigate();
+  const [loadSecondaryContent, setLoadSecondaryContent] = useState(false);
   const { data: collectionProducts = [] } = useProductsByCollection(
-    product?.collection?.slug || "",
+    loadSecondaryContent ? product?.collection?.slug || "" : "",
   );
-  const { data: reviews = [] } = useProductReviews(product?.id || "");
-  const averageRating = getAverageRating(reviews);
-  const totalReviews = reviews.length;
+  const { data: reviewSummary } = useProductReviewSummary(product?.id || "");
+  const averageRating = reviewSummary?.averageRating || 0;
+  const totalReviews = reviewSummary?.totalReviews || 0;
 
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
@@ -57,9 +79,13 @@ export default function Product() {
   const trackView = useTrackProductView();
 
   /* Safe access for loading state */
-  const images = product?.images?.length
-    ? product.images
-    : [product?.image_url || "/product-1.jpg"];
+  const images = useMemo(
+    () =>
+      product?.images?.length
+        ? product.images
+        : [product?.image_url || "/product-1.jpg"],
+    [product?.images, product?.image_url],
+  );
   const sizes = product?.sizes || ["XS", "S", "M", "L", "XL"];
   const petSizes = product?.pet_sizes || ["XS", "S", "M", "L"];
   const features = product?.features || [
@@ -88,6 +114,43 @@ export default function Product() {
       return () => clearTimeout(timer);
     }
   }, [images.length]);
+
+  useEffect(() => {
+    if (images.length === 0) return;
+
+    const preloadUrls = images.map((image) =>
+      getOptimizedImageSrc(image, PRODUCT_THUMBNAIL_TRANSFORM),
+    );
+
+    preloadUrls.push(
+      getOptimizedImageSrc(images[currentImage], PRODUCT_IMAGE_TRANSFORM),
+    );
+
+    if (images.length > 1) {
+      const nextIndex = (currentImage + 1) % images.length;
+      preloadUrls.push(
+        getOptimizedImageSrc(images[nextIndex], PRODUCT_IMAGE_TRANSFORM),
+      );
+    }
+
+    preloadUrls.forEach((url) => {
+      if (!url) return;
+
+      const preloadImage = new window.Image();
+      preloadImage.decoding = "async";
+      preloadImage.src = url;
+    });
+  }, [currentImage, images]);
+
+  useEffect(() => {
+    setLoadSecondaryContent(false);
+
+    const timer = window.setTimeout(() => {
+      setLoadSecondaryContent(true);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [product?.id]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -379,6 +442,7 @@ export default function Product() {
                 alt={product.name}
                 priority={true} // LCP Image
                 sizes="(max-width: 768px) 100vw, 30vw"
+                transform={PRODUCT_IMAGE_TRANSFORM}
                 className="h-full w-full object-cover select-none pointer-events-none bg-muted"
                 draggable={false}
               />
@@ -449,7 +513,11 @@ export default function Product() {
                   <OptimizedImage
                     src={img}
                     alt={`View ${idx + 1}`}
+                    priority={true}
                     sizes="80px"
+                    loading="eager"
+                    fetchPriority="low"
+                    transform={PRODUCT_THUMBNAIL_TRANSFORM}
                     className="h-full w-full object-cover"
                   />
                 </button>
@@ -704,11 +772,15 @@ export default function Product() {
         </div>
 
         {/* Product Reviews */}
-        <ProductReviews
-          productId={product.id}
-          productName={product.name}
-          productSlug={slug || ""}
-        />
+        <Suspense fallback={<div className="mt-16 h-64 animate-pulse rounded-xl bg-muted" />}>
+          {loadSecondaryContent && (
+            <ProductReviews
+              productId={product.id}
+              productName={product.name}
+              productSlug={slug || ""}
+            />
+          )}
+        </Suspense>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
@@ -725,7 +797,9 @@ export default function Product() {
         )}
 
         {/* Recently Viewed */}
-        <RecentlyViewed />
+        <Suspense fallback={null}>
+          {loadSecondaryContent && <RecentlyViewed />}
+        </Suspense>
       </div>
     </PageLayout>
   );

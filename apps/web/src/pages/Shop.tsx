@@ -6,6 +6,22 @@ import { useProducts, useCategories } from "@/hooks/useProducts";
 import { SlidersHorizontal, X, Search, ChevronDown } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { SEOHead } from "@/components/SEOHead";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function ProductCardSkeleton() {
+  return (
+    <div className="group relative">
+      <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+        <Skeleton className="h-full w-full rounded-none" />
+      </div>
+      <div className="mt-4 space-y-2">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-2/3" />
+      </div>
+    </div>
+  );
+}
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -354,17 +370,20 @@ export default function Shop() {
 
           {/* Loading State */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+              {Array.from({ length: 12 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
             </div>
           ) : (
             <>
               {/* Products Grid */}
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-                {sortedProducts.map((product) => (
+                {sortedProducts.map((product, index) => (
                   <ProductCard
                     key={product.id}
                     product={product}
+                    priority={index < 8}
                   />
                 ))}
               </div>
