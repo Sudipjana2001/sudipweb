@@ -17,7 +17,7 @@ export function CompareBar() {
   if (compareIds.length === 0 || hiddenPaths.includes(location.pathname)) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background shadow-xl">
+    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border bg-background shadow-xl lg:bottom-0">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">

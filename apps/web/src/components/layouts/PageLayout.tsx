@@ -20,4 +20,3 @@ export function PageLayout({ children, showNewsletter = true }: PageLayoutProps)
     </div>
   );
 }
-

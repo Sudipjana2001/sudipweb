@@ -66,7 +66,7 @@ export function LiveChatWidget() {
   if (!user) {
     return (
       <Link to="/login">
-        <button className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110">
+        <button className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110 lg:bottom-6">
           <MessageCircle className="h-6 w-6" />
         </button>
       </Link>
@@ -79,7 +79,7 @@ export function LiveChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110"
+          className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110 lg:bottom-6"
         >
           <MessageCircle className="h-6 w-6" />
           {unreadCount > 0 && (
@@ -93,7 +93,7 @@ export function LiveChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden rounded-lg bg-background shadow-2xl border border-border transition-all ${
+          className={`fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-6 z-50 flex flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl transition-all lg:bottom-6 ${
             isMinimized
               ? "h-14 w-[calc(100vw-3rem)] max-w-[350px]"
               : "h-[calc(100vh-8rem)] max-h-[450px] w-[calc(100vw-3rem)] max-w-[350px]"

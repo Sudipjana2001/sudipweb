@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, Search, User, LogOut, Dog, Award, GitCompare, Truck, HelpCircle, MessageCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Award, Dog, Heart, LogOut, ShoppingBag, Truck, User } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,18 +20,12 @@ const navLinks = [
   { name: "Support", href: "/support" },
 ];
 
-
-
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const navigate = useNavigate();
   const location = useLocation();
   const { cartCount, wishlistItems } = useCart();
   const { user, profile, isAdmin, signOut } = useAuth();
-
-
 
   useEffect(() => {
     let ticking = false;
@@ -48,20 +42,6 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isMobileMenuOpen]);
-
-
-
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -71,27 +51,15 @@ export function Header() {
     <>
       <header
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-          isScrolled || isMobileMenuOpen
+          isScrolled
             ? "bg-background/80 backdrop-blur-md shadow-sm"
             : "bg-gradient-to-b from-background/90 via-background/50 to-transparent pt-2"
         }`}
       >
-
         {/* Main Header */}
         <div className="container mx-auto px-6">
           <div className="flex h-20 items-center justify-between">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-6 w-6 text-foreground" />
-              ) : (
-                <Menu className="h-6 w-6 text-foreground" />
-              )}
-            </button>
+            <div className="h-10 w-10 lg:hidden" aria-hidden="true" />
 
             {/* Logo */}
             <Link to="/" className="absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
@@ -126,13 +94,11 @@ export function Header() {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-
-
               {/* User Account */}
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="hidden text-foreground transition-colors hover:text-foreground/70 sm:block" aria-label="Account">
+                    <button className="hidden text-foreground transition-colors hover:text-foreground/70 lg:inline-flex" aria-label="Account">
                       <User className="h-5 w-5" />
                     </button>
                   </DropdownMenuTrigger>
@@ -176,7 +142,7 @@ export function Header() {
               ) : (
                 <button 
                   onClick={() => navigate("/login")}
-                  className="hidden text-foreground transition-colors hover:text-foreground/70 sm:block" 
+                  className="hidden text-foreground transition-colors hover:text-foreground/70 lg:inline-flex" 
                   aria-label="Account"
                 >
                   <User className="h-5 w-5" />
@@ -197,7 +163,7 @@ export function Header() {
               </button>
               <button 
                 onClick={() => navigate("/cart")}
-                className="relative text-foreground transition-colors hover:text-foreground/70" 
+                className="relative hidden text-foreground transition-colors hover:text-foreground/70 lg:inline-flex" 
                 aria-label="Cart"
               >
                 <ShoppingBag className="h-5 w-5" />
@@ -209,124 +175,7 @@ export function Header() {
           </div>
         </div>
       </header>
-
-      {/* Mobile Menu - outside header to avoid stacking context issues */}
-      <div
-        className={`fixed inset-0 top-20 z-[60] bg-background transition-all duration-300 lg:hidden overflow-y-auto ${
-          isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <nav className="container mx-auto px-6 py-8">
-          <ul className="space-y-6">
-            {navLinks.map((link) => (
-              <li key={link.name}>
-                <Link
-                  to={link.href}
-                  className="font-display text-2xl text-foreground transition-colors hover:text-foreground/70"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-8">
-            {user ? (
-              <div className="space-y-4">
-                <p className="font-body text-sm text-muted-foreground">
-                  Signed in as {profile?.full_name || user.email}
-                </p>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/profile");
-                  }}
-                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                >
-                  My Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/pets");
-                  }}
-                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                >
-                  My Pets
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/loyalty");
-                  }}
-                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                >
-                  Rewards
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/tracking");
-                  }}
-                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                >
-                  Track Order
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/orders");
-                  }}
-                  className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                >
-                  My Orders
-                </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      navigate("/admin");
-                    }}
-                    className="block w-full border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  >
-                    Admin Dashboard
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    handleSignOut();
-                  }}
-                  className="block w-full border border-destructive px-6 py-3 font-body text-sm text-destructive transition-colors hover:bg-destructive/10"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-4">
-                <button 
-                  className="flex-1 bg-foreground px-6 py-3 font-body text-sm text-background transition-colors hover:bg-foreground/90"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/login");
-                  }}
-                >
-                  Sign In
-                </button>
-                <button 
-                  className="flex-1 border border-border px-6 py-3 font-body text-sm transition-colors hover:bg-muted"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    navigate("/signup");
-                  }}
-                >
-                  Register
-                </button>
-              </div>
-            )}
-          </div>
-        </nav>
-      </div>
+      <MobileBottomNav />
     </>
   );
 }
