@@ -111,7 +111,7 @@ export function Header() {
                   <Link
                     key={link.name}
                     to={link.href}
-                    className="group relative font-body text-sm tracking-wide text-foreground transition-colors hover:text-foreground/70"
+                    className="group relative font-body text-sm font-medium tracking-wide text-foreground transition-colors hover:text-foreground/70"
                   >
                     {link.name}
                     <span 

@@ -1,9 +1,10 @@
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProductCard } from "@/components/ProductCard";
 import { Product } from "@/hooks/useProducts";
-import { Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 export function PersonalizedRecommendations() {
   const { user } = useAuth();
@@ -145,6 +146,53 @@ export function PersonalizedRecommendations() {
 
   const recommendations = data?.products || [];
   const petName = data?.petName;
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+
+    if (!container) {
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+      return;
+    }
+
+    const updateScrollButtons = () => {
+      const maxScrollLeft = Math.max(
+        container.scrollWidth - container.clientWidth,
+        0,
+      );
+
+      setCanScrollPrev(container.scrollLeft > 8);
+      setCanScrollNext(container.scrollLeft < maxScrollLeft - 8);
+    };
+
+    updateScrollButtons();
+    container.addEventListener("scroll", updateScrollButtons, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateScrollButtons);
+
+    return () => {
+      container.removeEventListener("scroll", updateScrollButtons);
+      window.removeEventListener("resize", updateScrollButtons);
+    };
+  }, [recommendations.length]);
+
+  const scrollRecommendations = (direction: "prev" | "next") => {
+    const container = scrollContainerRef.current;
+
+    if (!container) return;
+
+    const scrollAmount = Math.max(container.clientWidth * 0.72, 260);
+
+    container.scrollBy({
+      left: direction === "next" ? scrollAmount : -scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -181,15 +229,56 @@ export function PersonalizedRecommendations() {
           </p>
         </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide -mx-6 px-6 sm:mx-0 sm:px-0">
-          {recommendations.map((product) => (
-            <div key={product.id} className="min-w-[200px] max-w-[200px] snap-center">
-              <ProductCard
+        <div className="group/recommendations relative">
+          <div
+            className={`pointer-events-none absolute inset-y-0 left-0 z-20 hidden w-24 items-center bg-gradient-to-r from-background via-background/95 to-transparent transition-opacity duration-200 lg:flex ${
+              canScrollPrev
+                ? "opacity-0 lg:group-hover/recommendations:opacity-100"
+                : "opacity-0"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => scrollRecommendations("prev")}
+              disabled={!canScrollPrev}
+              className="pointer-events-auto ml-3 flex h-12 w-12 items-center justify-center text-black transition-all duration-200 hover:scale-110 lg:-translate-x-2 lg:group-hover/recommendations:translate-x-0 disabled:pointer-events-none disabled:opacity-0"
+              aria-label="Scroll recommendations left"
+            >
+              <ChevronLeft className="h-7 w-7" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div
+            className={`pointer-events-none absolute inset-y-0 right-0 z-20 hidden w-24 items-center justify-end bg-gradient-to-l from-background via-background/95 to-transparent transition-opacity duration-200 lg:flex ${
+              canScrollNext
+                ? "opacity-0 lg:group-hover/recommendations:opacity-100"
+                : "opacity-0"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => scrollRecommendations("next")}
+              disabled={!canScrollNext}
+              className="pointer-events-auto mr-3 flex h-12 w-12 items-center justify-center text-black transition-all duration-200 hover:scale-110 lg:translate-x-2 lg:group-hover/recommendations:translate-x-0 disabled:pointer-events-none disabled:opacity-0"
+              aria-label="Scroll recommendations right"
+            >
+              <ChevronRight className="h-7 w-7" strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-6 px-6 scroll-smooth sm:mx-0 sm:px-0"
+          >
+            {recommendations.map((product) => (
+              <div
                 key={product.id}
-                product={product as Product}
-              />
-            </div>
-          ))}
+                className="min-w-[200px] max-w-[200px] snap-center"
+              >
+                <ProductCard product={product as Product} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

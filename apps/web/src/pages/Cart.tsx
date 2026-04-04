@@ -68,7 +68,7 @@ export default function Cart() {
                         <h3 className="font-display text-lg font-medium hover:underline line-clamp-2">{item.name}</h3>
                       </Link>
                       <p className="font-body text-sm text-muted-foreground">
-                        Size: {item.ownerSize} / Pet: {item.petSize}
+                        Owner: {item.ownerSize} / Pet: {item.petSize}
                       </p>
                       <button
                         onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize)}
