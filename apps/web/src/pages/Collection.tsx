@@ -1,15 +1,19 @@
 import { useState, useMemo } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { ProductCard } from "@/components/ProductCard";
-import { useProductsByCollection, useCollections } from "@/hooks/useProducts";
+import { useProductsByCollection, useCollections, useCategories } from "@/hooks/useProducts";
 import { SEOHead } from "@/components/SEOHead";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowUpDown, ListFilter } from "lucide-react";
 
 type SortOption = "featured" | "price-low" | "price-high" | "newest";
 
 export default function Collection() {
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Determine slug from URL path if not provided as param
   // For routes like /summer, /winter, /rainy defined in App.tsx
@@ -25,6 +29,14 @@ export default function Collection() {
   
   const collection = collections.find(c => c.slug === collectionSlug);
   const [sortBy, setSortBy] = useState<SortOption>("featured");
+  
+  const [selectedPetSize, setSelectedPetSize] = useState<string>("all");
+  const [selectedOwnerSize, setSelectedOwnerSize] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  const { data: categories = [] } = useCategories();
+  const petSizes = ["XS", "S", "M", "L"];
+  const ownerSizes = ["XS", "S", "M", "L"];
 
   // Fallback images
   const fallbackImages: Record<string, string> = {
@@ -33,8 +45,23 @@ export default function Collection() {
     rainy: "/collection-rainy.jpg",
   };
 
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchesPetSize = selectedPetSize === "all" ||
+        (p.pet_sizes && p.pet_sizes.includes(selectedPetSize));
+
+      const matchesOwnerSize = selectedOwnerSize === "all" ||
+        (p.sizes && p.sizes.includes(selectedOwnerSize));
+
+      const matchesCategory = selectedCategory === "all" ||
+        p.category?.id === selectedCategory;
+
+      return matchesPetSize && matchesOwnerSize && matchesCategory;
+    });
+  }, [products, selectedPetSize, selectedOwnerSize, selectedCategory]);
+
   const sortedProducts = useMemo(() => {
-    const sorted = [...products];
+    const sorted = [...filteredProducts];
     switch (sortBy) {
       case "price-low":
         return sorted.sort((a, b) => a.price - b.price);
@@ -45,7 +72,7 @@ export default function Collection() {
       default:
         return sorted;
     }
-  }, [products, sortBy]);
+  }, [filteredProducts, sortBy]);
 
   const collectionImage = collection?.image_url || fallbackImages[collectionSlug] || "/collection-summer.jpg";
   const collectionName = collection?.name || `${collectionSlug.charAt(0).toUpperCase() + collectionSlug.slice(1)} Collection`;
@@ -66,66 +93,386 @@ export default function Collection() {
           url: `https://pebric.vercel.app/collection/${collectionSlug}`,
         }}
       />
-      {/* Hero Banner */}
-      <section className="relative h-[50vh] min-h-[400px]">
-        <div className="absolute inset-0">
-          <img
-            src={collectionImage}
-            alt={collectionName}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-foreground/40" />
+      
+      {/* Breadcrumb & Header */}
+      <div className="container mx-auto px-6 pt-10 pb-6">
+        <div className="flex items-center text-xs text-muted-foreground mb-4">
+          <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          <span className="mx-2">/</span>
+          <Link to="/shop" className="hover:text-foreground transition-colors">Shop All Products</Link>
+          <span className="mx-2">/</span>
+          <span className="text-foreground font-semibold">{collectionName}</span>
         </div>
-        <div className="container relative mx-auto flex h-full flex-col items-center justify-center px-6 text-center">
-          <p className="mb-4 font-body text-xs uppercase tracking-[0.3em] text-background/80">
-            Explore Our
-          </p>
-          <h1 className="mb-4 font-display text-5xl font-medium tracking-tight text-background md:text-7xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground">
             {collectionName}
           </h1>
-          <p className="max-w-xl font-body text-lg text-background/90">
-            {collectionDescription}
-          </p>
+          <div className="hidden lg:block w-[180px]">
+            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+              <SelectTrigger className="w-[180px] border-border/60 bg-transparent font-body text-sm focus:ring-1 focus:ring-[#8b6540] focus:ring-offset-0 rounded-sm">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent className="font-body">
+                <SelectItem value="featured" className="cursor-pointer focus:bg-[#e6f3fa]">Featured</SelectItem>
+                <SelectItem value="newest" className="cursor-pointer focus:bg-[#e6f3fa]">Newest First</SelectItem>
+                <SelectItem value="price-low" className="cursor-pointer focus:bg-[#e6f3fa]">Price: Low to High</SelectItem>
+                <SelectItem value="price-high" className="cursor-pointer focus:bg-[#e6f3fa]">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </section>
+      </div>
 
-      {/* Products Grid */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-6">
-          <div className="mb-12 flex items-center justify-between">
-            <p className="font-body text-sm text-muted-foreground">
-              {productsLoading ? "Loading..." : `${sortedProducts.length} Products`}
-            </p>
-            <select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="border border-border bg-transparent px-4 py-2 font-body text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-            >
-              <option value="featured">Sort by: Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="newest">Newest First</option>
-            </select>
+      {/* Mobile Sort & Filter Bar */}
+      <div className="sticky top-[72px] lg:top-20 z-40 flex items-center border-y border-border/40 bg-background/95 backdrop-blur-sm lg:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="flex flex-1 items-center justify-center gap-2 border-r border-border/40 py-3.5 font-body text-[13px] font-medium transition-colors hover:bg-muted/50 active:bg-muted focus:outline-none">
+              <ArrowUpDown className="h-4 w-4" />
+              <span>Sort</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-2xl px-6 pb-8 pt-6 sm:max-w-md mx-auto h-auto">
+            <SheetHeader className="mb-4 text-left">
+              <SheetTitle className="font-display text-xl">Sort By</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-1">
+              {[
+                { value: "featured", label: "Featured" },
+                { value: "newest", label: "Newest First" },
+                { value: "price-low", label: "Price: Low to High" },
+                { value: "price-high", label: "Price: High to Low" }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortBy(option.value as SortOption)}
+                  className={`flex items-center justify-between rounded-lg px-4 py-3.5 text-sm transition-colors ${sortBy === option.value ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground font-medium'}`}
+                >
+                  {option.label}
+                  {sortBy === option.value && (
+                    <div className="h-2 w-2 rounded-full bg-[#8b6540]" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="flex flex-1 items-center justify-center gap-2 py-3.5 font-body text-[13px] font-medium transition-colors hover:bg-muted/50 active:bg-muted focus:outline-none">
+              <ListFilter className="h-4 w-4" />
+              <span>Filter</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[85vw] sm:max-w-md overflow-y-auto p-0">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/20 bg-background/95 px-6 py-4 backdrop-blur-sm">
+              <SheetTitle className="font-display text-xl">Filters</SheetTitle>
+            </div>
+            <div className="p-6">
+              {/* Collection Filter */}
+              <div className="mb-6 border-b border-border/20 pb-6">
+                <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+                  <span>Collection</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="space-y-3">
+                  {["all", "summer", "winter", "rainy"].map((col) => (
+                    <label key={col} className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="mobile-collection"
+                        checked={collectionSlug === col}
+                        onChange={() => {
+                          if (col === "all") navigate("/shop");
+                          else navigate(`/${col}`);
+                        }}
+                        className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                      />
+                      <span className="text-[15px] font-medium font-body text-foreground/80 capitalize">{col === "all" ? "All Collections" : col}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Filter */}
+              <div className="mb-6 border-b border-border/20 pb-6">
+                <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+                  <span>Category</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="mobile-category"
+                        checked={selectedCategory === "all"}
+                        onChange={() => setSelectedCategory("all")}
+                        className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                      />
+                      <span className="text-[15px] font-medium font-body text-foreground/80">All Categories</span>
+                  </label>
+                  {categories.map((cat) => (
+                    <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="mobile-category"
+                        checked={selectedCategory === cat.id}
+                        onChange={() => setSelectedCategory(cat.id)}
+                        className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                      />
+                      <span className="text-[15px] font-medium font-body text-foreground/80">{cat.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pet Size */}
+              <div className="mb-6 border-b border-border/20 pb-6">
+                <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+                  <span>Pet Size</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="mobile-petsize"
+                      checked={selectedPetSize === "all"}
+                      onChange={() => setSelectedPetSize("all")}
+                      className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                    />
+                    <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">All Sizes</span>
+                  </label>
+                  {petSizes.map((size) => (
+                    <label key={size} className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="mobile-petsize"
+                        checked={selectedPetSize === size}
+                        onChange={() => setSelectedPetSize(size)}
+                        className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                      />
+                      <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">{size}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Owner Size */}
+              <div className="mb-6 pb-6 border-b border-border/20">
+                <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+                  <span>Owner Size</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="mobile-ownersize"
+                      checked={selectedOwnerSize === "all"}
+                      onChange={() => setSelectedOwnerSize("all")}
+                      className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                    />
+                    <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">All Sizes</span>
+                  </label>
+                  {ownerSizes.map((size) => (
+                    <label key={size} className="flex items-center gap-3 cursor-pointer group">
+                      <input 
+                        type="radio" 
+                        name="mobile-ownersize"
+                        checked={selectedOwnerSize === size}
+                        onChange={() => setSelectedOwnerSize(size)}
+                        className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                      />
+                      <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">{size}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color (Soon) */}
+              <div className="mb-6 pb-6">
+                <div className="flex items-center justify-between font-semibold mb-4 text-sm opacity-50">
+                  <span>Color (Soon)</span>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div className="flex flex-wrap gap-2 opacity-50">
+                  {['#cc8b86', '#7d8ca3', '#f2efe9', '#ae988e'].map((color) => (
+                    <div key={color} className="w-[18px] h-[18px] rounded-[3px] shadow-sm cursor-not-allowed" style={{ backgroundColor: color }}></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Main Layout */}
+      <section className="container mx-auto px-6 py-4 flex flex-col lg:flex-row gap-8 lg:gap-16">
+        
+        {/* Sidebar Filters (Desktop) */}
+        <aside className="hidden lg:block w-48 flex-shrink-0">
+          <h2 className="font-display text-lg font-bold mb-6">Filters</h2>
+
+          {/* Collection Filter */}
+          <div className="mb-6 border-b border-border/20 pb-6">
+            <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+              <span>Collection</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="space-y-3">
+              {["all", "summer", "winter", "rainy"].map((col) => (
+                <label key={col} className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="collection"
+                    checked={collectionSlug === col}
+                    onChange={() => {
+                      if (col === "all") navigate("/shop");
+                      else navigate(`/${col}`);
+                    }}
+                    className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                  />
+                  <span className="text-sm font-medium font-body text-foreground/80 capitalize">{col === "all" ? "All Collections" : col}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
+          {/* Category Filter */}
+          <div className="mb-6 border-b border-border/20 pb-6">
+            <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+              <span>Category</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="category"
+                    checked={selectedCategory === "all"}
+                    onChange={() => setSelectedCategory("all")}
+                    className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                  />
+                  <span className="text-sm font-medium font-body text-foreground/80">All Categories</span>
+              </label>
+              {categories.map((cat) => (
+                <label key={cat.id} className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="category"
+                    checked={selectedCategory === cat.id}
+                    onChange={() => setSelectedCategory(cat.id)}
+                    className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                  />
+                  <span className="text-sm font-medium font-body text-foreground/80">{cat.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Pet Size */}
+          <div className="mb-6 border-b border-border/20 pb-6">
+            <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+              <span>Pet Size</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="petsize"
+                  checked={selectedPetSize === "all"}
+                  onChange={() => setSelectedPetSize("all")}
+                  className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                />
+                <span className="text-sm font-medium font-body text-foreground/80 uppercase">All Sizes</span>
+              </label>
+              {petSizes.map((size) => (
+                <label key={size} className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="petsize"
+                    checked={selectedPetSize === size}
+                    onChange={() => setSelectedPetSize(size)}
+                    className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                  />
+                  <span className="text-sm font-medium font-body text-foreground/80 uppercase">{size}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Owner Size */}
+          <div className="mb-6 border-b border-border/20 pb-6">
+            <div className="flex items-center justify-between font-semibold mb-4 text-sm">
+              <span>Owner Size</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="ownersize"
+                  checked={selectedOwnerSize === "all"}
+                  onChange={() => setSelectedOwnerSize("all")}
+                  className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                />
+                <span className="text-sm font-medium font-body text-foreground/80 uppercase">All Sizes</span>
+              </label>
+              {ownerSizes.map((size) => (
+                <label key={size} className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="ownersize"
+                    checked={selectedOwnerSize === size}
+                    onChange={() => setSelectedOwnerSize(size)}
+                    className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                  />
+                  <span className="text-sm font-medium font-body text-foreground/80 uppercase">{size}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Simple Decorative Colors for aesthetic consistency */}
+          <div className="mb-6 border-b border-border/20 pb-6 hidden lg:block">
+            <div className="flex items-center justify-between font-semibold mb-4 text-sm opacity-50">
+              <span>Color (Soon)</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div className="flex flex-wrap gap-2 opacity-50">
+              {['#cc8b86', '#7d8ca3', '#f2efe9', '#ae988e'].map((color) => (
+                <div key={color} className="w-[16px] h-[16px] rounded-[3px] shadow-sm cursor-not-allowed" style={{ backgroundColor: color }}></div>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+
+        {/* Product Grid Area */}
+        <div className="flex-1 pb-24">
           {productsLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-              {sortedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-
-          {!productsLoading && sortedProducts.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="font-body text-lg text-muted-foreground">
-                No products found in this collection.
-              </p>
-            </div>
+            <>
+              {sortedProducts.length === 0 ? (
+                <div className="py-20 text-center">
+                  <p className="font-body text-lg text-muted-foreground">
+                    No products found in this collection.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

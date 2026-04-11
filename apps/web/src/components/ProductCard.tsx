@@ -16,7 +16,7 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
     <Link to={productLink}>
       <div className="group relative">
         {/* Image Container */}
-        <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+        <div className="relative aspect-[3/4] overflow-hidden bg-muted rounded-[20px]">
           <OptimizedImage
             src={image}
             alt={product.name}
@@ -27,14 +27,14 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
           />
 
           {/* Badges */}
-          <div className="absolute left-4 top-4 flex flex-col gap-2">
+          <div className="absolute left-3 top-3 flex flex-col gap-2">
             {product.is_new_arrival && (
-              <span className="bg-foreground px-3 py-1 font-body text-[10px] uppercase tracking-wider text-background">
+              <span className="bg-[#423a31] px-4 py-1.5 font-body text-xs text-white rounded-full">
                 New
               </span>
             )}
             {product.original_price && (
-              <span className="bg-destructive px-3 py-1 font-body text-[10px] uppercase tracking-wider text-destructive-foreground">
+              <span className="bg-[#ca6e53] px-4 py-1.5 font-body text-xs text-white rounded-full">
                 Sale
               </span>
             )}
@@ -42,20 +42,17 @@ export function ProductCard({ product, priority = false }: ProductCardProps) {
         </div>
 
         {/* Product Info */}
-        <div className="mt-4 space-y-1">
-          <p className="font-body text-xs uppercase tracking-wider text-muted-foreground">
-            {category}
-          </p>
-          <h3 className="h-[45px] overflow-hidden font-display text-lg font-medium leading-tight text-foreground line-clamp-2">
+        <div className="mt-3 space-y-1 px-1">
+          <h3 className="font-display text-base font-semibold leading-tight text-foreground line-clamp-2">
             {product.name}
           </h3>
           <div className="flex items-center gap-2">
-            <span className="font-body text-base font-medium text-foreground">
-              ₹{product.price}
+            <span className="font-body text-sm font-semibold text-[#8b6540]">
+              ₹{product.price.toLocaleString()}
             </span>
             {product.original_price && (
               <span className="font-body text-sm text-muted-foreground line-through">
-                ₹{product.original_price}
+                ₹{product.original_price.toLocaleString()}
               </span>
             )}
           </div>
