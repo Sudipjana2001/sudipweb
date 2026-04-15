@@ -9,6 +9,7 @@ import { ReorderButton } from "@/components/ReorderButton";
 import { RefundTracker } from "@/components/RefundTracker";
 import { SEOHead } from "@/components/SEOHead";
 import { CancelOrderRequestButton } from "@/components/CancelOrderRequestButton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const statusConfig = {
   pending: { label: "Pending", icon: Clock, color: "text-yellow-500" },
@@ -18,6 +19,76 @@ const statusConfig = {
   delivered: { label: "Delivered", icon: CheckCircle, color: "text-green-500" },
   cancelled: { label: "Cancelled", icon: XCircle, color: "text-red-500" },
 };
+
+function OrdersPageSkeleton() {
+  return (
+    <PageLayout showNewsletter={false}>
+      <div className="container mx-auto px-6 py-16">
+        <Skeleton className="mb-8 h-10 w-40" />
+
+        <div className="space-y-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`order-card-skeleton-${index}`}
+              className="rounded-lg border border-border bg-card p-6"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <Skeleton className="h-6 w-28" />
+              </div>
+
+              <div className="mb-4 space-y-3">
+                {Array.from({ length: 2 }).map((_, itemIndex) => (
+                  <div
+                    key={`order-item-skeleton-${index}-${itemIndex}`}
+                    className="flex items-center gap-4"
+                  >
+                    <Skeleton className="h-16 w-16 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-border pt-4 space-y-3">
+                {Array.from({ length: 4 }).map((_, rowIndex) => (
+                  <div
+                    key={`order-total-skeleton-${index}-${rowIndex}`}
+                    className="flex justify-between"
+                  >
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="h-10 w-28" />
+                <Skeleton className="h-10 w-36" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-12">
+          <Skeleton className="mb-6 h-8 w-40" />
+          <div className="rounded-lg border border-border bg-card p-6 space-y-3">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </div>
+      </div>
+    </PageLayout>
+  );
+}
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -31,15 +102,7 @@ export default function Orders() {
   }, [user, authLoading, navigate]);
 
   if (authLoading || isLoading) {
-    return (
-      <PageLayout showNewsletter={false}>
-        <div className="container mx-auto px-6 py-16">
-          <div className="flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        </div>
-      </PageLayout>
-    );
+    return <OrdersPageSkeleton />;
   }
 
   return (

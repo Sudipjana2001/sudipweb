@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/contexts/CartContext";
 import {
   useProduct,
@@ -55,6 +56,129 @@ const RecentlyViewed = lazy(() =>
     default: module.RecentlyViewed,
   })),
 );
+
+function ProductDetailSkeleton() {
+  return (
+    <PageLayout>
+      <div className="container mx-auto px-4 md:px-6 py-5 md:py-8">
+        <div className="grid gap-6 md:gap-8 lg:gap-12 lg:grid-cols-[30%_1fr]">
+          <div className="space-y-4">
+            <div className="aspect-square overflow-hidden bg-muted">
+              <Skeleton className="h-full w-full rounded-none" />
+            </div>
+            <div className="grid min-w-0 grid-cols-5 gap-3 sm:flex sm:overflow-x-auto sm:pb-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={`product-thumb-skeleton-${index}`}
+                  className="aspect-square w-full overflow-hidden sm:w-16 sm:shrink-0 md:w-20"
+                >
+                  <Skeleton className="h-full w-full rounded-none" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-5 md:space-y-6">
+            <div className="space-y-4">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-10 w-4/5" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-10 w-36" />
+              </div>
+            </div>
+
+            <div className="space-y-4 md:space-y-5">
+              {Array.from({ length: 2 }).map((_, sectionIndex) => (
+                <div key={`product-size-skeleton-${sectionIndex}`}>
+                  <Skeleton className="mb-3 h-3 w-24" />
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: 5 }).map((_, optionIndex) => (
+                      <Skeleton
+                        key={`product-size-option-${sectionIndex}-${optionIndex}`}
+                        className="h-10 w-14 md:h-12 md:w-16"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="w-full max-w-[220px] md:max-w-[260px]">
+                <Skeleton className="mb-2 h-3 w-20" />
+                <Skeleton className="h-10 w-full md:h-12" />
+              </div>
+              <div className="mt-1 flex flex-col gap-3 sm:flex-row">
+                <Skeleton className="h-14 w-full flex-1" />
+                <Skeleton className="h-14 w-full flex-1" />
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:block lg:border-t lg:border-border lg:pt-8 lg:-mr-8 lg:pr-8">
+            <Skeleton className="mb-4 h-7 w-32" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton
+                  key={`product-feature-skeleton-${index}`}
+                  className="h-4 w-full"
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-5 md:space-y-6 lg:border-t lg:border-border lg:pt-8 lg:-ml-8 lg:pl-8">
+            <div className="border-t border-border pt-6 md:pt-8 lg:border-none lg:pt-0">
+              <Skeleton className="mb-4 h-7 w-36" />
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton
+                    key={`product-description-skeleton-${index}`}
+                    className="h-4 w-full"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-6 md:pt-8">
+              <Skeleton className="mb-4 h-7 w-40" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton
+                    key={`product-fabric-skeleton-${index}`}
+                    className="h-16 w-full"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 md:gap-4 border-t border-border pt-6 md:pt-8">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`product-trust-skeleton-${index}`}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-16 space-y-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    </PageLayout>
+  );
+}
 
 export default function Product() {
   const { slug } = useParams<{ slug: string }>();
@@ -209,13 +333,7 @@ export default function Product() {
   }, [product, images, slug, averageRating, totalReviews]);
 
   if (isLoading) {
-    return (
-      <PageLayout>
-        <div className="container mx-auto px-6 py-32 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      </PageLayout>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {

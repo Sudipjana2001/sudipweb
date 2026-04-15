@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewPhotoGallery } from "@/components/ReviewPhotoGallery";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useProduct } from "@/hooks/useProducts";
 import {
   useProductReviews,
@@ -13,6 +14,82 @@ import { Star, ThumbsUp, ChevronLeft, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+
+function ProductReviewsPageSkeleton() {
+  return (
+    <PageLayout>
+      <div className="container mx-auto px-6 py-8">
+        <Skeleton className="mb-6 h-5 w-32" />
+
+        <div className="mb-8 space-y-3">
+          <Skeleton className="h-10 w-72 max-w-full" />
+          <Skeleton className="h-5 w-64 max-w-full" />
+        </div>
+
+        <div className="grid gap-12 lg:grid-cols-[280px_1fr]">
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <div className="rounded-lg border border-border p-6">
+              <div className="mb-6 flex items-center gap-3">
+                <Skeleton className="h-14 w-16" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={`review-summary-skeleton-${index}`}
+                    className="flex items-center gap-2"
+                  >
+                    <Skeleton className="h-3 w-3" />
+                    <Skeleton className="h-3 w-3" />
+                    <Skeleton className="h-2 flex-1" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={`review-card-skeleton-${index}`}
+                className="border-b border-border pb-4 last:border-0"
+              >
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-3">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-48" />
+                    </div>
+                    <Skeleton className="h-4 w-36" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                    <div className="flex gap-2">
+                      {Array.from({ length: 3 }).map((_, photoIndex) => (
+                        <Skeleton
+                          key={`review-photo-skeleton-${index}-${photoIndex}`}
+                          className="h-20 w-20"
+                        />
+                      ))}
+                    </div>
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </PageLayout>
+  );
+}
 
 export default function ProductReviews() {
   const { slug } = useParams<{ slug: string }>();
@@ -27,13 +104,7 @@ export default function ProductReviews() {
   const totalReviews = reviews.length;
 
   if (productLoading || reviewsLoading) {
-    return (
-      <PageLayout>
-        <div className="container mx-auto px-6 py-32 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      </PageLayout>
-    );
+    return <ProductReviewsPageSkeleton />;
   }
 
   if (!product) {
