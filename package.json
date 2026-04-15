@@ -9,7 +9,10 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "kafka:relay": "npm run relay --workspace @pebric/kafka-relay",
+    "kafka:relay:build": "npm run build --workspace @pebric/kafka-relay",
+    "kafka:relay:check": "npm run check --workspace @pebric/kafka-relay"
   },
   "devDependencies": {
     "prettier": "latest",
