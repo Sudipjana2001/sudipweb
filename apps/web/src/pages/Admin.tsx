@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout, adminNavGroups } from "@/components/layouts/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -284,6 +284,31 @@ export default function Admin() {
     }
   }, [user, isAdmin, authLoading, navigate]);
 
+  const fetchData = useCallback(async () => {
+    if (products.length === 0) setIsLoading(true);
+
+    try {
+      const [productsRes, ordersRes] = await Promise.all([
+        supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("orders")
+          .select("*, items:order_items(*)")
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (productsRes.error) throw productsRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+
+      setProducts((productsRes.data ?? []) as Product[]);
+      setOrders((ordersRes.data ?? []) as Order[]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [products.length]);
+
   useEffect(() => {
     if (isAdmin) {
       void fetchData().catch((error) => {
@@ -291,7 +316,7 @@ export default function Admin() {
         toast.error("Failed to load admin data");
       });
     }
-  }, [isAdmin]);
+  }, [isAdmin, fetchData]);
 
   useRealtimeChannel(
     "admin-orders-products-realtime",
@@ -325,31 +350,6 @@ export default function Admin() {
     }
 
     setSearchParams(nextSearchParams, { replace: true });
-  };
-
-  const fetchData = async () => {
-    if (products.length === 0) setIsLoading(true);
-
-    try {
-      const [productsRes, ordersRes] = await Promise.all([
-        supabase
-          .from("products")
-          .select("*")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("orders")
-          .select("*, items:order_items(*)")
-          .order("created_at", { ascending: false }),
-      ]);
-
-      if (productsRes.error) throw productsRes.error;
-      if (ordersRes.error) throw ordersRes.error;
-
-      setProducts((productsRes.data ?? []) as Product[]);
-      setOrders((ordersRes.data ?? []) as Order[]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleRefreshOrders = async () => {
@@ -797,7 +797,9 @@ export default function Admin() {
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {order.created_at
-                                  ? new Date(order.created_at).toLocaleTimeString()
+                                  ? new Date(
+                                      order.created_at,
+                                    ).toLocaleTimeString()
                                   : ""}
                               </p>
                             </div>
@@ -807,7 +809,10 @@ export default function Admin() {
                               {formatCurrency(order.total)}
                             </p>
                             <p className="text-xs capitalize text-muted-foreground">
-                              {formatEnumText(order.payment_method, "Payment n/a")}
+                              {formatEnumText(
+                                order.payment_method,
+                                "Payment n/a",
+                              )}
                             </p>
                           </td>
                           <td className="px-4 py-3">
@@ -1529,7 +1534,9 @@ export default function Admin() {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {order.created_at
-                                    ? new Date(order.created_at).toLocaleTimeString()
+                                    ? new Date(
+                                        order.created_at,
+                                      ).toLocaleTimeString()
                                     : ""}
                                 </p>
                               </div>
@@ -1606,7 +1613,8 @@ export default function Admin() {
                             </DialogTitle>
                             <div className="space-y-1">
                               <p className="text-sm text-muted-foreground">
-                                Placed on {formatDateTime(selectedOrder.created_at)}
+                                Placed on{" "}
+                                {formatDateTime(selectedOrder.created_at)}
                               </p>
                               <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-3">
                                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1686,7 +1694,8 @@ export default function Admin() {
                             </p>
                             {selectedOrder.updated_at && (
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Updated {formatDateTime(selectedOrder.updated_at)}
+                                Updated{" "}
+                                {formatDateTime(selectedOrder.updated_at)}
                               </p>
                             )}
                           </div>
@@ -1718,9 +1727,9 @@ export default function Admin() {
                           <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                             {getAddressLines(selectedOrder.shipping_address)
                               .length > 0 ? (
-                              getAddressLines(selectedOrder.shipping_address).map(
-                                (line) => <p key={line}>{line}</p>,
-                              )
+                              getAddressLines(
+                                selectedOrder.shipping_address,
+                              ).map((line) => <p key={line}>{line}</p>)
                             ) : (
                               <p>Not available</p>
                             )}
@@ -1733,9 +1742,9 @@ export default function Admin() {
                           <div className="mt-3 space-y-1 text-sm text-muted-foreground">
                             {getAddressLines(selectedOrder.billing_address)
                               .length > 0 ? (
-                              getAddressLines(selectedOrder.billing_address).map(
-                                (line) => <p key={line}>{line}</p>,
-                              )
+                              getAddressLines(
+                                selectedOrder.billing_address,
+                              ).map((line) => <p key={line}>{line}</p>)
                             ) : (
                               <p>Not available</p>
                             )}
@@ -1756,7 +1765,8 @@ export default function Admin() {
                             </span>
                           </div>
                           <div className="mt-4 space-y-3">
-                            {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                            {selectedOrder.items &&
+                            selectedOrder.items.length > 0 ? (
                               selectedOrder.items.map((item) => (
                                 <div
                                   key={item.id}
@@ -1806,7 +1816,9 @@ export default function Admin() {
                             <div className="mt-3 space-y-2 text-sm">
                               <div className="flex items-center justify-between text-muted-foreground">
                                 <span>Subtotal</span>
-                                <span>{formatCurrency(selectedOrder.subtotal)}</span>
+                                <span>
+                                  {formatCurrency(selectedOrder.subtotal)}
+                                </span>
                               </div>
                               <div className="flex items-center justify-between text-muted-foreground">
                                 <span>Shipping</span>
@@ -1823,14 +1835,18 @@ export default function Admin() {
                                 <div className="flex items-center justify-between text-muted-foreground">
                                   <span>Gift Wrap</span>
                                   <span>
-                                    {formatCurrency(selectedOrder.gift_wrap_price)}
+                                    {formatCurrency(
+                                      selectedOrder.gift_wrap_price,
+                                    )}
                                   </span>
                                 </div>
                               )}
                               <Separator className="my-3" />
                               <div className="flex items-center justify-between font-semibold text-foreground">
                                 <span>Total</span>
-                                <span>{formatCurrency(selectedOrder.total)}</span>
+                                <span>
+                                  {formatCurrency(selectedOrder.total)}
+                                </span>
                               </div>
                             </div>
                           </div>

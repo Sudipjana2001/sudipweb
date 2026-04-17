@@ -13,7 +13,15 @@ import {
   pointsToDiscount,
 } from "@/hooks/useLoyalty";
 import { Progress } from "@/components/ui/progress";
-import { Award, Gift, Star, TrendingUp, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
+import {
+  Award,
+  Gift,
+  Star,
+  TrendingUp,
+  ArrowUp,
+  ArrowDown,
+  Sparkles,
+} from "lucide-react";
 import { format } from "date-fns";
 import { SEOHead } from "@/components/SEOHead";
 
@@ -48,7 +56,7 @@ export default function Loyalty() {
     if (user && !loyaltyPoints && !isLoading) {
       initLoyalty.mutate();
     }
-  }, [user, loyaltyPoints, isLoading]);
+  }, [user, loyaltyPoints, isLoading, initLoyalty]);
 
   if (authLoading || isLoading) {
     return (
@@ -69,7 +77,9 @@ export default function Loyalty() {
   const discountValue = pointsToDiscount(points);
 
   const progressToNextTier = nextTier
-    ? ((lifetimePoints - TIER_THRESHOLDS[tier]) / (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) * 100
+    ? ((lifetimePoints - TIER_THRESHOLDS[tier]) /
+        (TIER_THRESHOLDS[nextTier] - TIER_THRESHOLDS[tier])) *
+      100
     : 100;
 
   return (
@@ -82,24 +92,32 @@ export default function Loyalty() {
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-medium">Loyalty Rewards</h1>
-          <p className="mt-2 text-muted-foreground">Earn points on every purchase and unlock exclusive benefits</p>
+          <p className="mt-2 text-muted-foreground">
+            Earn points on every purchase and unlock exclusive benefits
+          </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Points Card */}
           <div className="lg:col-span-2">
-            <div className={`rounded-2xl bg-gradient-to-br ${tierColors[tier]} p-8 text-white`}>
+            <div
+              className={`rounded-2xl bg-gradient-to-br ${tierColors[tier]} p-8 text-white`}
+            >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm opacity-80">Available Points</p>
-                  <p className="font-display text-3xl font-bold sm:text-5xl">{points.toLocaleString()}</p>
+                  <p className="font-display text-3xl font-bold sm:text-5xl">
+                    {points.toLocaleString()}
+                  </p>
                   <p className="mt-1 text-sm opacity-80">
                     Worth ₹{discountValue.toFixed(2)} in discounts
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
                   <div className="text-4xl sm:text-6xl">{tierIcons[tier]}</div>
-                  <p className="mt-2 font-display text-lg font-medium capitalize sm:text-xl">{tier} Member</p>
+                  <p className="mt-2 font-display text-lg font-medium capitalize sm:text-xl">
+                    {tier} Member
+                  </p>
                 </div>
               </div>
 
@@ -123,15 +141,21 @@ export default function Loyalty() {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-border bg-card p-6">
                 <TrendingUp className="h-8 w-8 text-primary" />
-                <h3 className="mt-4 font-display text-lg font-medium">Points Multiplier</h3>
-                <p className="mt-1 text-3xl font-bold">{benefits.pointsMultiplier}x</p>
+                <h3 className="mt-4 font-display text-lg font-medium">
+                  Points Multiplier
+                </h3>
+                <p className="mt-1 text-3xl font-bold">
+                  {benefits.pointsMultiplier}x
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Earn {benefits.pointsMultiplier} points per ₹1 spent
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-card p-6">
                 <Gift className="h-8 w-8 text-primary" />
-                <h3 className="mt-4 font-display text-lg font-medium">Member Discount</h3>
+                <h3 className="mt-4 font-display text-lg font-medium">
+                  Member Discount
+                </h3>
                 <p className="mt-1 text-3xl font-bold">{benefits.discount}%</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Off all purchases as a {tier} member
@@ -141,29 +165,51 @@ export default function Loyalty() {
 
             {/* Transaction History */}
             <div className="mt-8">
-              <h2 className="font-display text-xl font-medium mb-4">Points History</h2>
+              <h2 className="font-display text-xl font-medium mb-4">
+                Points History
+              </h2>
               {transactions.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border p-8 text-center">
                   <Star className="mx-auto h-10 w-10 text-muted-foreground" />
-                  <p className="mt-4 text-muted-foreground">No transactions yet</p>
-                  <p className="text-sm text-muted-foreground">Start shopping to earn points!</p>
+                  <p className="mt-4 text-muted-foreground">
+                    No transactions yet
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Start shopping to earn points!
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-lg border border-border divide-y divide-border">
                   {transactions.slice(0, 10).map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between p-4">
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-4"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className={`rounded-full p-2 ${tx.points > 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
-                          {tx.points > 0 ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                        <div
+                          className={`rounded-full p-2 ${tx.points > 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
+                        >
+                          {tx.points > 0 ? (
+                            <ArrowUp className="h-4 w-4" />
+                          ) : (
+                            <ArrowDown className="h-4 w-4" />
+                          )}
                         </div>
                         <div>
-                          <p className="font-medium capitalize">{tx.type.replace("_", " ")}</p>
-                          <p className="text-sm text-muted-foreground">{tx.description}</p>
+                          <p className="font-medium capitalize">
+                            {tx.type.replace("_", " ")}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {tx.description}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold ${tx.points > 0 ? "text-green-600" : "text-red-600"}`}>
-                          {tx.points > 0 ? "+" : ""}{tx.points}
+                        <p
+                          className={`font-bold ${tx.points > 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {tx.points > 0 ? "+" : ""}
+                          {tx.points}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(tx.created_at), "MMM d, yyyy")}
@@ -179,35 +225,45 @@ export default function Loyalty() {
           {/* Tier Info Sidebar */}
           <div className="space-y-6">
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-display text-lg font-medium mb-4">Membership Tiers</h3>
+              <h3 className="font-display text-lg font-medium mb-4">
+                Membership Tiers
+              </h3>
               <div className="space-y-4">
-                {(["bronze", "silver", "gold", "platinum"] as const).map((t) => (
-                  <div
-                    key={t}
-                    className={`flex items-center gap-3 rounded-lg p-3 ${
-                      t === tier ? "bg-primary/10 border border-primary" : "bg-muted/50"
-                    }`}
-                  >
-                    <span className="text-2xl">{tierIcons[t]}</span>
-                    <div className="flex-1">
-                      <p className="font-medium capitalize">{t}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {TIER_THRESHOLDS[t].toLocaleString()}+ points
-                      </p>
+                {(["bronze", "silver", "gold", "platinum"] as const).map(
+                  (t) => (
+                    <div
+                      key={t}
+                      className={`flex items-center gap-3 rounded-lg p-3 ${
+                        t === tier
+                          ? "bg-primary/10 border border-primary"
+                          : "bg-muted/50"
+                      }`}
+                    >
+                      <span className="text-2xl">{tierIcons[t]}</span>
+                      <div className="flex-1">
+                        <p className="font-medium capitalize">{t}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {TIER_THRESHOLDS[t].toLocaleString()}+ points
+                        </p>
+                      </div>
+                      <div className="text-right text-sm">
+                        <p>{TIER_BENEFITS[t].pointsMultiplier}x</p>
+                        <p className="text-muted-foreground">
+                          {TIER_BENEFITS[t].discount}% off
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right text-sm">
-                      <p>{TIER_BENEFITS[t].pointsMultiplier}x</p>
-                      <p className="text-muted-foreground">{TIER_BENEFITS[t].discount}% off</p>
-                    </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             </div>
 
             <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-lg font-medium">How to Earn</h3>
+                <h3 className="font-display text-lg font-medium">
+                  How to Earn
+                </h3>
               </div>
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center justify-between">
@@ -232,14 +288,21 @@ export default function Loyalty() {
             <div className="rounded-lg border border-border bg-card p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Award className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-lg font-medium">Redeem Points</h3>
+                <h3 className="font-display text-lg font-medium">
+                  Redeem Points
+                </h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Use your points at checkout for instant discounts. 100 points = ₹1 off.
+                Use your points at checkout for instant discounts. 100 points =
+                ₹1 off.
               </p>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Your points are worth</p>
-                <p className="font-display text-2xl font-bold">₹{discountValue.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">
+                  Your points are worth
+                </p>
+                <p className="font-display text-2xl font-bold">
+                  ₹{discountValue.toFixed(2)}
+                </p>
               </div>
             </div>
           </div>

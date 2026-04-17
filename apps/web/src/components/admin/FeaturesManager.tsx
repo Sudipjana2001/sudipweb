@@ -5,15 +5,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Save, ArrowUp, ArrowDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 // Common Lucide icons for features
 const AVAILABLE_ICONS = [
-  "Sparkles", "Heart", "RefreshCw", "Truck", "Shield", "Star",
-  "Award", "Check", "Gift", "Zap", "Target", "TrendingUp"
+  "Sparkles",
+  "Heart",
+  "RefreshCw",
+  "Truck",
+  "Shield",
+  "Star",
+  "Award",
+  "Check",
+  "Gift",
+  "Zap",
+  "Target",
+  "TrendingUp",
 ];
 
 interface FeatureForm {
@@ -22,6 +38,10 @@ interface FeatureForm {
   description: string;
   display_order: number;
   is_active: boolean;
+}
+
+interface Feature extends FeatureForm {
+  id: string;
 }
 
 export function FeaturesManager() {
@@ -78,7 +98,7 @@ export function FeaturesManager() {
     });
   };
 
-  const handleEdit = (feature: any) => {
+  const handleEdit = (feature: Feature) => {
     setEditingId(feature.id);
     setEditForm({
       icon_name: feature.icon_name,
@@ -132,7 +152,8 @@ export function FeaturesManager() {
     const currentIndex = features.findIndex((f) => f.id === id);
     if (currentIndex === -1) return;
 
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= features.length) return;
 
     const currentFeature = features[currentIndex];
@@ -187,7 +208,9 @@ export function FeaturesManager() {
                   id="icon"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={newFeature.icon_name}
-                  onChange={(e) => setNewFeature({ ...newFeature, icon_name: e.target.value })}
+                  onChange={(e) =>
+                    setNewFeature({ ...newFeature, icon_name: e.target.value })
+                  }
                 >
                   {AVAILABLE_ICONS.map((icon) => (
                     <option key={icon} value={icon}>
@@ -202,7 +225,9 @@ export function FeaturesManager() {
                 <Input
                   id="title"
                   value={newFeature.title}
-                  onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
+                  onChange={(e) =>
+                    setNewFeature({ ...newFeature, title: e.target.value })
+                  }
                   placeholder="Premium Fabrics"
                 />
               </div>
@@ -212,7 +237,12 @@ export function FeaturesManager() {
                 <Textarea
                   id="description"
                   value={newFeature.description}
-                  onChange={(e) => setNewFeature({ ...newFeature, description: e.target.value })}
+                  onChange={(e) =>
+                    setNewFeature({
+                      ...newFeature,
+                      description: e.target.value,
+                    })
+                  }
                   placeholder="Carefully selected materials for maximum comfort..."
                   rows={3}
                 />
@@ -223,7 +253,12 @@ export function FeaturesManager() {
                   type="checkbox"
                   id="is_active"
                   checked={newFeature.is_active}
-                  onChange={(e) => setNewFeature({ ...newFeature, is_active: e.target.checked })}
+                  onChange={(e) =>
+                    setNewFeature({
+                      ...newFeature,
+                      is_active: e.target.checked,
+                    })
+                  }
                 />
                 <Label htmlFor="is_active">Active</Label>
               </div>
@@ -241,25 +276,41 @@ export function FeaturesManager() {
           <table className="w-full">
             <thead className="border-b border-border bg-muted/50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">Icon</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Title</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Order</th>
-                <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Icon
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Title
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Description
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Order
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {features.map((feature, index) => (
                 <tr key={feature.id} className="border-b border-border">
                   <td className="px-4 py-3">
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{feature.icon_name}</code>
+                    <code className="text-xs bg-muted px-2 py-1 rounded">
+                      {feature.icon_name}
+                    </code>
                   </td>
                   <td className="px-4 py-3">
                     {editingId === feature.id ? (
                       <Input
                         value={editForm.title}
-                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, title: e.target.value })
+                        }
                         className="w-48"
                       />
                     ) : (
@@ -270,7 +321,12 @@ export function FeaturesManager() {
                     {editingId === feature.id ? (
                       <Textarea
                         value={editForm.description}
-                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            description: e.target.value,
+                          })
+                        }
                         className="min-w-[200px]"
                         rows={2}
                       />
@@ -285,7 +341,12 @@ export function FeaturesManager() {
                       <input
                         type="checkbox"
                         checked={editForm.is_active}
-                        onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            is_active: e.target.checked,
+                          })
+                        }
                       />
                     ) : (
                       <span

@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/client";
 
@@ -20,10 +26,16 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   isAdmin: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ data: any; error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+  ) => Promise<{ data: any; error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  updateProfile: (
+    updates: Partial<Profile>,
+  ) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,23 +110,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
 
-        if (session?.user) {
-          // Defer Supabase calls to avoid deadlock
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-            checkAdminRole(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
+      if (session?.user) {
+        // Defer Supabase calls to avoid deadlock
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+          checkAdminRole(session.user.id);
+        }, 0);
+      } else {
+        setProfile(null);
+        setIsAdmin(false);
       }
-    );
+    });
 
     // Then check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -124,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         await Promise.all([
           fetchProfile(session.user.id),
-          checkAdminRole(session.user.id)
+          checkAdminRole(session.user.id),
         ]);
       }
 
@@ -216,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

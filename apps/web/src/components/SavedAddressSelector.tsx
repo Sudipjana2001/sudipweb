@@ -3,8 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useSavedAddresses, useCreateSavedAddress, useDeleteSavedAddress, SavedAddress } from "@/hooks/useSavedAddresses";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  useSavedAddresses,
+  useCreateSavedAddress,
+  useDeleteSavedAddress,
+  SavedAddress,
+} from "@/hooks/useSavedAddresses";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, MapPin, Trash2, Check } from "lucide-react";
 
@@ -20,12 +31,14 @@ interface SavedAddressSelectorProps {
   }) => void;
 }
 
-export function SavedAddressSelector({ onAddressSelect }: SavedAddressSelectorProps) {
+export function SavedAddressSelector({
+  onAddressSelect,
+}: SavedAddressSelectorProps) {
   const { user } = useAuth();
   const { data: addresses = [] } = useSavedAddresses();
   const createAddress = useCreateSavedAddress();
   const deleteAddress = useDeleteSavedAddress();
-  
+
   const [selectedId, setSelectedId] = useState<string>("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [newAddress, setNewAddress] = useState({
@@ -51,7 +64,9 @@ export function SavedAddressSelector({ onAddressSelect }: SavedAddressSelectorPr
       onAddressSelect({
         firstName: nameParts[0] || "",
         lastName: nameParts.slice(1).join(" ") || "",
-        address: [address.address_line1, address.address_line2].filter(Boolean).join(", "),
+        address: [address.address_line1, address.address_line2]
+          .filter(Boolean)
+          .join(", "),
         city: address.city,
         postalCode: address.postal_code,
         country: address.country,
@@ -141,7 +156,11 @@ export function SavedAddressSelector({ onAddressSelect }: SavedAddressSelectorPr
               }`}
             >
               <div className="flex items-start gap-3">
-                <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
+                <RadioGroupItem
+                  value={address.id}
+                  id={address.id}
+                  className="mt-1"
+                />
                 <Label htmlFor={address.id} className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -186,8 +205,8 @@ function AddressForm({
   onSubmit,
   isLoading,
 }: {
-  address: any;
-  onChange: (address: any) => void;
+  address: Partial<SavedAddress>;
+  onChange: (address: Partial<SavedAddress>) => void;
   onSubmit: () => void;
   isLoading: boolean;
 }) {
@@ -206,7 +225,9 @@ function AddressForm({
           <Label>Full Name</Label>
           <Input
             value={address.full_name}
-            onChange={(e) => onChange({ ...address, full_name: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...address, full_name: e.target.value })
+            }
             placeholder="John Doe"
           />
         </div>
@@ -223,7 +244,9 @@ function AddressForm({
         <Label>Address Line 1</Label>
         <Input
           value={address.address_line1}
-          onChange={(e) => onChange({ ...address, address_line1: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...address, address_line1: e.target.value })
+          }
           placeholder="Street address"
         />
       </div>
@@ -231,7 +254,9 @@ function AddressForm({
         <Label>Address Line 2 (Optional)</Label>
         <Input
           value={address.address_line2}
-          onChange={(e) => onChange({ ...address, address_line2: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...address, address_line2: e.target.value })
+          }
           placeholder="Apartment, suite, etc."
         />
       </div>
@@ -247,7 +272,9 @@ function AddressForm({
           <Label>Postal Code</Label>
           <Input
             value={address.postal_code}
-            onChange={(e) => onChange({ ...address, postal_code: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...address, postal_code: e.target.value })
+            }
           />
         </div>
       </div>

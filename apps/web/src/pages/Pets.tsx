@@ -2,15 +2,38 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePets, useAddPet, useUpdatePet, useDeletePet, useSetPrimaryPet, getRecommendedSize, Pet } from "@/hooks/usePets";
+import {
+  usePets,
+  useAddPet,
+  useUpdatePet,
+  useDeletePet,
+  useSetPrimaryPet,
+  getRecommendedSize,
+  Pet,
+} from "@/hooks/usePets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/client";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Crown, Dog, Cat, Upload, Ruler } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Crown,
+  Dog,
+  Cat,
+  Upload,
+  Ruler,
+} from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 
 const speciesOptions = [
@@ -18,10 +41,9 @@ const speciesOptions = [
   { value: "cat", label: "Cat", icon: Cat },
 ];
 
-
 interface PetFormProps {
-  form: any;
-  setForm: (form: any) => void;
+  form: Partial<Pet>;
+  setForm: (form: Partial<Pet>) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
   isEditing: boolean;
@@ -30,15 +52,15 @@ interface PetFormProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
 }
 
-const PetForm = ({ 
-  form, 
-  setForm, 
-  onSubmit, 
-  isSubmitting, 
-  isEditing, 
-  onPhotoUpload, 
-  uploading, 
-  fileInputRef 
+const PetForm = ({
+  form,
+  setForm,
+  onSubmit,
+  isSubmitting,
+  isEditing,
+  onPhotoUpload,
+  uploading,
+  fileInputRef,
 }: PetFormProps) => (
   <div className="space-y-6">
     {/* Photo Upload */}
@@ -46,10 +68,18 @@ const PetForm = ({
       <div className="relative">
         <div className="h-24 w-24 overflow-hidden rounded-full bg-muted">
           {form.photo_url ? (
-            <img src={form.photo_url} alt="" className="h-full w-full object-cover" />
+            <img
+              src={form.photo_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              {form.species === "cat" ? <Cat className="h-10 w-10 text-muted-foreground" /> : <Dog className="h-10 w-10 text-muted-foreground" />}
+              {form.species === "cat" ? (
+                <Cat className="h-10 w-10 text-muted-foreground" />
+              ) : (
+                <Dog className="h-10 w-10 text-muted-foreground" />
+              )}
             </div>
           )}
         </div>
@@ -88,7 +118,9 @@ const PetForm = ({
               key={opt.value}
               onClick={() => setForm({ ...form, species: opt.value })}
               className={`flex-1 flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
-                form.species === opt.value ? "border-primary bg-primary/10" : "border-border"
+                form.species === opt.value
+                  ? "border-primary bg-primary/10"
+                  : "border-border"
               }`}
             >
               <opt.icon className="h-5 w-5" />
@@ -122,7 +154,9 @@ const PetForm = ({
     <div className="border-t pt-4">
       <div className="flex items-center gap-2 mb-4">
         <Ruler className="h-5 w-5 text-muted-foreground" />
-        <span className="font-medium">Measurements (for size recommendations)</span>
+        <span className="font-medium">
+          Measurements (for size recommendations)
+        </span>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
@@ -196,7 +230,7 @@ export default function Pets() {
   const updatePet = useUpdatePet();
   const deletePet = useDeletePet();
   const setPrimary = useSetPrimaryPet();
-  
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -275,9 +309,9 @@ export default function Pets() {
       return;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from("pet-photos")
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
 
     setForm({ ...form, photo_url: publicUrl });
     setUploading(false);
@@ -311,7 +345,7 @@ export default function Pets() {
       await addPet.mutateAsync(petData);
       setIsAddOpen(false);
     }
-    
+
     resetForm();
   };
 
@@ -332,14 +366,26 @@ export default function Pets() {
 
   return (
     <PageLayout>
-      <SEOHead title="My Pets" description="Manage your pet profiles for personalized size recommendations." noindex={true} />
+      <SEOHead
+        title="My Pets"
+        description="Manage your pet profiles for personalized size recommendations."
+        noindex={true}
+      />
       <div className="container mx-auto px-6 py-16">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="font-display text-4xl font-medium">My Pets</h1>
-            <p className="mt-2 text-muted-foreground">Manage your pet profiles for personalized recommendations</p>
+            <p className="mt-2 text-muted-foreground">
+              Manage your pet profiles for personalized recommendations
+            </p>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetForm(); }}>
+          <Dialog
+            open={isAddOpen}
+            onOpenChange={(open) => {
+              setIsAddOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -350,10 +396,10 @@ export default function Pets() {
               <DialogHeader>
                 <DialogTitle>Add New Pet</DialogTitle>
               </DialogHeader>
-              <PetForm 
-                form={form} 
-                setForm={setForm} 
-                onSubmit={handleSubmit} 
+              <PetForm
+                form={form}
+                setForm={setForm}
+                onSubmit={handleSubmit}
                 isSubmitting={addPet.isPending || updatePet.isPending}
                 isEditing={false}
                 onPhotoUpload={handlePhotoUpload}
@@ -367,8 +413,12 @@ export default function Pets() {
         {pets.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-12 text-center">
             <Dog className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 font-display text-xl font-medium">No pets yet</h3>
-            <p className="mt-2 text-muted-foreground">Add your first pet to get personalized size recommendations</p>
+            <h3 className="mt-4 font-display text-xl font-medium">
+              No pets yet
+            </h3>
+            <p className="mt-2 text-muted-foreground">
+              Add your first pet to get personalized size recommendations
+            </p>
             <Button onClick={() => setIsAddOpen(true)} className="mt-4">
               <Plus className="mr-2 h-4 w-4" />
               Add Your First Pet
@@ -379,27 +429,40 @@ export default function Pets() {
             {pets.map((pet) => {
               const recommendedSize = getRecommendedSize(pet);
               return (
-                <div key={pet.id} className="relative rounded-lg border border-border bg-card p-6">
+                <div
+                  key={pet.id}
+                  className="relative rounded-lg border border-border bg-card p-6"
+                >
                   {pet.is_primary && (
                     <div className="absolute -top-3 left-4 flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs text-primary-foreground">
                       <Crown className="h-3 w-3" />
                       Primary
                     </div>
                   )}
-                  
+
                   <div className="flex items-start gap-4">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-muted">
                       {pet.photo_url ? (
-                        <img src={pet.photo_url} alt={pet.name} className="h-full w-full object-cover" />
+                        <img
+                          src={pet.photo_url}
+                          alt={pet.name}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                          {pet.species === "cat" ? <Cat className="h-8 w-8 text-muted-foreground" /> : <Dog className="h-8 w-8 text-muted-foreground" />}
+                          {pet.species === "cat" ? (
+                            <Cat className="h-8 w-8 text-muted-foreground" />
+                          ) : (
+                            <Dog className="h-8 w-8 text-muted-foreground" />
+                          )}
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-xl font-medium">{pet.name}</h3>
+                      <h3 className="font-display text-xl font-medium">
+                        {pet.name}
+                      </h3>
                       <p className="text-sm text-muted-foreground capitalize">
                         {pet.breed || pet.species}
                       </p>
@@ -430,9 +493,21 @@ export default function Pets() {
                         Set Primary
                       </Button>
                     )}
-                    <Dialog open={editingPet?.id === pet.id} onOpenChange={(open) => { if (!open) { setEditingPet(null); resetForm(); } }}>
+                    <Dialog
+                      open={editingPet?.id === pet.id}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          setEditingPet(null);
+                          resetForm();
+                        }
+                      }}
+                    >
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(pet)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(pet)}
+                        >
                           <Pencil className="h-3 w-3" />
                         </Button>
                       </DialogTrigger>
@@ -440,10 +515,10 @@ export default function Pets() {
                         <DialogHeader>
                           <DialogTitle>Edit {pet.name}</DialogTitle>
                         </DialogHeader>
-                        <PetForm 
-                          form={form} 
-                          setForm={setForm} 
-                          onSubmit={handleSubmit} 
+                        <PetForm
+                          form={form}
+                          setForm={setForm}
+                          onSubmit={handleSubmit}
                           isSubmitting={addPet.isPending || updatePet.isPending}
                           isEditing={true}
                           onPhotoUpload={handlePhotoUpload}

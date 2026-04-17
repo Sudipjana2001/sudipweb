@@ -16,10 +16,7 @@ import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCart } from "@/contexts/CartContext";
-import {
-  useProduct,
-  useProductsByCollection,
-} from "@/hooks/useProducts";
+import { useProduct, useProductsByCollection } from "@/hooks/useProducts";
 import { useProductReviewSummary } from "@/hooks/useReviews";
 import { ProductCard } from "@/components/ProductCard";
 import { SizeRecommendation } from "@/components/SizeRecommendation";
@@ -302,7 +299,7 @@ export default function Product() {
     if (product?.id && user) {
       trackView.mutate(product.id);
     }
-  }, [product?.id, user]);
+  }, [product?.id, user, trackView]);
 
   const productJsonLd = useMemo(() => {
     if (!product) return null;
@@ -719,7 +716,9 @@ export default function Product() {
                   {sizes.map((size) => (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(selectedSize === size ? "" : size)}
+                      onClick={() =>
+                        setSelectedSize(selectedSize === size ? "" : size)
+                      }
                       className={`h-10 min-w-[44px] px-3 text-xs md:h-12 md:min-w-[48px] md:px-4 md:text-sm border font-body transition-colors ${
                         selectedSize === size
                           ? "border-foreground bg-foreground text-background"
@@ -745,7 +744,9 @@ export default function Product() {
                   {petSizes.map((size) => (
                     <button
                       key={size}
-                      onClick={() => setSelectedPetSize(selectedPetSize === size ? "" : size)}
+                      onClick={() =>
+                        setSelectedPetSize(selectedPetSize === size ? "" : size)
+                      }
                       className={`h-10 min-w-[44px] px-3 text-xs md:h-12 md:min-w-[48px] md:px-4 md:text-sm border font-body transition-colors ${
                         selectedPetSize === size
                           ? "border-foreground bg-foreground text-background"
@@ -888,7 +889,11 @@ export default function Product() {
         </div>
 
         {/* Product Reviews */}
-        <Suspense fallback={<div className="mt-16 h-64 animate-pulse rounded-xl bg-muted" />}>
+        <Suspense
+          fallback={
+            <div className="mt-16 h-64 animate-pulse rounded-xl bg-muted" />
+          }
+        >
           {loadSecondaryContent && (
             <ProductReviews
               productId={product.id}
