@@ -37,7 +37,8 @@ export default function Shop() {
   const [searchQuery, setSearchQuery] = useState<string>(
     searchParams.get("search") || ""
   );
-  const [showFilters, setShowFilters] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   const [selectedPetSize, setSelectedPetSize] = useState<string>("all");
   const [selectedOwnerSize, setSelectedOwnerSize] = useState<string>("all");
@@ -224,7 +225,7 @@ export default function Shop() {
 
       {/* Mobile Sort & Filter Bar */}
       <div className="sticky top-[72px] lg:top-20 z-40 flex items-center border-y border-border/40 bg-background/95 backdrop-blur-sm lg:hidden">
-        <Sheet>
+        <Sheet open={mobileSortOpen} onOpenChange={setMobileSortOpen}>
           <SheetTrigger asChild>
             <button className="flex flex-1 items-center justify-center gap-2 border-r border-border/40 py-3.5 font-body text-[13px] font-medium transition-colors hover:bg-muted/50 active:bg-muted focus:outline-none">
               <ArrowUpDown className="h-4 w-4" />
@@ -244,7 +245,10 @@ export default function Shop() {
               ].map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => handleSortChange(option.value)}
+                  onClick={() => {
+                    handleSortChange(option.value);
+                    setMobileSortOpen(false);
+                  }}
                   className={`flex items-center justify-between rounded-lg px-4 py-3.5 text-sm transition-colors ${sortBy === option.value ? 'bg-muted text-foreground font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground font-medium'}`}
                 >
                   {option.label}
@@ -257,7 +261,7 @@ export default function Shop() {
           </SheetContent>
         </Sheet>
 
-        <Sheet>
+        <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
           <SheetTrigger asChild>
             <button className="flex flex-1 items-center justify-center gap-2 py-3.5 font-body text-[13px] font-medium transition-colors hover:bg-muted/50 active:bg-muted focus:outline-none">
               <ListFilter className="h-4 w-4" />
@@ -295,7 +299,10 @@ export default function Shop() {
                         type="radio" 
                         name="mobile-collection"
                         checked={selectedCollection === col}
-                        onChange={() => handleCollectionChange(col)}
+                        onChange={() => {
+                          handleCollectionChange(col);
+                          setMobileFilterOpen(false);
+                        }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
                       <span className="text-[15px] font-medium font-body text-foreground/80 capitalize">{col === "all" ? "All Collections" : col}</span>
@@ -316,7 +323,10 @@ export default function Shop() {
                         type="radio" 
                         name="mobile-category"
                         checked={selectedCategory === "all"}
-                        onChange={() => setSelectedCategory("all")}
+                        onChange={() => {
+                          setSelectedCategory("all");
+                          setMobileFilterOpen(false);
+                        }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
                       <span className="text-[15px] font-medium font-body text-foreground/80">All Categories</span>
@@ -327,7 +337,10 @@ export default function Shop() {
                         type="radio" 
                         name="mobile-category"
                         checked={selectedCategory === cat.id}
-                        onChange={() => setSelectedCategory(cat.id)}
+                        onChange={() => {
+                          setSelectedCategory(cat.id);
+                          setMobileFilterOpen(false);
+                        }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
                       <span className="text-[15px] font-medium font-body text-foreground/80">{cat.name}</span>
@@ -348,7 +361,10 @@ export default function Shop() {
                       type="radio" 
                       name="mobile-petsize"
                       checked={selectedPetSize === "all"}
-                      onChange={() => setSelectedPetSize("all")}
+                      onChange={() => {
+                        setSelectedPetSize("all");
+                        setMobileFilterOpen(false);
+                      }}
                       className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                     />
                     <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">All Sizes</span>
@@ -359,7 +375,10 @@ export default function Shop() {
                         type="radio" 
                         name="mobile-petsize"
                         checked={selectedPetSize === size}
-                        onChange={() => setSelectedPetSize(size)}
+                        onChange={() => {
+                          setSelectedPetSize(size);
+                          setMobileFilterOpen(false);
+                        }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
                       <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">{size}</span>
@@ -380,7 +399,10 @@ export default function Shop() {
                       type="radio" 
                       name="mobile-ownersize"
                       checked={selectedOwnerSize === "all"}
-                      onChange={() => setSelectedOwnerSize("all")}
+                      onChange={() => {
+                        setSelectedOwnerSize("all");
+                        setMobileFilterOpen(false);
+                      }}
                       className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                     />
                     <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">All Sizes</span>
@@ -391,7 +413,10 @@ export default function Shop() {
                         type="radio" 
                         name="mobile-ownersize"
                         checked={selectedOwnerSize === size}
-                        onChange={() => setSelectedOwnerSize(size)}
+                        onChange={() => {
+                          setSelectedOwnerSize(size);
+                          setMobileFilterOpen(false);
+                        }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
                       <span className="text-[15px] font-medium font-body text-foreground/80 uppercase">{size}</span>
