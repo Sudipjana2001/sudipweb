@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   Award,
   Camera,
+  CheckCircle2,
   Dog,
   Gift,
   Heart,
@@ -33,21 +34,23 @@ import {
   ShieldCheck,
   Truck,
   User,
+  XCircle,
 } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
+import { INDIAN_STATES } from "@/lib/indianStates";
+
+import { AddressBook } from "@/components/profile/AddressBook";
+// ─── Validation helpers ───────────────────────────────────────────────────────
+const PHONE_RE = /^[+]?[0-9]{10,15}$/;
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, profile, isAdmin, isLoading: authLoading, signOut, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   const [formData, setFormData] = useState({
     full_name: "",
     phone: "",
-    address: "",
-    city: "",
-    postal_code: "",
-    country: "",
   });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -79,10 +82,6 @@ export default function Profile() {
       setFormData({
         full_name: profile.full_name || "",
         phone: profile.phone || "",
-        address: profile.address || "",
-        city: profile.city || "",
-        postal_code: profile.postal_code || "",
-        country: profile.country || "",
       });
       setAvatarUrl(profile.avatar_url);
     }
@@ -90,6 +89,10 @@ export default function Profile() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -129,10 +132,24 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
 
+    // Validate phone
+    if (formData.phone) {
+      const digits = formData.phone.replace(/[\s\-().]/g, "");
+      if (!PHONE_RE.test(digits)) {
+        toast.error("Invalid phone number", {
+          description: "Phone must be 10–15 digits (e.g. +91 9876543210).",
+        });
+        return;
+      }
+    }
+
+    setSaving(true);
     try {
-      const { error } = await updateProfile(formData);
+      const { error } = await updateProfile({
+        full_name: formData.full_name,
+        phone: formData.phone,
+      });
       if (error) throw error;
       toast.success("Profile updated successfully!");
     } catch (error: unknown) {
@@ -264,9 +281,17 @@ export default function Profile() {
                             value={formData.phone}
                             onChange={handleInputChange}
                             placeholder="+91 9876543210"
-                            className="pl-10"
+                            className={[
+                              "pl-10",
+                              formData.phone && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, ""))
+                                ? "border-destructive focus-visible:ring-destructive"
+                                : "",
+                            ].join(" ")}
                           />
                         </div>
+                        {formData.phone && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, "")) && (
+                          <p className="text-xs text-destructive">Must be 10–15 digits (e.g. +91 9876543210).</p>
+                        )}
                       </div>
                     </div>
 
@@ -288,54 +313,7 @@ export default function Profile() {
                   </div>
 
                   <div className="space-y-4 border-t border-border pt-6">
-                    <h3 className="flex items-center gap-2 font-display text-lg font-medium">
-                      <MapPin className="h-5 w-5" />
-                      Address
-                    </h3>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Street Address</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        placeholder="Enter your street address"
-                      />
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          placeholder="City"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="postal_code">Postal Code</Label>
-                        <Input
-                          id="postal_code"
-                          name="postal_code"
-                          value={formData.postal_code}
-                          onChange={handleInputChange}
-                          placeholder="123456"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="country">Country</Label>
-                        <Input
-                          id="country"
-                          name="country"
-                          value={formData.country}
-                          onChange={handleInputChange}
-                          placeholder="India"
-                        />
-                      </div>
-                    </div>
+                    <AddressBook />
                   </div>
 
                   <div className="pb-4 pt-2">
@@ -359,45 +337,45 @@ export default function Profile() {
           </form>
 
           <section className="space-y-4 border-t border-border pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-display text-lg font-medium">Quick Access</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Shortcuts for your account, orders, and support
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="hidden sm:inline-flex"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </Button>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="font-display text-lg font-medium">Quick Access</h3>
+                <p className="text-sm text-muted-foreground">
+                  Shortcuts for your account, orders, and support
+                </p>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="hidden sm:inline-flex"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                {quickLinks.map((item) => (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    className="flex items-center gap-3 border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
-                  >
-                    <item.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-body text-sm font-medium">{item.label}</span>
-                  </Link>
-                ))}
-                {isAdmin ? (
-                  <Link
-                    to="/admin"
-                    className="flex items-center gap-3 border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
-                  >
-                    <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-body text-sm font-medium">Admin Dashboard</span>
-                  </Link>
-                ) : null}
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {quickLinks.map((item) => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className="flex items-center gap-3 border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
+                >
+                  <item.icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-body text-sm font-medium">{item.label}</span>
+                </Link>
+              ))}
+              {isAdmin ? (
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-3 border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
+                >
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-body text-sm font-medium">Admin Dashboard</span>
+                </Link>
+              ) : null}
+            </div>
             <Button
               type="button"
               variant="outline"

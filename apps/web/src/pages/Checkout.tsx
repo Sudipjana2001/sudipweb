@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -8,6 +8,9 @@ import {
   Tag,
   X,
   Check,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -27,6 +30,31 @@ import { usePaytm, PaytmPaymentResponse } from "@/hooks/usePaytm";
 import { usePhonePe } from "@/hooks/usePhonePe";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { INDIAN_STATES } from "@/lib/indianStates";
+import { usePincodeLookup } from "@/hooks/usePincodeLookup";
+import { useSavedAddresses } from "@/hooks/useSavedAddresses";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+/** Indian 6-digit postal code: exactly 6 digits, first digit non-zero */
+const POSTAL_CODE_RE = /^[1-9][0-9]{5}$/;
+/** Phone: 10–15 digits, optionally prefixed by + and country code */
+const PHONE_RE = /^[+]?[0-9]{10,15}$/;
+/** Country: letters, spaces, hyphens, at least 2 chars */
+const COUNTRY_RE = /^[A-Za-z][A-Za-z\s\-]{1,49}$/;
+
+function validateCheckoutForm(data: CheckoutFormValues): string | null {
+  const phone = data.phone.replace(/[\s\-().]/g, "");
+  if (!PHONE_RE.test(phone)) {
+    return "Phone number must be 10–15 digits (e.g. +91 9876543210).";
+  }
+  if (!POSTAL_CODE_RE.test(data.postalCode.trim())) {
+    return "Postal code must be a valid 6-digit Indian PIN (e.g. 700001).";
+  }
+  return null;
+}
+
 
 const mapPaytmModeToMethod = (mode?: string | null): PaymentMethod | null => {
   if (!mode) return null;
@@ -49,17 +77,19 @@ const createCheckoutAttemptId = () =>
   `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 type AddressFormValues = {
-  firstName: string;
-  lastName: string;
-  address: string;
+  fullName: string;
+  phone: string;
+  address: string;   // Flat, House no., Building
+  area: string;      // Area, Street, Sector, Village
+  landmark: string;
   city: string;
+  state: string;
   postalCode: string;
   country: string;
 };
 
 type CheckoutFormValues = AddressFormValues & {
   email: string;
-  phone: string;
 };
 
 type CheckoutSnapshotItem = {
@@ -84,80 +114,139 @@ type CheckoutSnapshot = {
   idempotencyKey?: string;
 };
 
-function ContactFields({
+function AddressFields({
   prefix,
   values,
   onChange,
+  onAutofill,
+  onSelectChange,
+  onStatusChange,
+  required = true,
 }: {
   prefix: string;
-  values: Pick<CheckoutFormValues, "email" | "phone">;
+  values: AddressFormValues;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAutofill?: (fields: Partial<AddressFormValues>) => void;
+  onSelectChange?: (name: string, value: string) => void;
+  onStatusChange?: (status: "idle" | "loading" | "valid" | "invalid") => void;
+  required?: boolean;
 }) {
+  const { status, lookupError, fetchPincode, resetStatus } = usePincodeLookup();
+  const isLookingUp = status === "loading";
+
+  // Notify parent whenever status changes
+  useEffect(() => { onStatusChange?.(status); }, [status, onStatusChange]);
+
+  const phoneDigits = values.phone.replace(/[\s\-().]/g, "");
+  const phoneInvalid = values.phone.length > 0 && !PHONE_RE.test(phoneDigits);
+
+  const handlePincodeChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e);
+      const pin = e.target.value.trim();
+      // Reset status whenever user types
+      resetStatus();
+      if (pin.length === 6 && POSTAL_CODE_RE.test(pin)) {
+        const result = await fetchPincode(pin);
+        if (result && onAutofill) {
+          onAutofill({ city: result.city, state: result.state, country: result.country });
+        }
+      }
+    },
+    [onChange, onAutofill, fetchPincode, resetStatus],
+  );
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-4">
+      {/* Country / Region */}
       <div>
-        <Label htmlFor={`${prefix}-email`}>Email</Label>
+        <Label htmlFor={`${prefix}-country`}>Country / Region</Label>
+        <select
+          id={`${prefix}-country`}
+          name="country"
+          value={values.country}
+          onChange={(e) => onSelectChange?.("country", e.target.value)}
+          required={required}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <option value="India">India</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      {/* Full Name */}
+      <div>
+        <Label htmlFor={`${prefix}-fullName`}>Full name (First and Last name)</Label>
         <Input
-          id={`${prefix}-email`}
-          name="email"
-          type="email"
-          value={values.email}
+          id={`${prefix}-fullName`}
+          name="fullName"
+          value={values.fullName}
           onChange={onChange}
-          required
+          required={required}
+          placeholder=""
         />
       </div>
+
+      {/* Mobile */}
       <div>
-        <Label htmlFor={`${prefix}-phone`}>Phone</Label>
+        <Label htmlFor={`${prefix}-phone`}>Mobile number</Label>
         <Input
           id={`${prefix}-phone`}
           name="phone"
           type="tel"
           value={values.phone}
           onChange={onChange}
-          required
+          required={required}
+          className={phoneInvalid ? "border-destructive focus-visible:ring-destructive" : ""}
         />
+        {phoneInvalid
+          ? <p className="mt-1 text-xs text-destructive">Enter a valid 10-digit number.</p>
+          : <p className="mt-1 text-xs text-muted-foreground">May be used to assist delivery</p>
+        }
       </div>
-    </div>
-  );
-}
 
-function AddressFields({
-  prefix,
-  values,
-  onChange,
-  required = true,
-}: {
-  prefix: string;
-  values: AddressFormValues;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  required?: boolean;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor={`${prefix}-firstName`}>First Name</Label>
-          <Input
-            id={`${prefix}-firstName`}
-            name="firstName"
-            value={values.firstName}
-            onChange={onChange}
-            required={required}
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-lastName`}>Last Name</Label>
-          <Input
-            id={`${prefix}-lastName`}
-            name="lastName"
-            value={values.lastName}
-            onChange={onChange}
-            required={required}
-          />
-        </div>
-      </div>
+      {/* Pincode */}
       <div>
-        <Label htmlFor={`${prefix}-address`}>Address</Label>
+        <Label htmlFor={`${prefix}-postalCode`}>Pincode</Label>
+        <div className="relative">
+          <Input
+            id={`${prefix}-postalCode`}
+            name="postalCode"
+            value={values.postalCode}
+            onChange={handlePincodeChange}
+            required={required}
+            maxLength={6}
+            inputMode="numeric"
+            placeholder="6 digits [0-9] PIN code"
+            className={[
+              "pr-9",
+              status === "invalid" || (values.postalCode.length === 6 && !POSTAL_CODE_RE.test(values.postalCode)) ? "border-destructive focus-visible:ring-destructive" : "",
+            ].join(" ")}
+          />
+          {isLookingUp && (
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
+          {(status === "invalid" || (values.postalCode.length === 6 && !POSTAL_CODE_RE.test(values.postalCode))) && !isLookingUp && (
+            <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+          )}
+        </div>
+        {isLookingUp && (
+          <p className="mt-1 text-xs text-muted-foreground">Verifying PIN code...</p>
+        )}
+        {values.postalCode.length === 6 && !POSTAL_CODE_RE.test(values.postalCode) && (
+          <p className="mt-1 text-xs text-destructive">Enter a valid 6-digit PIN (e.g. 700001).</p>
+        )}
+        {status === "invalid" && !isLookingUp && values.postalCode.length === 6 && POSTAL_CODE_RE.test(values.postalCode) && (
+          <p className="mt-1 text-xs text-destructive">{lookupError ?? "Invalid PIN code."}</p>
+        )}
+        {values.postalCode.length > 0 && values.postalCode.length < 6 && (
+          <p className="mt-1 text-xs text-muted-foreground">Enter all 6 digits</p>
+        )}
+      </div>
+
+      {/* Flat / House */}
+      <div>
+        <Label htmlFor={`${prefix}-address`}>Flat, House no., Building, Company, Apartment</Label>
         <Input
           id={`${prefix}-address`}
           name="address"
@@ -166,36 +255,57 @@ function AddressFields({
           required={required}
         />
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+
+      {/* Area / Street */}
+      <div>
+        <Label htmlFor={`${prefix}-area`}>Area, Street, Sector, Village</Label>
+        <Input
+          id={`${prefix}-area`}
+          name="area"
+          value={values.area}
+          onChange={onChange}
+        />
+      </div>
+
+      {/* Landmark */}
+      <div>
+        <Label htmlFor={`${prefix}-landmark`}>Landmark</Label>
+        <Input
+          id={`${prefix}-landmark`}
+          name="landmark"
+          value={values.landmark}
+          onChange={onChange}
+          placeholder="E.g. near apollo hospital"
+        />
+      </div>
+
+      {/* Town / City  +  State */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor={`${prefix}-city`}>City</Label>
+          <Label htmlFor={`${prefix}-city`}>Town / City</Label>
           <Input
             id={`${prefix}-city`}
             name="city"
             value={values.city}
             onChange={onChange}
             required={required}
+            placeholder={isLookingUp ? "Fetching..." : ""}
           />
         </div>
         <div>
-          <Label htmlFor={`${prefix}-postalCode`}>Postal Code</Label>
-          <Input
-            id={`${prefix}-postalCode`}
-            name="postalCode"
-            value={values.postalCode}
-            onChange={onChange}
-            required={required}
-          />
-        </div>
-        <div>
-          <Label htmlFor={`${prefix}-country`}>Country</Label>
-          <Input
-            id={`${prefix}-country`}
-            name="country"
-            value={values.country}
-            onChange={onChange}
-            required={required}
-          />
+          <Label htmlFor={`${prefix}-state`}>State</Label>
+          <select
+            id={`${prefix}-state`}
+            name="state"
+            value={values.state}
+            onChange={(e) => onSelectChange?.("state", e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <option value="">Choose a state</option>
+            {INDIAN_STATES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
       </div>
     </div>
@@ -228,70 +338,99 @@ export default function Checkout() {
   }, [buyNowItems, cartTotal]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<CheckoutFormValues>({
+  const [shippingPincodeStatus, setShippingPincodeStatus] = useState<"idle"|"loading"|"valid"|"invalid">("idle");
+  const [billingPincodeStatus, setBillingPincodeStatus] = useState<"idle"|"loading"|"valid"|"invalid">("idle");
+  const emptyAddress = (): CheckoutFormValues => ({
     email: user?.email || "",
-    firstName: profile?.full_name?.split(" ")[0] || "",
-    lastName: profile?.full_name?.split(" ").slice(1).join(" ") || "",
-    address: profile?.address || "",
-    city: profile?.city || "",
-    postalCode: profile?.postal_code || "",
-    country: profile?.country || "",
+    fullName: profile?.full_name || "",
     phone: profile?.phone || "",
-  });
-  const [billingData, setBillingData] = useState<CheckoutFormValues>({
-    email: user?.email || "",
-    phone: profile?.phone || "",
-    firstName: profile?.full_name?.split(" ")[0] || "",
-    lastName: profile?.full_name?.split(" ").slice(1).join(" ") || "",
     address: profile?.address || "",
+    area: "",
+    landmark: "",
     city: profile?.city || "",
+    state: "",
     postalCode: profile?.postal_code || "",
-    country: profile?.country || "",
+    country: profile?.country || "India",
   });
+  const [formData, setFormData] = useState<CheckoutFormValues>(emptyAddress);
+  const [billingData, setBillingData] = useState<CheckoutFormValues>(emptyAddress);
   const [sameAsShipping, setSameAsShipping] = useState(true);
+
+  const { data: savedAddresses = [] } = useSavedAddresses();
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [hasInitializedAddress, setHasInitializedAddress] = useState(false);
+
+  useEffect(() => {
+    if (savedAddresses.length > 0 && !hasInitializedAddress) {
+      const defaultAddr = savedAddresses.find((a) => a.is_default) || savedAddresses[0];
+      setSelectedAddressId(defaultAddr.id);
+      setHasInitializedAddress(true);
+      
+      const newFormData = {
+        ...emptyAddress(),
+        fullName: defaultAddr.full_name,
+        phone: defaultAddr.phone || "",
+        address: defaultAddr.address_line1,
+        area: defaultAddr.address_line2 || "",
+        city: defaultAddr.city,
+        state: defaultAddr.state || "",
+        postalCode: defaultAddr.postal_code,
+        country: defaultAddr.country,
+      };
+      setFormData(newFormData);
+    }
+  }, [savedAddresses, hasInitializedAddress, user]);
+
+  const handleAddressSelect = (id: string) => {
+    setSelectedAddressId(id);
+    if (id === "new") {
+       setFormData(emptyAddress());
+    } else {
+       const addr = savedAddresses.find(a => a.id === id);
+       if (addr) {
+         setFormData(prev => ({
+          ...prev,
+          fullName: addr.full_name,
+          phone: addr.phone || "",
+          address: addr.address_line1,
+          area: addr.address_line2 || "",
+          city: addr.city,
+          state: addr.state || "",
+          postalCode: addr.postal_code,
+          country: addr.country,
+         }));
+       }
+    }
+  };
 
   useEffect(() => {
     if (profile) {
-      const parts = profile.full_name ? profile.full_name.split(" ") : [];
       setFormData((prev) => ({
         ...prev,
         email: prev.email || user?.email || "",
-        firstName: prev.firstName || (parts.length > 0 ? parts[0] : ""),
-        lastName:
-          prev.lastName || (parts.length > 1 ? parts.slice(1).join(" ") : ""),
+        fullName: prev.fullName || profile.full_name || "",
+        phone: prev.phone || profile.phone || "",
         address: prev.address || profile.address || "",
         city: prev.city || profile.city || "",
         postalCode: prev.postalCode || profile.postal_code || "",
-        country: prev.country || profile.country || "",
-        phone: prev.phone || profile.phone || "",
+        country: prev.country || profile.country || "India",
       }));
       setBillingData((prev) => ({
+        ...prev,
         email: prev.email || user?.email || "",
+        fullName: prev.fullName || profile.full_name || "",
         phone: prev.phone || profile.phone || "",
-        firstName: prev.firstName || (parts.length > 0 ? parts[0] : ""),
-        lastName:
-          prev.lastName || (parts.length > 1 ? parts.slice(1).join(" ") : ""),
         address: prev.address || profile.address || "",
         city: prev.city || profile.city || "",
         postalCode: prev.postalCode || profile.postal_code || "",
-        country: prev.country || profile.country || "",
+        country: prev.country || profile.country || "India",
       }));
     }
   }, [profile, user?.email]);
 
   useEffect(() => {
     if (!sameAsShipping) return;
-
-    setBillingData({
-      email: formData.email,
-      phone: formData.phone,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      address: formData.address,
-      city: formData.city,
-      postalCode: formData.postalCode,
-      country: formData.country,
-    });
+    setBillingData({ ...formData });
   }, [formData, sameAsShipping]);
 
   // Coupon state
@@ -368,51 +507,34 @@ export default function Checkout() {
   };
 
   const handleSameAsShippingChange = (checked: boolean | "indeterminate") => {
-    const shouldMatch = checked === true;
-
-    setBillingData({
-      email: formData.email,
-      phone: formData.phone,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      address: formData.address,
-      city: formData.city,
-      postalCode: formData.postalCode,
-      country: formData.country,
-    });
-
-    setSameAsShipping(shouldMatch);
+    setSameAsShipping(checked === true);
+    if (checked === true) setBillingData({ ...formData });
   };
 
   const buildAddressPayload = (
     values: AddressFormValues,
-    extras?: { phone?: string; email?: string },
+    extras?: { email?: string },
   ) => ({
-    full_name: `${values.firstName} ${values.lastName}`.trim(),
-    firstName: values.firstName,
-    lastName: values.lastName,
-    address: values.address,
+    full_name: values.fullName,
+    firstName: values.fullName.split(" ")[0],
+    lastName: values.fullName.split(" ").slice(1).join(" "),
+    address: [values.address, values.area, values.landmark].filter(Boolean).join(", "),
     city: values.city,
+    state: values.state,
     postal_code: values.postalCode,
     postalCode: values.postalCode,
     country: values.country,
-    phone: extras?.phone,
+    phone: values.phone,
     email: extras?.email,
   });
 
   const buildShippingAddress = () =>
-    buildAddressPayload(formData, {
-      phone: formData.phone,
-      email: formData.email,
-    });
+    buildAddressPayload(formData, { email: formData.email });
 
   const buildBillingAddress = () =>
     sameAsShipping
       ? buildShippingAddress()
-      : buildAddressPayload(billingData, {
-          phone: billingData.phone,
-          email: billingData.email,
-        });
+      : buildAddressPayload(billingData, { email: billingData.email });
 
   const buildOrderItems = () =>
     checkoutItems.map((item) => ({
@@ -543,33 +665,36 @@ export default function Checkout() {
           petSize: item.petSize,
         }));
 
+        const fd = snapshot.formData;
         const shippingAddress = {
-          full_name: `${snapshot.formData.firstName} ${snapshot.formData.lastName}`,
-          firstName: snapshot.formData.firstName,
-          lastName: snapshot.formData.lastName,
-          address: snapshot.formData.address,
-          city: snapshot.formData.city,
-          postal_code: snapshot.formData.postalCode,
-          postalCode: snapshot.formData.postalCode,
-          country: snapshot.formData.country,
-          phone: snapshot.formData.phone,
-          email: snapshot.formData.email,
+          full_name: fd.fullName || `${(fd as any).firstName ?? ""} ${(fd as any).lastName ?? ""}`.trim(),
+          firstName: fd.fullName?.split(" ")[0] ?? (fd as any).firstName ?? "",
+          lastName: fd.fullName?.split(" ").slice(1).join(" ") ?? (fd as any).lastName ?? "",
+          address: [fd.address, fd.area, fd.landmark].filter(Boolean).join(", "),
+          city: fd.city,
+          state: fd.state,
+          postal_code: fd.postalCode,
+          postalCode: fd.postalCode,
+          country: fd.country,
+          phone: fd.phone,
+          email: fd.email,
         };
+        const bd = snapshot.billingData;
         const billingAddress =
-          snapshot.sameAsShipping !== false || !snapshot.billingData
+          snapshot.sameAsShipping !== false || !bd
             ? shippingAddress
             : {
-                full_name:
-                  `${snapshot.billingData.firstName} ${snapshot.billingData.lastName}`.trim(),
-                email: snapshot.billingData.email,
-                phone: snapshot.billingData.phone,
-                firstName: snapshot.billingData.firstName,
-                lastName: snapshot.billingData.lastName,
-                address: snapshot.billingData.address,
-                city: snapshot.billingData.city,
-                postal_code: snapshot.billingData.postalCode,
-                postalCode: snapshot.billingData.postalCode,
-                country: snapshot.billingData.country,
+                full_name: bd.fullName || `${(bd as any).firstName ?? ""} ${(bd as any).lastName ?? ""}`.trim(),
+                email: bd.email,
+                phone: bd.phone,
+                firstName: bd.fullName?.split(" ")[0] ?? (bd as any).firstName ?? "",
+                lastName: bd.fullName?.split(" ").slice(1).join(" ") ?? (bd as any).lastName ?? "",
+                address: [bd.address, bd.area, bd.landmark].filter(Boolean).join(", "),
+                city: bd.city,
+                state: bd.state,
+                postal_code: bd.postalCode,
+                postalCode: bd.postalCode,
+                country: bd.country,
               };
 
         const resolvedMethod = verification.paymentMode || "phonepe";
@@ -627,6 +752,34 @@ export default function Checkout() {
     if (checkoutItems.length === 0) {
       toast.error("Your cart is empty");
       return;
+    }
+
+    // Validate shipping address fields
+    const shippingError = validateCheckoutForm(formData);
+    if (shippingError) {
+      toast.error("Invalid shipping details", { description: shippingError });
+      return;
+    }
+    if (shippingPincodeStatus === "invalid") {
+      toast.error("Invalid shipping PIN code", {
+        description: "The PIN code you entered was not found. Please check and try again.",
+      });
+      return;
+    }
+
+    // Validate billing address if different from shipping
+    if (!sameAsShipping) {
+      const billingError = validateCheckoutForm(billingData);
+      if (billingError) {
+        toast.error("Invalid billing details", { description: billingError });
+        return;
+      }
+      if (billingPincodeStatus === "invalid") {
+        toast.error("Invalid billing PIN code", {
+          description: "The billing PIN code was not found. Please check and try again.",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -796,18 +949,81 @@ export default function Checkout() {
                 <h2 className="mb-6 font-display text-xl font-medium">
                   Shipping Address
                 </h2>
-                <div className="mb-6">
-                  <ContactFields
-                    prefix="shipping"
-                    values={formData}
+                {/* Email */}
+                <div className="mb-4">
+                  <Label htmlFor="shipping-email">Email address</Label>
+                  <Input
+                    id="shipping-email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
                     onChange={handleShippingInputChange}
+                    required
                   />
                 </div>
-                <AddressFields
-                  prefix="shipping"
-                  values={formData}
-                  onChange={handleShippingInputChange}
-                />
+                {user && savedAddresses.length > 0 && (
+                  <div className="mb-6">
+                    <Label className="mb-3 block text-sm font-medium text-foreground">Select delivery address</Label>
+                    <RadioGroup value={selectedAddressId} onValueChange={handleAddressSelect} className="gap-3">
+                      {savedAddresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          className={`relative rounded-xl border p-4 ${
+                            selectedAddressId === addr.id ? "border-primary bg-primary/5" : "border-border"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <RadioGroupItem value={addr.id} id={addr.id} className="mt-1" />
+                            <Label htmlFor={addr.id} className="flex-1 cursor-pointer">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">{addr.label}</span>
+                                {addr.is_default && (
+                                  <span className="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-sm font-medium text-foreground">{addr.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ""}</p>
+                              <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} {addr.postal_code}</p>
+                              {addr.phone && <p className="mt-1 text-sm text-muted-foreground">Phone: {addr.phone}</p>}
+                            </Label>
+                          </div>
+                        </div>
+                      ))}
+                      <div className={`relative rounded-xl border p-4 ${
+                            selectedAddressId === "new" ? "border-primary bg-primary/5" : "border-border"
+                          }`}>
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="new" id="new-address" />
+                          <Label htmlFor="new-address" className="flex-1 cursor-pointer font-medium text-foreground">
+                            Add a new address
+                          </Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+
+                {(!user || savedAddresses.length === 0 || selectedAddressId === "new") && (
+                  <div className="space-y-6">
+                    {user && savedAddresses.length > 0 && (
+                      <h3 className="font-medium text-foreground">Enter new address details</h3>
+                    )}
+                    <AddressFields
+                      prefix="shipping"
+                      values={formData}
+                      onChange={handleShippingInputChange}
+                      onAutofill={(fields) =>
+                        setFormData((prev) => ({ ...prev, ...fields }))
+                      }
+                      onSelectChange={(name, value) =>
+                        setFormData((prev) => ({ ...prev, [name]: value }))
+                      }
+                      onStatusChange={setShippingPincodeStatus}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Billing Address */}
@@ -827,15 +1043,29 @@ export default function Checkout() {
 
                 {!sameAsShipping && (
                   <div className="space-y-6">
-                    <ContactFields
-                      prefix="billing"
-                      values={billingData}
-                      onChange={handleBillingInputChange}
-                    />
+                    {/* Billing email */}
+                    <div>
+                      <Label htmlFor="billing-email">Email address</Label>
+                      <Input
+                        id="billing-email"
+                        name="email"
+                        type="email"
+                        value={billingData.email}
+                        onChange={handleBillingInputChange}
+                        required
+                      />
+                    </div>
                     <AddressFields
                       prefix="billing"
                       values={billingData}
                       onChange={handleBillingInputChange}
+                      onAutofill={(fields) =>
+                        setBillingData((prev) => ({ ...prev, ...fields }))
+                      }
+                      onSelectChange={(name, value) =>
+                        setBillingData((prev) => ({ ...prev, [name]: value }))
+                      }
+                      onStatusChange={setBillingPincodeStatus}
                     />
                   </div>
                 )}
