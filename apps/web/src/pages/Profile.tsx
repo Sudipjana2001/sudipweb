@@ -41,7 +41,7 @@ import { INDIAN_STATES } from "@/lib/indianStates";
 
 import { AddressBook } from "@/components/profile/AddressBook";
 // ─── Validation helpers ───────────────────────────────────────────────────────
-const PHONE_RE = /^[+]?[0-9]{10,15}$/;
+const PHONE_RE = /^(?:(?:\+?91)|0)?[6-9]\d{9}$/;
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function Profile() {
   
   const [formData, setFormData] = useState({
     full_name: "",
-    phone: "",
+    phone: "+91 ",
   });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -81,7 +81,7 @@ export default function Profile() {
     if (profile) {
       setFormData({
         full_name: profile.full_name || "",
-        phone: profile.phone || "",
+        phone: profile.phone || "+91 ",
       });
       setAvatarUrl(profile.avatar_url);
     }
@@ -138,7 +138,7 @@ export default function Profile() {
       const digits = formData.phone.replace(/[\s\-().]/g, "");
       if (!PHONE_RE.test(digits)) {
         toast.error("Invalid phone number", {
-          description: "Phone must be 10–15 digits (e.g. +91 9876543210).",
+          description: "Enter a valid 10-digit Indian mobile number.",
         });
         return;
       }
@@ -283,14 +283,14 @@ export default function Profile() {
                             placeholder="+91 9876543210"
                             className={[
                               "pl-10",
-                              formData.phone && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, ""))
+                              formData.phone && formData.phone.trim() !== "+91" && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, ""))
                                 ? "border-destructive focus-visible:ring-destructive"
                                 : "",
                             ].join(" ")}
                           />
                         </div>
-                        {formData.phone && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, "")) && (
-                          <p className="text-xs text-destructive">Must be 10–15 digits (e.g. +91 9876543210).</p>
+                        {formData.phone && formData.phone.trim() !== "+91" && !PHONE_RE.test(formData.phone.replace(/[\s\-().]/g, "")) && (
+                          <p className="text-xs text-destructive">Enter a valid 10-digit Indian mobile number.</p>
                         )}
                       </div>
                     </div>

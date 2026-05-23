@@ -38,15 +38,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 /** Indian 6-digit postal code: exactly 6 digits, first digit non-zero */
 const POSTAL_CODE_RE = /^[1-9][0-9]{5}$/;
-/** Phone: 10–15 digits, optionally prefixed by + and country code */
-const PHONE_RE = /^[+]?[0-9]{10,15}$/;
+/** Phone: Indian mobile numbers, optionally prefixed by +91 or 0 */
+const PHONE_RE = /^(?:(?:\+?91)|0)?[6-9]\d{9}$/;
 /** Country: letters, spaces, hyphens, at least 2 chars */
 const COUNTRY_RE = /^[A-Za-z][A-Za-z\s\-]{1,49}$/;
 
 function validateCheckoutForm(data: CheckoutFormValues): string | null {
   const phone = data.phone.replace(/[\s\-().]/g, "");
   if (!PHONE_RE.test(phone)) {
-    return "Phone number must be 10–15 digits (e.g. +91 9876543210).";
+    return "Phone number must be a valid 10-digit Indian mobile number.";
   }
   if (!POSTAL_CODE_RE.test(data.postalCode.trim())) {
     return "Postal code must be a valid 6-digit Indian PIN (e.g. 700001).";
@@ -137,7 +137,7 @@ function AddressFields({
   useEffect(() => { onStatusChange?.(status); }, [status, onStatusChange]);
 
   const phoneDigits = values.phone.replace(/[\s\-().]/g, "");
-  const phoneInvalid = values.phone.length > 0 && !PHONE_RE.test(phoneDigits);
+  const phoneInvalid = values.phone.trim() !== "" && values.phone.trim() !== "+91" && !PHONE_RE.test(phoneDigits);
 
   const handlePincodeChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +159,7 @@ function AddressFields({
     <div className="space-y-4">
       {/* Country / Region */}
       <div>
-        <Label htmlFor={`${prefix}-country`}>Country / Region</Label>
+        <Label htmlFor={`${prefix}-country`}>Country / Region{required && <span className="text-destructive"> *</span>}</Label>
         <Input
           id={`${prefix}-country`}
           name="country"
@@ -171,7 +171,7 @@ function AddressFields({
 
       {/* Full Name */}
       <div>
-        <Label htmlFor={`${prefix}-fullName`}>Full name (First and Last name)</Label>
+        <Label htmlFor={`${prefix}-fullName`}>Full name (First and Last name){required && <span className="text-destructive"> *</span>}</Label>
         <Input
           id={`${prefix}-fullName`}
           name="fullName"
@@ -184,7 +184,7 @@ function AddressFields({
 
       {/* Mobile */}
       <div>
-        <Label htmlFor={`${prefix}-phone`}>Mobile number</Label>
+        <Label htmlFor={`${prefix}-phone`}>Mobile number{required && <span className="text-destructive"> *</span>}</Label>
         <Input
           id={`${prefix}-phone`}
           name="phone"
@@ -195,14 +195,14 @@ function AddressFields({
           className={phoneInvalid ? "border-destructive focus-visible:ring-destructive" : ""}
         />
         {phoneInvalid
-          ? <p className="mt-1 text-xs text-destructive">Enter a valid 10-digit number.</p>
+          ? <p className="mt-1 text-xs text-destructive">Enter a valid 10-digit Indian mobile number.</p>
           : <p className="mt-1 text-xs text-muted-foreground">May be used to assist delivery</p>
         }
       </div>
 
       {/* Pincode */}
       <div>
-        <Label htmlFor={`${prefix}-postalCode`}>Pincode</Label>
+        <Label htmlFor={`${prefix}-postalCode`}>Pincode{required && <span className="text-destructive"> *</span>}</Label>
         <div className="relative">
           <Input
             id={`${prefix}-postalCode`}
@@ -241,7 +241,7 @@ function AddressFields({
 
       {/* Flat / House */}
       <div>
-        <Label htmlFor={`${prefix}-address`}>Flat, House no., Building, Company, Apartment</Label>
+        <Label htmlFor={`${prefix}-address`}>Flat, House no., Building, Company, Apartment{required && <span className="text-destructive"> *</span>}</Label>
         <Input
           id={`${prefix}-address`}
           name="address"
@@ -277,7 +277,7 @@ function AddressFields({
       {/* Town / City  +  State */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor={`${prefix}-city`}>Town / City</Label>
+          <Label htmlFor={`${prefix}-city`}>Town / City{required && <span className="text-destructive"> *</span>}</Label>
           <Input
             id={`${prefix}-city`}
             name="city"
@@ -288,7 +288,7 @@ function AddressFields({
           />
         </div>
         <div>
-          <Label htmlFor={`${prefix}-state`}>State</Label>
+          <Label htmlFor={`${prefix}-state`}>State{required && <span className="text-destructive"> *</span>}</Label>
           <Input
             id={`${prefix}-state`}
             name="state"
@@ -334,7 +334,7 @@ export default function Checkout() {
   const emptyAddress = (): CheckoutFormValues => ({
     email: user?.email || "",
     fullName: profile?.full_name || "",
-    phone: profile?.phone || "",
+    phone: profile?.phone || "+91 ",
     address: profile?.address || "",
     area: "",
     landmark: "",
@@ -360,7 +360,7 @@ export default function Checkout() {
       const newFormData = {
         ...emptyAddress(),
         fullName: defaultAddr.full_name,
-        phone: defaultAddr.phone || "",
+        phone: defaultAddr.phone || "+91 ",
         address: defaultAddr.address_line1,
         area: defaultAddr.address_line2 || "",
         city: defaultAddr.city,
@@ -382,7 +382,7 @@ export default function Checkout() {
          setFormData(prev => ({
           ...prev,
           fullName: addr.full_name,
-          phone: addr.phone || "",
+          phone: addr.phone || "+91 ",
           address: addr.address_line1,
           area: addr.address_line2 || "",
           city: addr.city,
@@ -400,7 +400,7 @@ export default function Checkout() {
         ...prev,
         email: prev.email || user?.email || "",
         fullName: prev.fullName || profile.full_name || "",
-        phone: prev.phone || profile.phone || "",
+        phone: prev.phone || profile.phone || "+91 ",
         address: prev.address || profile.address || "",
         city: prev.city || profile.city || "",
         postalCode: prev.postalCode || profile.postal_code || "",
@@ -410,7 +410,7 @@ export default function Checkout() {
         ...prev,
         email: prev.email || user?.email || "",
         fullName: prev.fullName || profile.full_name || "",
-        phone: prev.phone || profile.phone || "",
+        phone: prev.phone || profile.phone || "+91 ",
         address: prev.address || profile.address || "",
         city: prev.city || profile.city || "",
         postalCode: prev.postalCode || profile.postal_code || "",

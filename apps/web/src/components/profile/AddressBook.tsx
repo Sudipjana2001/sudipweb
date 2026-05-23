@@ -7,35 +7,48 @@ import { Loader2, MapPin, Plus, Trash2, Edit2, CheckCircle2, XCircle } from "luc
 import { useSavedAddresses, useCreateSavedAddress, useUpdateSavedAddress, useDeleteSavedAddress, SavedAddressInsert } from "@/hooks/useSavedAddresses";
 import { usePincodeLookup } from "@/hooks/usePincodeLookup";
 const POSTAL_CODE_RE = /^[1-9][0-9]{5}$/;
-const PHONE_RE = /^[+]?[0-9]{10,15}$/;
+const PHONE_RE = /^(?:(?:\+?91)|0)?[6-9]\d{9}$/;
 
 export function AddressBook() {
   const { data: addresses = [], isLoading } = useSavedAddresses();
   const deleteAddress = useDeleteSavedAddress();
-  const [editingAddress, setEditingAddress] = useState<SavedAddressInsert & { id?: string } | null>(null);
+  const [editingAddress, setEditingAddress] = useState<SavedAddressInsert & { id?: string, landmark?: string } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleAddNew = () => {
     setEditingAddress({
       label: "Home",
       full_name: "",
-      phone: "",
+      phone: "+91 ",
       address_line1: "",
       address_line2: "",
+      landmark: "",
       city: "",
       state: "",
       postal_code: "",
       country: "India",
       is_default: addresses.length === 0, // First address is default
-    });
+    } as any);
     setIsDialogOpen(true);
   };
 
   const handleEdit = (address: any) => {
+    let area = address.address_line2 || "";
+    let landmark = "";
+    if (area.includes(", Landmark: ")) {
+      const parts = area.split(", Landmark: ");
+      area = parts[0];
+      landmark = parts[1];
+    } else if (area.startsWith("Landmark: ")) {
+      landmark = area.replace("Landmark: ", "");
+      area = "";
+    }
+
     setEditingAddress({
       ...address,
-      phone: address.phone || "",
-      address_line2: address.address_line2 || "",
+      phone: address.phone || "+91 ",
+      address_line2: area,
+      landmark: landmark,
       state: address.state || "",
     });
     setIsDialogOpen(true);
@@ -125,8 +138,8 @@ function AddressFormContent({
   onChange,
   onClose,
 }: {
-  address: SavedAddressInsert & { id?: string };
-  onChange: (data: SavedAddressInsert & { id?: string }) => void;
+  address: SavedAddressInsert & { id?: string, landmark?: string };
+  onChange: (data: SavedAddressInsert & { id?: string, landmark?: string }) => void;
   onClose: () => void;
 }) {
   const createAddress = useCreateSavedAddress();
@@ -162,33 +175,40 @@ function AddressFormContent({
     
     if (address.phone && !PHONE_RE.test(address.phone.replace(/[\s\-().]/g, ""))) return;
 
-    if (address.id) {
-      await updateAddress.mutateAsync(address as any);
+    const { landmark, ...dbAddress } = address;
+    if (landmark) {
+        dbAddress.address_line2 = dbAddress.address_line2 
+          ? `${dbAddress.address_line2}, Landmark: ${landmark}` 
+          : `Landmark: ${landmark}`;
+    }
+
+    if (dbAddress.id) {
+      await updateAddress.mutateAsync(dbAddress as any);
     } else {
-      await createAddress.mutateAsync(address);
+      await createAddress.mutateAsync(dbAddress);
     }
     onClose();
   };
 
   const isSaving = createAddress.isPending || updateAddress.isPending;
   const phoneDigits = (address.phone || "").replace(/[\s\-().]/g, "");
-  const phoneInvalid = address.phone && address.phone.length > 0 && !PHONE_RE.test(phoneDigits);
+  const phoneInvalid = address.phone && address.phone.trim() !== "+91" && !PHONE_RE.test(phoneDigits);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="label">Label (Home, Work, etc)</Label>
+          <Label htmlFor="label">Label (Home, Work, etc) <span className="text-destructive">*</span></Label>
           <Input id="label" value={address.label} onChange={(e) => onChange({ ...address, label: e.target.value })} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="full_name">Full Name</Label>
+          <Label htmlFor="full_name">Full Name <span className="text-destructive">*</span></Label>
           <Input id="full_name" value={address.full_name} onChange={(e) => onChange({ ...address, full_name: e.target.value })} required />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="phone">Phone Number <span className="text-destructive">*</span></Label>
         <Input 
           id="phone" 
           type="tel"
@@ -197,11 +217,11 @@ function AddressFormContent({
           required 
           className={phoneInvalid ? "border-destructive" : ""}
         />
-        {phoneInvalid && <p className="text-xs text-destructive">Enter a valid 10-15 digit phone number</p>}
+        {phoneInvalid && <p className="text-xs text-destructive">Enter a valid 10-digit Indian mobile number</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="postal_code">Pincode</Label>
+        <Label htmlFor="postal_code">Pincode <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Input
             id="postal_code"
@@ -226,7 +246,7 @@ function AddressFormContent({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address_line1">Flat, House no., Building</Label>
+        <Label htmlFor="address_line1">Flat, House no., Building <span className="text-destructive">*</span></Label>
         <Input id="address_line1" value={address.address_line1} onChange={(e) => onChange({ ...address, address_line1: e.target.value })} required />
       </div>
 
@@ -235,13 +255,18 @@ function AddressFormContent({
         <Input id="address_line2" value={address.address_line2 || ""} onChange={(e) => onChange({ ...address, address_line2: e.target.value })} />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="landmark">Landmark (Optional)</Label>
+        <Input id="landmark" value={address.landmark || ""} onChange={(e) => onChange({ ...address, landmark: e.target.value })} placeholder="E.g. near apollo hospital" />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
+          <Label htmlFor="city">City <span className="text-destructive">*</span></Label>
           <Input id="city" value={address.city} onChange={(e) => onChange({ ...address, city: e.target.value })} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="state">State</Label>
+          <Label htmlFor="state">State <span className="text-destructive">*</span></Label>
           <Input 
             id="state" 
             value={address.state || ""} 
