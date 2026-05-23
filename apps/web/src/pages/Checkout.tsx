@@ -30,7 +30,6 @@ import { usePaytm, PaytmPaymentResponse } from "@/hooks/usePaytm";
 import { usePhonePe } from "@/hooks/usePhonePe";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
-import { INDIAN_STATES } from "@/lib/indianStates";
 import { usePincodeLookup } from "@/hooks/usePincodeLookup";
 import { useSavedAddresses } from "@/hooks/useSavedAddresses";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -161,17 +160,13 @@ function AddressFields({
       {/* Country / Region */}
       <div>
         <Label htmlFor={`${prefix}-country`}>Country / Region</Label>
-        <select
+        <Input
           id={`${prefix}-country`}
           name="country"
-          value={values.country}
-          onChange={(e) => onSelectChange?.("country", e.target.value)}
-          required={required}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          <option value="India">India</option>
-          <option value="Other">Other</option>
-        </select>
+          value="India"
+          readOnly
+          className="bg-muted/50 text-muted-foreground"
+        />
       </div>
 
       {/* Full Name */}
@@ -294,18 +289,14 @@ function AddressFields({
         </div>
         <div>
           <Label htmlFor={`${prefix}-state`}>State</Label>
-          <select
+          <Input
             id={`${prefix}-state`}
             name="state"
             value={values.state}
-            onChange={(e) => onSelectChange?.("state", e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <option value="">Choose a state</option>
-            {INDIAN_STATES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+            onChange={onChange}
+            required={required}
+            placeholder={isLookingUp ? "Fetching..." : ""}
+          />
         </div>
       </div>
     </div>

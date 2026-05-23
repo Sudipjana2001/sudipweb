@@ -6,8 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, MapPin, Plus, Trash2, Edit2, CheckCircle2, XCircle } from "lucide-react";
 import { useSavedAddresses, useCreateSavedAddress, useUpdateSavedAddress, useDeleteSavedAddress, SavedAddressInsert } from "@/hooks/useSavedAddresses";
 import { usePincodeLookup } from "@/hooks/usePincodeLookup";
-import { INDIAN_STATES } from "@/lib/indianStates";
-
 const POSTAL_CODE_RE = /^[1-9][0-9]{5}$/;
 const PHONE_RE = /^[+]?[0-9]{10,15}$/;
 
@@ -244,20 +242,13 @@ function AddressFormContent({
         </div>
         <div className="space-y-2">
           <Label htmlFor="state">State</Label>
-          <div className="relative">
-            <select
-              id="state"
-              value={address.state || ""}
-              onChange={(e) => onChange({ ...address, state: e.target.value })}
-              required
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="">Choose a state</option>
-              {INDIAN_STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          <Input 
+            id="state" 
+            value={address.state || ""} 
+            onChange={(e) => onChange({ ...address, state: e.target.value })} 
+            required 
+            placeholder={status === "loading" ? "Fetching..." : ""}
+          />
         </div>
       </div>
 
