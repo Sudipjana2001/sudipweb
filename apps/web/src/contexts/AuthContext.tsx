@@ -109,41 +109,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener first
+    let cancelled = false;
+
+    const loadUserData = (userId: string) => {
+      void Promise.all([fetchProfile(userId), checkAdminRole(userId)]);
+    };
+
+    // INITIAL_SESSION is emitted by onAuthStateChange after getSession(); avoid duplicate work.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Defer Supabase calls to avoid deadlock
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-          checkAdminRole(session.user.id);
-        }, 0);
+        if (event !== "INITIAL_SESSION") {
+          setTimeout(() => {
+            if (!cancelled) loadUserData(session.user.id);
+          }, 0);
+        }
       } else {
         setProfile(null);
         setIsAdmin(false);
       }
     });
 
-    // Then check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        await Promise.all([
-          fetchProfile(session.user.id),
-          checkAdminRole(session.user.id),
-        ]);
+        loadUserData(session.user.id);
       }
 
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {

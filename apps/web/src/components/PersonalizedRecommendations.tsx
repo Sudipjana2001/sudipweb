@@ -11,6 +11,7 @@ export function PersonalizedRecommendations() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["personalized-recommendations", user?.id],
+    enabled: !!user,
     queryFn: async () => {
       // 1. Fetch user's primary pet
       const { data: pet } = user ? await supabase

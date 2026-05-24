@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -23,7 +23,7 @@ export function useRecentlyViewed() {
     queryKey: ["recently-viewed", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("recently_viewed")
         .select(`
@@ -38,31 +38,33 @@ export function useRecentlyViewed() {
       return data as RecentlyViewedItem[];
     },
     enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
 export function useTrackProductView() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (productId: string) => {
       if (!user) return null;
-      
+
       const { error } = await supabase
         .from("recently_viewed")
-        .upsert({
-          user_id: user.id,
-          product_id: productId,
-          viewed_at: new Date().toISOString(),
-        }, {
-          onConflict: "user_id,product_id",
-        });
+        .upsert(
+          {
+            user_id: user.id,
+            product_id: productId,
+            viewed_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,product_id",
+          },
+        );
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recently-viewed"] });
-    },
+    // Listing is updated on next navigation; invalidating here caused refetch loops on the product page.
   });
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
@@ -199,7 +199,8 @@ export default function Product() {
     useCart();
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
   const { user } = useAuth();
-  const trackView = useTrackProductView();
+  const { mutate: trackProductView } = useTrackProductView();
+  const trackedProductIdRef = useRef<string | null>(null);
 
   /* Safe access for loading state */
   const images = useMemo(
@@ -294,12 +295,14 @@ export default function Product() {
     }
   };
 
-  // Track product view
+  // Track product view once per product per mount (avoid refetch storms from unstable mutation deps)
   useEffect(() => {
-    if (product?.id && user) {
-      trackView.mutate(product.id);
-    }
-  }, [product?.id, user, trackView]);
+    if (!product?.id || !user?.id) return;
+    if (trackedProductIdRef.current === product.id) return;
+
+    trackedProductIdRef.current = product.id;
+    trackProductView(product.id);
+  }, [product?.id, user?.id, trackProductView]);
 
   const productJsonLd = useMemo(() => {
     if (!product) return null;
