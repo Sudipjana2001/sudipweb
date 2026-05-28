@@ -13,13 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 function ProductCardSkeleton() {
   return (
     <div className="group relative">
-      <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+      <div className="relative aspect-[4/5] overflow-hidden bg-muted rounded-2xl">
         <Skeleton className="h-full w-full rounded-none" />
       </div>
-      <div className="mt-4 space-y-2">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-5 w-full" />
-        <Skeleton className="h-5 w-2/3" />
+      <div className="mt-3 space-y-1.5 px-1">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-4 w-20" />
       </div>
     </div>
   );
@@ -602,7 +603,7 @@ export default function Shop() {
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 12 }).map((_, index) => (
                 <ProductCardSkeleton key={index} />
               ))}
@@ -625,7 +626,7 @@ export default function Shop() {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {sortedProducts.map((product, index) => (
                     <ProductCard 
                       key={product.id} 
