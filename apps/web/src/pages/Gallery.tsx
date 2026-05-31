@@ -369,7 +369,7 @@ function GalleryCard({
 
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg bg-card break-inside-avoid mb-4"
+      className="group relative cursor-pointer overflow-hidden rounded-lg bg-card break-inside-avoid mb-2"
       onClick={onOpen}
     >
       <div className="overflow-hidden">
@@ -596,25 +596,14 @@ function UploadDialog() {
 
 export default function Gallery() {
   const { user } = useAuth();
-  const { data: posts = [], isLoading } = useGalleryPosts();
-  const { data: userPosts = [], isLoading: isUserPostsLoading } =
-    useUserGalleryPosts();
-  const { data: petOfTheWeek } = usePetOfTheWeek();
+  const [limit, setLimit] = useState(10);
+  const { data: posts = [], isLoading } = useGalleryPosts(undefined, limit);
 
   // Lightbox state
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [selectedFeed, setSelectedFeed] = useState<"all" | "user">("all");
-  const activePosts = selectedFeed === "user" ? userPosts : posts;
-  const activePostsLoading =
-    selectedFeed === "user" ? isUserPostsLoading : isLoading;
 
-  const handleOpen = useCallback((index: number, feed: "all" | "user") => {
-    setSelectedFeed(feed);
+  const handleOpen = useCallback((index: number) => {
     setSelectedIndex(index);
-  }, []);
-  const handleFeedChange = useCallback((feed: "all" | "user") => {
-    setSelectedFeed(feed);
-    setSelectedIndex(null);
   }, []);
   const handleClose = useCallback(() => setSelectedIndex(null), []);
   const handlePrev = useCallback(
@@ -624,155 +613,91 @@ export default function Gallery() {
   const handleNext = useCallback(
     () =>
       setSelectedIndex((i) =>
-        i !== null && i < activePosts.length - 1 ? i + 1 : i,
+        i !== null && i < posts.length - 1 ? i + 1 : i,
       ),
-    [activePosts.length],
+    [posts.length],
   );
 
   return (
     <PageLayout>
       <SEOHead
-        title="Pet Gallery"
-        description="Browse adorable photos of pets wearing Pebric outfits. Share your own pet photos and vote for Pet of the Week!"
-        keywords="pet gallery, pet photos, Pebric pets, pet fashion photos, pet of the week"
+        title="The Pebric Pack"
+        description="A curated gallery of our community. Share your moments in Pebric luxury."
+        keywords="pet gallery, pet photos, Pebric pets, pet fashion photos, The Pebric Pack"
       />
       {/* Lightbox */}
-      {selectedIndex !== null && activePosts[selectedIndex] && (
+      {selectedIndex !== null && posts[selectedIndex] && (
         <PhotoLightbox
-          post={activePosts[selectedIndex]}
+          post={posts[selectedIndex]}
           onClose={handleClose}
           onPrev={handlePrev}
           onNext={handleNext}
           hasPrev={selectedIndex > 0}
-          hasNext={selectedIndex < activePosts.length - 1}
+          hasNext={selectedIndex < posts.length - 1}
         />
       )}
 
       {/* Hero */}
-      <section className="bg-muted py-16">
+      <section className="bg-background pt-24 pb-12">
         <div className="container mx-auto px-6 text-center">
-          <h1 className="font-display text-4xl font-medium md:text-5xl">
-            Pet Gallery
+          <h1 className="font-display text-4xl font-medium text-foreground md:text-5xl lg:text-6xl">
+            The Pebric Pack
           </h1>
-          <p className="mt-4 text-muted-foreground">
-            See our adorable customers in their PawStyle outfits
+          <p className="mx-auto mt-6 max-w-2xl font-body text-sm text-muted-foreground md:text-base">
+            A curated gallery of our community. Share your moments in Pebric luxury.
           </p>
-          <div className="mt-6">
+          <div className="mt-8 mb-4">
+            <span className="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-[#C6A87C] md:text-xs">
+              #PEBRICLIFE
+            </span>
+          </div>
+          <div className="mt-8">
             <UploadDialog />
           </div>
         </div>
       </section>
 
-      {/* Pet of the Week */}
-      {petOfTheWeek?.gallery_post && (
-        <section className="container mx-auto px-6 py-12">
-          <div className="rounded-2xl bg-gradient-to-r from-yellow-100 to-orange-100 p-8 dark:from-yellow-900/20 dark:to-orange-900/20">
-            <div className="flex items-center gap-2 mb-4">
-              <Crown className="h-6 w-6 text-yellow-600" />
-              <h2 className="font-display text-2xl font-medium">
-                Pet of the Week
-              </h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="aspect-square overflow-hidden rounded-lg">
-                <img
-                  src={petOfTheWeek.gallery_post.image_url}
-                  alt="Pet of the week"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="flex flex-col justify-center">
-                <h3 className="font-display text-3xl font-medium">
-                  {petOfTheWeek.gallery_post.pet?.name || "Featured Pet"}
-                </h3>
-                {petOfTheWeek.gallery_post.pet?.breed && (
-                  <p className="mt-2 text-muted-foreground">
-                    {petOfTheWeek.gallery_post.pet.breed}
-                  </p>
-                )}
-                {petOfTheWeek.gallery_post.caption && (
-                  <p className="mt-4 text-lg">
-                    {petOfTheWeek.gallery_post.caption}
-                  </p>
-                )}
-                <div className="mt-4 flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-5 w-5 text-red-500 fill-red-500" />
-                    {petOfTheWeek.gallery_post.likes_count} likes
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Gallery Grid */}
       <section className="container mx-auto px-6 py-6 md:py-8">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="mb-2 font-body text-xs uppercase tracking-[0.3em] text-muted-foreground">
-              Community Feed
-            </p>
-            <h2 className="font-display text-2xl font-medium md:text-3xl">
-              {selectedFeed === "user" ? "My Posts" : "All Posts"}
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {selectedFeed === "user"
-                ? "Browse all the photos you have shared with the community."
-                : "Browse every post shared by the Pebric community."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant={selectedFeed === "all" ? "default" : "outline"}
-              onClick={() => handleFeedChange("all")}
-              className="h-10 px-4 font-body text-[11px] uppercase tracking-[0.18em]"
-            >
-              All Posts
-            </Button>
-            {user && (
-              <Button
-                type="button"
-                variant={selectedFeed === "user" ? "default" : "outline"}
-                onClick={() => handleFeedChange("user")}
-                className="h-10 px-4 font-body text-[11px] uppercase tracking-[0.18em]"
-              >
-                My Posts
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {activePostsLoading ? (
+        {isLoading && posts.length === 0 ? (
           <div className="flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-        ) : activePosts.length === 0 ? (
+        ) : posts.length === 0 ? (
           <div className="py-16 text-center">
             <ImageIcon className="mx-auto h-16 w-16 text-muted-foreground" />
             <h3 className="mt-4 font-display text-xl">
-              {selectedFeed === "user" ? "No posts yet" : "No photos yet"}
+              No photos yet
             </h3>
             <p className="mt-2 text-muted-foreground">
-              {selectedFeed === "user"
-                ? "Share your first pet photo to see it here."
-                : "Be the first to share your pet!"}
+              Be the first to share your pet!
             </p>
           </div>
         ) : (
-          <div className="columns-2 gap-4 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5">
-            {activePosts.map((post, index) => (
-              <GalleryCard
-                key={post.id}
-                post={post}
-                onOpen={() => handleOpen(index, selectedFeed)}
-                showApprovalStatus={selectedFeed === "user"}
-              />
-            ))}
-          </div>
+          <>
+            <div className="columns-1 gap-2 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5">
+              {posts.map((post, index) => (
+                <GalleryCard
+                  key={post.id}
+                  post={post}
+                  onOpen={() => handleOpen(index)}
+                  showApprovalStatus={false}
+                />
+              ))}
+            </div>
+            
+            {!isLoading && posts.length >= limit && (
+              <div className="mt-16 flex justify-center pb-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setLimit((l) => l + 10)}
+                  className="h-12 border-foreground px-8 font-body text-xs font-medium uppercase tracking-[0.2em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+                >
+                  Load More
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </PageLayout>

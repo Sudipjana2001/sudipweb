@@ -29,7 +29,7 @@ export interface GalleryComment {
   profile?: { full_name: string | null };
 }
 
-export function useGalleryPosts(featured?: boolean) {
+export function useGalleryPosts(featured?: boolean, limit: number = 50) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -49,7 +49,7 @@ export function useGalleryPosts(featured?: boolean) {
         query = query.eq("is_featured", true);
       }
 
-      const { data, error } = await query.limit(50);
+      const { data, error } = await query.limit(limit);
       if (error) throw error;
       return data as GalleryPost[];
     },
