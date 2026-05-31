@@ -156,7 +156,7 @@ export function Header() {
               >
                 <Heart className="h-5 w-5" />
                 {wishlistItems.length > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center bg-foreground font-body text-xs text-background">
+                  <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-foreground font-body text-xs text-background">
                     {wishlistItems.length}
                   </span>
                 )}
@@ -167,7 +167,7 @@ export function Header() {
                 aria-label="Cart"
               >
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center bg-foreground font-body text-xs text-background">
+                <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-foreground font-body text-xs text-background">
                   {cartCount}
                 </span>
               </button>

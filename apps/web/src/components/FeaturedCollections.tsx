@@ -52,13 +52,13 @@ export function FeaturedCollections() {
         </div>
 
         {/* Collections Grid */}
-        <div ref={gridRef} className="grid gap-8 md:grid-cols-3">
+        <div ref={gridRef} className="grid gap-8 md:grid-cols-3 items-start">
           {collections.slice(0, 3).map((collection, index) => (
             <div
               key={collection.id}
               className={`group relative cursor-pointer overflow-hidden bg-muted transition-all duration-700 hover:shadow-elevated ${
                 gridVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
-              }`}
+              } ${index === 1 ? 'md:mt-16' : ''}`}
               style={{ transitionDelay: `${index * 150}ms` }}
               onClick={() => navigate(`/collection/${collection.slug}`)}
             >
@@ -76,29 +76,25 @@ export function FeaturedCollections() {
 
               {/* Tag */}
               <div className="absolute left-6 top-6 overflow-hidden">
-                <span className="inline-block bg-background/90 px-3 py-1.5 font-body text-[10px] uppercase tracking-[0.2em] text-foreground transition-transform duration-500 group-hover:translate-y-0 translate-y-0">
-                  Collection
+                <span className="inline-block bg-background px-3 py-1.5 font-display text-[11px] font-bold uppercase tracking-widest text-foreground transition-transform duration-500 group-hover:scale-105">
+                  COLLECTION
                 </span>
               </div>
 
               {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-background">
-                <h3 className="mb-2 font-display text-2xl font-medium transition-transform duration-500 group-hover:-translate-y-1">
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 text-background">
+                <h3 className="mb-2 font-display text-2xl md:text-3xl font-medium transition-transform duration-500 group-hover:-translate-y-1">
                   {collection.name}
                 </h3>
-                <p className="mb-6 font-body text-sm text-background/80 transition-all duration-500 group-hover:-translate-y-1">
+                <p className="mb-6 font-body text-sm text-background/90 transition-all duration-500 group-hover:-translate-y-1">
                   {collection.description || "Explore our curated collection"}
                 </p>
-                <Button 
-                  variant="hero-outline" 
-                  className="border-background text-background transition-all duration-300 hover:bg-background hover:text-foreground group-hover:-translate-y-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/collection/${collection.slug}`);
-                  }}
-                >
-                  View Collection
-                </Button>
+                <div className="inline-flex flex-col gap-1.5 transition-transform duration-500 group-hover:-translate-y-1">
+                  <span className="font-body text-[11px] font-bold uppercase tracking-[0.15em] text-background">
+                    VIEW COLLECTION
+                  </span>
+                  <div className="h-[1.5px] w-full bg-background" />
+                </div>
               </div>
             </div>
           ))}
