@@ -85,7 +85,7 @@ export class CartService {
   /**
    * Add item to cart in database
    */
-  async addItem(item: Omit<CartItemData, 'quantity'>): Promise<void> {
+  async addItem(item: Omit<CartItemData, 'quantity'>, quantity = 1): Promise<void> {
     if (!this.userId) return;
 
     const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
@@ -95,7 +95,7 @@ export class CartService {
       p_product_id: item.id as string,
       p_size: ownerSize,
       p_pet_size: petSize,
-      p_quantity: 1,
+      p_quantity: quantity,
     });
 
     if (error) throw error;

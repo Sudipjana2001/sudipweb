@@ -47,7 +47,7 @@ export interface WishlistItem {
 interface CartContextType {
   cartItems: CartItem[];
   wishlistItems: WishlistItem[];
-  addToCart: (item: Omit<CartItem, "quantity">) => void;
+  addToCart: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   removeFromCart: (
     id: number | string,
     ownerSize: string,
@@ -404,7 +404,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     !!user,
   );
 
-  const addToCart = async (item: Omit<CartItem, "quantity">) => {
+  const addToCart = async (item: Omit<CartItem, "quantity">, quantity = 1) => {
     const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
     const petSize = CartItemModel.normalizeSize(item.petSize);
 
@@ -455,17 +455,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
       if (existing) {
         updated = updated.map((i) =>
-          i === existing ? { ...i, quantity: i.quantity + 1 } : i
+          i === existing ? { ...i, quantity: i.quantity + quantity } : i
         );
       } else {
-        updated.push(newItem);
+        updated.push({ ...newItem, quantity });
       }
       return updated;
     });
 
     if (user) {
       try {
-        await cartService.addItem(newItem);
+        await cartService.addItem(newItem, quantity);
       } catch (error) {
         console.error("Failed to sync cart:", error);
         toast.error("Failed to save to account.");

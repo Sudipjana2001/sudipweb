@@ -192,7 +192,8 @@ export default function Product() {
   const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPetSize, setSelectedPetSize] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [parentQuantity, setParentQuantity] = useState(1);
+  const [petQuantity, setPetQuantity] = useState(1);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } =
@@ -201,6 +202,21 @@ export default function Product() {
   const { user } = useAuth();
   const { mutate: trackProductView } = useTrackProductView();
   const trackedProductIdRef = useRef<string | null>(null);
+  const halfPrice = Math.round(product?.price ? product.price * 0.5 : 0);
+  const dynamicTotalPrice = useMemo(() => {
+    if (!product) return 0;
+    let sum = 0;
+    if (selectedSize) {
+      sum += parentQuantity * halfPrice;
+    }
+    if (selectedPetSize) {
+      sum += petQuantity * halfPrice;
+    }
+    if (!selectedSize && !selectedPetSize) {
+      return product.price;
+    }
+    return sum;
+  }, [product, selectedSize, selectedPetSize, parentQuantity, petQuantity, halfPrice]);
 
   /* Safe access for loading state */
   const images = useMemo(
@@ -360,46 +376,32 @@ export default function Product() {
       return;
     }
 
-    const basePrice = product.price;
-    const halfPrice = Math.round(basePrice * 0.5);
-
     let totalAdded = 0;
 
-    for (let i = 0; i < quantity; i++) {
-      if (selectedSize && selectedPetSize) {
-        addToCart({
-          id: product.id,
-          name: `${product.name} (Matching Set)`,
-          price: basePrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: selectedSize,
-          petSize: selectedPetSize,
-          slug: product.slug,
-        });
-        totalAdded++;
-      } else if (selectedSize) {
-        addToCart({
-          id: product.id,
-          name: `${product.name} (Owner Only)`,
-          price: halfPrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: selectedSize,
-          petSize: "N/A",
-          slug: product.slug,
-        });
-        totalAdded++;
-      } else if (selectedPetSize) {
-        addToCart({
-          id: product.id,
-          name: `${product.name} (Pet Only)`,
-          price: halfPrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: "N/A",
-          petSize: selectedPetSize,
-          slug: product.slug,
-        });
-        totalAdded++;
-      }
+    if (selectedSize) {
+      addToCart({
+        id: product.id,
+        name: `${product.name} (Owner Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: selectedSize,
+        petSize: "N/A",
+        slug: product.slug,
+      }, parentQuantity);
+      totalAdded += parentQuantity;
+    }
+
+    if (selectedPetSize) {
+      addToCart({
+        id: product.id,
+        name: `${product.name} (Pet Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: "N/A",
+        petSize: selectedPetSize,
+        slug: product.slug,
+      }, petQuantity);
+      totalAdded += petQuantity;
     }
 
     if (totalAdded > 0) {
@@ -419,46 +421,32 @@ export default function Product() {
       return;
     }
 
-    const basePrice = product.price;
-    const halfPrice = Math.round(basePrice * 0.5);
-
     const buyNowItems = [];
 
-    for (let i = 0; i < quantity; i++) {
-      if (selectedSize && selectedPetSize) {
-        buyNowItems.push({
-          id: product.id,
-          name: `${product.name} (Matching Set)`,
-          price: basePrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: selectedSize,
-          petSize: selectedPetSize,
-          slug: product.slug,
-          quantity: 1,
-        });
-      } else if (selectedSize) {
-        buyNowItems.push({
-          id: product.id,
-          name: `${product.name} (Owner Only)`,
-          price: halfPrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: selectedSize,
-          petSize: "N/A",
-          slug: product.slug,
-          quantity: 1,
-        });
-      } else if (selectedPetSize) {
-        buyNowItems.push({
-          id: product.id,
-          name: `${product.name} (Pet Only)`,
-          price: halfPrice,
-          image: product.image_url || "/product-1.jpg",
-          ownerSize: "N/A",
-          petSize: selectedPetSize,
-          slug: product.slug,
-          quantity: 1,
-        });
-      }
+    if (selectedSize) {
+      buyNowItems.push({
+        id: product.id,
+        name: `${product.name} (Owner Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: selectedSize,
+        petSize: "N/A",
+        slug: product.slug,
+        quantity: parentQuantity,
+      });
+    }
+
+    if (selectedPetSize) {
+      buyNowItems.push({
+        id: product.id,
+        name: `${product.name} (Pet Only)`,
+        price: halfPrice,
+        image: product.image_url || "/product-1.jpg",
+        ownerSize: "N/A",
+        petSize: selectedPetSize,
+        slug: product.slug,
+        quantity: petQuantity,
+      });
     }
 
     navigate("/checkout", { state: { buyNowItems } });
@@ -688,7 +676,7 @@ export default function Product() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="font-display text-2xl font-medium">
-                    ₹{product.price}
+                    ₹{dynamicTotalPrice}
                   </span>
                   {product.original_price && (
                     <span className="font-body text-lg text-muted-foreground line-through">
@@ -709,10 +697,11 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Size Selection */}
-            <div className="space-y-4 md:space-y-5">
-              <div>
-                <label className="mb-3 block font-body text-xs uppercase tracking-[0.2em] text-foreground">
+            {/* Size & Quantity Selection */}
+            <div className="space-y-6 md:space-y-8">
+              {/* Parent Section */}
+              <div className="space-y-3">
+                <label className="block font-body text-xs uppercase tracking-[0.2em] text-foreground">
                   Your Size
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -732,9 +721,36 @@ export default function Product() {
                     </button>
                   ))}
                 </div>
+                {/* Parent Quantity Selector */}
+                {selectedSize && (
+                  <div className="w-full max-w-[180px] pt-1">
+                    <label className="mb-1.5 block font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Parent Quantity
+                    </label>
+                    <div className="flex h-9 items-center border border-border">
+                      <button
+                        onClick={() => setParentQuantity((q) => Math.max(1, q - 1))}
+                        className="flex h-full w-9 items-center justify-center transition-colors hover:bg-muted"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="flex-1 text-center font-body text-xs">
+                        {parentQuantity}
+                      </span>
+                      <button
+                        onClick={() => setParentQuantity((q) => q + 1)}
+                        className="flex h-full w-9 items-center justify-center transition-colors hover:bg-muted"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <div className="mb-3 flex items-center justify-between">
+
+              {/* Pet Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <label className="font-body text-xs uppercase tracking-[0.2em] text-foreground">
                     Pet Size
                   </label>
@@ -760,33 +776,36 @@ export default function Product() {
                     </button>
                   ))}
                 </div>
+                {/* Pet Quantity Selector */}
+                {selectedPetSize && (
+                  <div className="w-full max-w-[180px] pt-1">
+                    <label className="mb-1.5 block font-body text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Pet Quantity
+                    </label>
+                    <div className="flex h-9 items-center border border-border">
+                      <button
+                        onClick={() => setPetQuantity((q) => Math.max(1, q - 1))}
+                        className="flex h-full w-9 items-center justify-center transition-colors hover:bg-muted"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="flex-1 text-center font-body text-xs">
+                        {petQuantity}
+                      </span>
+                      <button
+                        onClick={() => setPetQuantity((q) => q + 1)}
+                        className="flex h-full w-9 items-center justify-center transition-colors hover:bg-muted"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Quantity & Add to Cart */}
-            <div className="flex flex-col gap-3">
-              <div className="w-full max-w-[220px] md:max-w-[260px]">
-                <label className="mb-2 block font-body text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:text-xs">
-                  Quantity
-                </label>
-                <div className="flex h-10 items-center border border-border md:h-12">
-                  <button
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="flex h-full w-10 items-center justify-center transition-colors hover:bg-muted md:w-12"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="flex-1 text-center font-body text-xs md:text-sm">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="flex h-full w-10 items-center justify-center transition-colors hover:bg-muted md:w-12"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+            {/* Actions Section */}
+            <div className="flex flex-col gap-3 pt-4">
 
               {/* Action Buttons */}
               <div className="mt-1 flex flex-col gap-3 sm:flex-row">
