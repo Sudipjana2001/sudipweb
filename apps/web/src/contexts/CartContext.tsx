@@ -32,7 +32,9 @@ export interface CartItem {
   petSize: string;
   quantity: number;
   slug: string;
-  type: "owner" | "pet" | "combo";  // ADD THIS
+  type: "owner" | "pet" | "combo";
+  ownerQuantity: number;
+  petQuantity: number;
 }
 
 export interface WishlistItem {
@@ -47,19 +49,24 @@ export interface WishlistItem {
 interface CartContextType {
   cartItems: CartItem[];
   wishlistItems: WishlistItem[];
-  addToCart: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  addToCart: (
+    item: Omit<CartItem, "quantity" | "ownerQuantity" | "petQuantity"> & {
+      ownerQuantity?: number;
+      petQuantity?: number;
+    },
+    quantity?: number
+  ) => void;
   removeFromCart: (
     id: number | string,
     ownerSize: string,
-    petSize: string,
-    type: "owner" | "pet" | "combo",
+    petSize: string
   ) => Promise<void>;
   updateQuantity: (
     id: number | string,
     ownerSize: string,
     petSize: string,
-    quantity: number,
-    type: "owner" | "pet" | "combo",
+    ownerQuantity: number,
+    petQuantity: number
   ) => Promise<void>;
   clearCart: () => void;
   addToWishlist: (item: WishlistItem) => void;
@@ -71,7 +78,7 @@ interface CartContextType {
     id: number | string,
     ownerSize: string,
     petSize: string,
-    partToRemove: "owner" | "pet",
+    partToRemove: "owner" | "pet"
   ) => Promise<void>;
 }
 
@@ -108,7 +115,6 @@ function mapWishlistItems(rows: WishlistQueryRow[]): WishlistItem[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  // Load state from localStorage if available (for guests)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("guest_cart");
@@ -131,20 +137,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const previousCartItemsRef = useRef<CartItem[]>(cartItems);
   const skipNextEmptyCartClearRef = useRef(false);
 
-  // Create service instance (memoized per user)
   const cartService = useMemo(
     () => new CartService(user?.id ?? null),
     [user?.id],
   );
 
-  // Sync guest cart to localStorage
   useEffect(() => {
     if (!user) {
       localStorage.setItem("guest_cart", JSON.stringify(cartItems));
     }
   }, [cartItems, user]);
 
-  // Load cart and wishlist from Supabase on login, and merge guest cart
   useEffect(() => {
     if (!user) {
       const saved = localStorage.getItem("guest_cart");
@@ -163,24 +166,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const guestItems: CartItem[] = JSON.parse(guestCartJson);
         if (guestItems.length > 0) {
           for (const item of guestItems) {
-            await cartService.addItem({
-              id: item.id,
-              name: item.name,
-              price: item.price,
-              image: item.image,
-              ownerSize: item.ownerSize,
-              petSize: item.petSize,
-              slug: item.slug,
-              type: item.type,
-            });
-            if (item.quantity > 1) {
-              await cartService.updateQuantity(
-                item.id,
-                item.ownerSize,
-                item.petSize,
-                item.quantity,
-              );
-            }
+            await cartService.addItem(item);
           }
           localStorage.removeItem("guest_cart");
         }
@@ -198,7 +184,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             price,
             image_url,
             images,
-            slug
+            slug,
+            sizes,
+            pet_sizes
           )
         `,
         )
@@ -206,7 +194,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (cartData) {
         const groupedItems = cartService.groupCartItems(
-          cartData as RawCartItemRecord[],
+          cartData as unknown as RawCartItemRecord[],
         );
         setCartItems(groupedItems);
       }
@@ -217,8 +205,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           `
           product:products (
             id,
-            name,
-            price,
             name,
             price,
             image_url,
@@ -271,17 +257,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       void trackAbandonedCartSnapshot({
         ...identity,
         email: profile?.email || user?.email,
-        cart_total: cartItems.reduce(
-          (sum, item) => sum + item.price * item.quantity,
-          0,
-        ),
-        cart_items: cartItems.map((item) => ({
-          product_id: String(item.id),
-          product_name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image_url: item.image,
-        })),
+        cart_total: cartTotal,
+        cart_items: cartItems.map((item) => {
+          const isMatchingSet = item.ownerSize !== 'N/A' && item.petSize !== 'N/A';
+          const halfPrice = Math.round(item.price * 0.5);
+          const itemTotal = isMatchingSet
+            ? (item.ownerSize !== 'N/A' ? item.ownerQuantity * halfPrice : 0) +
+              (item.petSize !== 'N/A' ? item.petQuantity * halfPrice : 0)
+            : item.price * item.quantity;
+
+          return {
+            product_id: String(item.id),
+            product_name: item.name,
+            quantity: item.quantity,
+            price: item.quantity > 0 ? Math.round(itemTotal / item.quantity) : item.price,
+            image_url: item.image,
+          };
+        }),
       }).catch((error) => {
         console.warn("Failed to track abandoned cart:", error);
       });
@@ -322,16 +314,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
         sessionId: abandonedCartSessionIdRef.current,
         email: previousEmailRef.current || undefined,
         cart_total: previousCartItemsRef.current.reduce(
-          (sum, item) => sum + item.price * item.quantity,
+          (sum, item) => {
+            const isMatchingSet = item.ownerSize !== 'N/A' && item.petSize !== 'N/A';
+            const halfPrice = Math.round(item.price * 0.5);
+            const itemTotal = isMatchingSet
+              ? (item.ownerSize !== 'N/A' ? item.ownerQuantity * halfPrice : 0) +
+                (item.petSize !== 'N/A' ? item.petQuantity * halfPrice : 0)
+              : item.price * item.quantity;
+            return sum + itemTotal;
+          },
           0,
         ),
-        cart_items: previousCartItemsRef.current.map((item) => ({
-          product_id: String(item.id),
-          product_name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          image_url: item.image,
-        })),
+        cart_items: previousCartItemsRef.current.map((item) => {
+          const isMatchingSet = item.ownerSize !== 'N/A' && item.petSize !== 'N/A';
+          const halfPrice = Math.round(item.price * 0.5);
+          const itemTotal = isMatchingSet
+            ? (item.ownerSize !== 'N/A' ? item.ownerQuantity * halfPrice : 0) +
+              (item.petSize !== 'N/A' ? item.petQuantity * halfPrice : 0)
+            : item.price * item.quantity;
+
+          return {
+            product_id: String(item.id),
+            product_name: item.name,
+            quantity: item.quantity,
+            price: item.quantity > 0 ? Math.round(itemTotal / item.quantity) : item.price,
+            image_url: item.image,
+          };
+        }),
       }).catch((error) => {
         console.warn("Failed to track abandoned cart on logout:", error);
       });
@@ -368,7 +377,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             price,
             image_url,
             images,
-            slug
+            slug,
+            sizes,
+            pet_sizes
           )
         `,
         )
@@ -376,7 +387,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (cartData) {
         const groupedItems = cartService.groupCartItems(
-          cartData as RawCartItemRecord[],
+          cartData as unknown as RawCartItemRecord[],
         );
         setCartItems(groupedItems);
       }
@@ -404,45 +415,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     !!user,
   );
 
-  const addToCart = async (item: Omit<CartItem, "quantity">, quantity = 1) => {
+  const addToCart = async (
+    item: Omit<CartItem, "quantity" | "ownerQuantity" | "petQuantity"> & {
+      ownerQuantity?: number;
+      petQuantity?: number;
+    },
+    quantity = 1
+  ) => {
     const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
     const petSize = CartItemModel.normalizeSize(item.petSize);
 
     const isCombo = ownerSize !== "N/A" && petSize !== "N/A";
+    const itemOwnerQty = item.ownerQuantity !== undefined ? item.ownerQuantity : (ownerSize !== "N/A" ? quantity : 0);
+    const itemPetQty = item.petQuantity !== undefined ? item.petQuantity : (petSize !== "N/A" ? quantity : 0);
+    const combinedQuantity = itemOwnerQty + itemPetQty;
 
-    let newItem: CartItem;
-
-    if (isCombo) {
-      newItem = {
-        ...item,
-        ownerSize,
-        petSize,
-        type: "combo" as const,
-        price: item.price,
-        name: item.name,
-        quantity: 1,
-      };
-    } else if (ownerSize !== "N/A") {
-      newItem = {
-        ...item,
-        ownerSize,
-        petSize: "N/A",
-        type: "owner" as const,
-        price: item.price,
-        name: item.name,
-        quantity: 1,
-      };
-    } else {
-      newItem = {
-        ...item,
-        ownerSize: "N/A",
-        petSize,
-        type: "pet" as const,
-        price: item.price,
-        name: item.name,
-        quantity: 1,
-      };
-    }
+    const newItem: CartItem = {
+      ...item,
+      ownerSize,
+      petSize,
+      ownerQuantity: itemOwnerQty,
+      petQuantity: itemPetQty,
+      quantity: combinedQuantity,
+      type: isCombo ? "combo" : (ownerSize !== "N/A" ? "owner" : "pet"),
+    };
 
     setCartItems((prev) => {
       let updated = [...prev];
@@ -450,22 +446,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
         (i) =>
           i.id === newItem.id &&
           i.ownerSize === newItem.ownerSize &&
-          i.petSize === newItem.petSize &&
-          i.type === newItem.type
+          i.petSize === newItem.petSize
       );
       if (existing) {
         updated = updated.map((i) =>
-          i === existing ? { ...i, quantity: i.quantity + quantity } : i
+          i === existing
+            ? {
+                ...i,
+                ownerQuantity: i.ownerQuantity + newItem.ownerQuantity,
+                petQuantity: i.petQuantity + newItem.petQuantity,
+                quantity: i.quantity + newItem.quantity,
+              }
+            : i
         );
       } else {
-        updated.push({ ...newItem, quantity });
+        updated.push(newItem);
       }
       return updated;
     });
 
     if (user) {
       try {
-        await cartService.addItem(newItem, quantity);
+        await cartService.addItem(newItem);
       } catch (error) {
         console.error("Failed to sync cart:", error);
         toast.error("Failed to save to account.");
@@ -476,8 +478,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeFromCart = async (
     id: number | string,
     ownerSize: string,
-    petSize: string,
-    type: "owner" | "pet" | "combo"
+    petSize: string
   ) => {
     const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
     const normalizedPetSize = CartItemModel.normalizeSize(petSize);
@@ -487,9 +488,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         (i) =>
           !(i.id === id &&
             i.ownerSize === normalizedOwnerSize &&
-            i.petSize === normalizedPetSize &&
-            i.type === type)
-      ),
+            i.petSize === normalizedPetSize)
+      )
     );
 
     if (user) {
@@ -514,98 +514,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
       (i) =>
         i.id === id &&
         i.ownerSize === normalizedOwnerSize &&
-        i.petSize === normalizedPetSize &&
-        i.type === "combo"
+        i.petSize === normalizedPetSize
     );
 
     if (!comboItem) return;
 
-    // 1. Remove the combo item from state
-    setCartItems((prev) =>
-      prev.filter(
-        (i) =>
-          !(i.id === id &&
-            i.ownerSize === normalizedOwnerSize &&
-            i.petSize === normalizedPetSize &&
-            i.type === "combo")
-      )
-    );
+    // 1. Remove the combo item completely
+    await removeFromCart(id, normalizedOwnerSize, normalizedPetSize);
 
-    // 2. Remove the combo item from database
-    if (user) {
-      try {
-        await cartService.removeItem(id, normalizedOwnerSize, normalizedPetSize);
-      } catch (error) {
-        console.error("Failed to sync cart removal:", error);
-      }
-    }
-
-    // 3. Add the remaining item at 50% price
-    const basePrice = comboItem.price;
-    const halfPrice = Math.round(basePrice * 0.5);
-
+    // 2. Add back the remaining part with its quantity
     if (partToRemove === "owner") {
-      // Keep pet part
-      const petItem: CartItem = {
+      // Keep pet part only
+      await addToCart({
         id: comboItem.id,
-        name: comboItem.name.replace(" (Matching Set)", "").replace(" (Combo)", "") + " (Pet Only)",
-        price: halfPrice,
+        name: comboItem.name,
+        price: comboItem.price,
         image: comboItem.image,
         ownerSize: "N/A",
         petSize: normalizedPetSize,
-        quantity: comboItem.quantity,
         slug: comboItem.slug,
         type: "pet",
-      };
-
-      setCartItems((prev) => [...prev, petItem]);
-
-      if (user) {
-        try {
-          await cartService.addItem(petItem);
-          if (petItem.quantity > 1) {
-            await cartService.updateQuantity(
-              petItem.id,
-              petItem.ownerSize,
-              petItem.petSize,
-              petItem.quantity
-            );
-          }
-        } catch (error) {
-          console.error("Failed to sync new pet item:", error);
-        }
-      }
+        ownerQuantity: 0,
+        petQuantity: comboItem.petQuantity,
+      });
     } else {
-      // Keep owner part
-      const ownerItem: CartItem = {
+      // Keep owner part only
+      await addToCart({
         id: comboItem.id,
-        name: comboItem.name.replace(" (Matching Set)", "").replace(" (Combo)", "") + " (Owner Only)",
-        price: halfPrice,
+        name: comboItem.name,
+        price: comboItem.price,
         image: comboItem.image,
         ownerSize: normalizedOwnerSize,
         petSize: "N/A",
-        quantity: comboItem.quantity,
         slug: comboItem.slug,
         type: "owner",
-      };
-
-      setCartItems((prev) => [...prev, ownerItem]);
-
-      if (user) {
-        try {
-          await cartService.addItem(ownerItem);
-          if (ownerItem.quantity > 1) {
-            await cartService.updateQuantity(
-              ownerItem.id,
-              ownerItem.ownerSize,
-              ownerItem.petSize,
-              ownerItem.quantity
-            );
-          }
-        } catch (error) {
-          console.error("Failed to sync new owner item:", error);
-        }
-      }
+        ownerQuantity: comboItem.ownerQuantity,
+        petQuantity: 0,
+      });
     }
   };
 
@@ -613,18 +558,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     id: number | string,
     ownerSize: string,
     petSize: string,
-    quantity: number,
-    type: "owner" | "pet" | "combo"
+    ownerQuantity: number,
+    petQuantity: number
   ) => {
     const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
     const normalizedPetSize = CartItemModel.normalizeSize(petSize);
 
-    if (quantity < 1) {
+    if (ownerQuantity < 1 && petQuantity < 1) {
       await removeFromCart(
         id,
         normalizedOwnerSize,
-        normalizedPetSize,
-        type
+        normalizedPetSize
       );
       return;
     }
@@ -634,7 +578,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         i.id === id &&
         i.ownerSize === normalizedOwnerSize &&
         i.petSize === normalizedPetSize
-          ? { ...i, quantity }
+          ? {
+              ...i,
+              ownerQuantity: Math.max(0, ownerQuantity),
+              petQuantity: Math.max(0, petQuantity),
+              quantity: Math.max(0, ownerQuantity) + Math.max(0, petQuantity),
+            }
           : i,
       ),
     );
@@ -645,7 +594,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           id,
           normalizedOwnerSize,
           normalizedPetSize,
-          quantity,
+          ownerQuantity,
+          petQuantity
         );
       } catch (error) {
         console.error("Failed to sync cart:", error);
@@ -725,10 +675,3 @@ export function useCart() {
   }
   return context;
 }
-
-
-
-
-
-
-

@@ -8,27 +8,41 @@ export class CartItemModel {
     public readonly petSize: string,
     public readonly quantity: number,
     public readonly slug: string,
-    public readonly type: "owner" | "pet" | "combo" = "combo"
+    public readonly type: "owner" | "pet" | "combo" = "combo",
+    public readonly ownerQuantity: number = 0,
+    public readonly petQuantity: number = 0
   ) {}
 
   /**
    * Generate unique key for cart item (handles size variants)
    */
   get key(): string {
-    return CartItemModel.generateKey(this.id, this.ownerSize, this.petSize, this.type);
+    return CartItemModel.generateKey(this.id, this.ownerSize, this.petSize);
   }
 
   /**
-   * Calculate line total for this item
+   * Calculate line total for this item using split pricing if it is a matching set
    */
   get lineTotal(): number {
-    return this.price * this.quantity;
+    const isMatchingSet = this.ownerSize !== 'N/A' && this.petSize !== 'N/A';
+    if (isMatchingSet) {
+      const halfPrice = Math.round(this.price * 0.5);
+      return (this.ownerSize !== 'N/A' ? this.ownerQuantity * halfPrice : 0) +
+             (this.petSize !== 'N/A' ? this.petQuantity * halfPrice : 0);
+    } else {
+      if (this.ownerSize !== 'N/A') {
+        return this.price * this.ownerQuantity;
+      } else if (this.petSize !== 'N/A') {
+        return this.price * this.petQuantity;
+      }
+      return this.price * this.quantity;
+    }
   }
 
   /**
-   * Create a new CartItemModel with updated quantity
+   * Create a new CartItemModel with updated quantities
    */
-  withQuantity(quantity: number): CartItemModel {
+  withQuantities(ownerQty: number, petQty: number): CartItemModel {
     return new CartItemModel(
       this.id,
       this.name,
@@ -36,24 +50,12 @@ export class CartItemModel {
       this.image,
       this.ownerSize,
       this.petSize,
-      quantity,
+      ownerQty + petQty,
       this.slug,
-      this.type
+      this.type,
+      ownerQty,
+      petQty
     );
-  }
-
-  /**
-   * Increment quantity by 1
-   */
-  incrementQuantity(): CartItemModel {
-    return this.withQuantity(this.quantity + 1);
-  }
-
-  /**
-   * Decrement quantity by 1 (minimum 0)
-   */
-  decrementQuantity(): CartItemModel {
-    return this.withQuantity(Math.max(0, this.quantity - 1));
   }
 
   /**
@@ -71,25 +73,27 @@ export class CartItemModel {
    * Convert to plain object (for context state)
    */
   toPlainObject(): CartItemData {
-  return {
-    id: this.id,
-    name: this.name,
-    price: this.price,
-    image: this.image,
-    ownerSize: this.ownerSize,
-    petSize: this.petSize,
-    quantity: this.quantity,
-    slug: this.slug,
-    type: this.type,  // ADD THIS
-  };
-}
+    return {
+      id: this.id,
+      name: this.name,
+      price: this.price,
+      image: this.image,
+      ownerSize: this.ownerSize,
+      petSize: this.petSize,
+      quantity: this.quantity,
+      slug: this.slug,
+      type: this.type,
+      ownerQuantity: this.ownerQuantity,
+      petQuantity: this.petQuantity,
+    };
+  }
 
   /**
    * Static: Generate unique key for cart item
    */
- static generateKey(productId: string | number, ownerSize: string, petSize: string, type = "combo"): string {
-  return `${productId}-${CartItemModel.normalizeSize(ownerSize)}-${CartItemModel.normalizeSize(petSize)}-${type}`;
-}
+  static generateKey(productId: string | number, ownerSize: string, petSize: string): string {
+    return `${productId}-${CartItemModel.normalizeSize(ownerSize)}-${CartItemModel.normalizeSize(petSize)}`;
+  }
 
   /**
    * Static: Normalize size value (handles null, empty, "N/A" consistently)
@@ -115,39 +119,79 @@ export class CartItemModel {
   }
 
   /**
+   * Static: Serialize size and quantity for database storage
+   */
+  static serializeSize(size: string, qty: number): string {
+    const normalized = CartItemModel.normalizeSize(size);
+    if (normalized === 'N/A') return 'N/A';
+    return `${normalized}:${qty}`;
+  }
+
+  /**
+   * Static: Deserialize size and quantity from database storage
+   */
+  static deserializeSize(serialized: string | null | undefined): { size: string; quantity: number } {
+    if (!serialized || serialized === '' || serialized === 'N/A') {
+      return { size: 'N/A', quantity: 0 };
+    }
+    if (serialized.includes(':')) {
+      const [sizePart, qtyPart] = serialized.split(':');
+      return { size: sizePart, quantity: parseInt(qtyPart, 10) || 0 };
+    }
+    return { size: serialized, quantity: 1 };
+  }
+
+  /**
    * Static: Create from raw database record
    */
   static fromDatabaseRecord(record: RawCartItemRecord): CartItemModel {
-  const ownerSize = CartItemModel.normalizeSize(record.size);
-  const petSize = CartItemModel.normalizeSize(record.pet_size);
+    const rawSize = record.size;
+    const rawPetSize = record.pet_size;
 
-  const isMatchingSet = ownerSize !== 'N/A' && petSize !== 'N/A';
-  const basePrice = record.product.price;
-  const price = isMatchingSet ? basePrice : Math.round(basePrice * 0.5);
+    const { size: ownerSize, quantity: deserializedOwnerQty } = CartItemModel.deserializeSize(rawSize);
+    const { size: petSize, quantity: deserializedPetQty } = CartItemModel.deserializeSize(rawPetSize);
 
-  // Infer type from sizes
-  const type = isMatchingSet
-    ? "combo"
-    : ownerSize !== 'N/A' ? "owner" : "pet";
+    const hasOwner = ownerSize !== 'N/A';
+    const hasPet = petSize !== 'N/A';
 
-  const name = isMatchingSet
-    ? record.product.name
-    : ownerSize !== 'N/A'
-      ? `${record.product.name} (Owner)`
-      : `${record.product.name} (Pet)`;
+    let ownerQuantity = deserializedOwnerQty;
+    let petQuantity = deserializedPetQty;
 
-  return new CartItemModel(
-    record.product.id,
-    name,
-    price,
-    record.product.image_url || record.product.images?.[0] || '',
-    ownerSize,
-    petSize,
-    record.quantity,
-    record.product.slug,
-    type  // ADD THIS
-  );
-}
+    // Fallback logic for legacy database rows without quantity suffix in sizes
+    if (hasOwner && (!rawSize || !rawSize.includes(':'))) {
+      ownerQuantity = record.quantity || 1;
+    }
+    if (hasPet && (!rawPetSize || !rawPetSize.includes(':'))) {
+      petQuantity = record.quantity || 1;
+    }
+
+    const sizes = record.product.sizes || [];
+    const petSizes = record.product.pet_sizes || [];
+    const isMatchingSet = (sizes.length > 0 && petSizes.length > 0) || (hasOwner && hasPet);
+
+    // Combined quantity is the sum
+    const quantity = (hasOwner ? ownerQuantity : 0) + (hasPet ? petQuantity : 0);
+
+    const type = isMatchingSet ? "combo" : (hasOwner ? "owner" : "pet");
+
+    let cleanName = record.product.name;
+    if (cleanName.endsWith(" (Owner Only)")) cleanName = cleanName.slice(0, -13);
+    if (cleanName.endsWith(" (Pet Only)")) cleanName = cleanName.slice(0, -11);
+
+    return new CartItemModel(
+      record.product.id,
+      cleanName,
+      record.product.price,
+      record.product.image_url || record.product.images?.[0] || '',
+      ownerSize,
+      petSize,
+      quantity,
+      record.product.slug,
+      type,
+      ownerQuantity,
+      petQuantity
+    );
+  }
 
   /**
    * Static: Create from plain object
@@ -162,7 +206,9 @@ export class CartItemModel {
       data.petSize,
       data.quantity,
       data.slug,
-      data.type
+      data.type,
+      data.ownerQuantity,
+      data.petQuantity
     );
   }
 }
@@ -176,10 +222,13 @@ export interface CartItemData {
   petSize: string;
   quantity: number;
   slug: string;
-  type: "owner" | "pet" | "combo";  // ADD THIS
+  type: "owner" | "pet" | "combo";
+  ownerQuantity: number;
+  petQuantity: number;
 }
 
 export interface RawCartItemRecord {
+  id: string;
   size: string | null;
   pet_size: string | null;
   quantity: number;
@@ -190,5 +239,7 @@ export interface RawCartItemRecord {
     image_url: string | null;
     images: string[] | null;
     slug: string;
+    sizes?: string[] | null;
+    pet_sizes?: string[] | null;
   };
 }

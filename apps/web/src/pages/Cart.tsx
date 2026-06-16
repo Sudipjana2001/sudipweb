@@ -54,11 +54,19 @@ export default function Cart() {
 
             <div className="divide-y divide-border">
               {cartItems.map((item) => {
-                const quantity = Number(item.quantity);
+                const isMatchingSet = item.ownerSize !== "N/A" && item.petSize !== "N/A";
+                const halfPrice = Math.round(item.price * 0.5);
+                const isMatchingSetProduct = item.type === "combo" || isMatchingSet;
+                
+                const displayUnitPrice = isMatchingSetProduct ? halfPrice : item.price;
+                const lineTotal = isMatchingSetProduct
+                  ? (item.ownerSize !== "N/A" ? item.ownerQuantity * halfPrice : 0) +
+                    (item.petSize !== "N/A" ? item.petQuantity * halfPrice : 0)
+                  : item.price * item.quantity;
 
                 return (
                   <div
-                    key={`${item.id}-${item.ownerSize}-${item.petSize}-${item.type}`}
+                    key={`${item.id}-${item.ownerSize}-${item.petSize}`}
                     className="grid grid-cols-12 items-center gap-4 py-6"
                   >
                     <div className="col-span-12 flex items-center gap-4 md:col-span-5">
@@ -74,80 +82,114 @@ export default function Cart() {
                       </Link>
                       <div className="flex-1">
                         <Link to={`/product/${item.slug}`} className="hover:underline">
-                          <h3>{item.name}</h3>
+                          <h3 className="font-medium">{item.name}</h3>
                         </Link>
-                        <div className="font-body text-sm text-muted-foreground space-y-1.5">
-                          {item.type === "combo" ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <span>👤 Owner — Size: {item.ownerSize}</span>
+                        <div className="mt-1 font-body text-sm text-muted-foreground space-y-1">
+                          {item.ownerSize !== "N/A" && (
+                            <div className="flex items-center gap-2">
+                              <span>👤 Owner — Size: {item.ownerSize}</span>
+                              {isMatchingSet && (
                                 <button
                                   onClick={() => removeComboPart(item.id, item.ownerSize, item.petSize, "owner")}
                                   className="text-[10px] text-muted-foreground hover:text-destructive underline font-semibold transition-colors"
                                 >
                                   Remove Owner
                                 </button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span>🐾 Pet — Size: {item.petSize}</span>
+                              )}
+                            </div>
+                          )}
+                          {item.petSize !== "N/A" && (
+                            <div className="flex items-center gap-2">
+                              <span>🐾 Pet — Size: {item.petSize}</span>
+                              {isMatchingSet && (
                                 <button
                                   onClick={() => removeComboPart(item.id, item.ownerSize, item.petSize, "pet")}
                                   className="text-[10px] text-muted-foreground hover:text-destructive underline font-semibold transition-colors"
                                 >
                                   Remove Pet
                                 </button>
-                              </div>
+                              )}
                             </div>
-                          ) : item.type === "owner" ? (
-                            <span>👤 Owner — Size: {item.ownerSize}</span>
-                          ) : (
-                            <span>🐾 Pet — Size: {item.petSize}</span>
                           )}
                         </div>
 
                         <button
-                          onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize, item.type)}
+                          onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize)}
                           className="mt-2 flex items-center gap-1 font-body text-xs text-muted-foreground hover:text-destructive md:hidden"
                         >
                           <Trash2 className="h-3 w-3" />
-                          Remove
+                          Remove Product
                         </button>
                       </div>
                     </div>
 
-                    {/* Quantity */}
-                    <div className="col-span-4 flex items-center justify-center md:col-span-2">
-                      <div className="flex items-center border border-border">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, quantity - 1, item.type)}
-                          className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
-                          title="Decrease quantity"
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-8 text-center font-body text-sm">{quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, quantity + 1, item.type)}
-                          className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
-                          title="Increase quantity"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
+                    {/* Quantity Selectors Stack */}
+                    <div className="col-span-4 flex flex-col gap-2 justify-center md:col-span-2">
+                      {item.ownerSize !== "N/A" && (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Owner Qty</span>
+                          <div className="flex items-center border border-border">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, item.ownerQuantity - 1, item.petQuantity)}
+                              className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
+                              title="Decrease owner quantity"
+                              aria-label="Decrease owner quantity"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-8 text-center font-body text-xs">{item.ownerQuantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, item.ownerQuantity + 1, item.petQuantity)}
+                              className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
+                              title="Increase owner quantity"
+                              aria-label="Increase owner quantity"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.petSize !== "N/A" && (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Pet Qty</span>
+                          <div className="flex items-center border border-border">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, item.ownerQuantity, item.petQuantity - 1)}
+                              className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
+                              title="Decrease pet quantity"
+                              aria-label="Decrease pet quantity"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-8 text-center font-body text-xs">{item.petQuantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.ownerSize, item.petSize, item.ownerQuantity, item.petQuantity + 1)}
+                              className="flex h-8 w-8 items-center justify-center transition-colors hover:bg-muted"
+                              title="Increase pet quantity"
+                              aria-label="Increase pet quantity"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Price */}
-                    <div className="col-span-4 text-center font-body md:col-span-2">₹{item.price}</div>
+                    <div className="col-span-4 text-center font-body md:col-span-2">
+                      ₹{displayUnitPrice}
+                    </div>
 
                     {/* Total */}
-                    <div className="col-span-4 text-right font-body font-medium md:col-span-2">₹{item.price * quantity}</div>
+                    <div className="col-span-4 text-right font-body font-medium md:col-span-2">
+                      ₹{lineTotal}
+                    </div>
 
                     {/* Remove (Desktop) */}
                     <div className="hidden justify-end md:col-span-1 md:flex">
                       <button
-                        onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize, item.type)}
+                        onClick={() => removeFromCart(item.id, item.ownerSize, item.petSize)}
                         className="text-muted-foreground hover:text-destructive"
                         aria-label="Remove item"
                       >

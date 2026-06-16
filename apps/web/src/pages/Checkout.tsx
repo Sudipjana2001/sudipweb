@@ -320,8 +320,15 @@ export default function Checkout() {
   const activeTotal = useMemo(() => {
     if (buyNowItems && buyNowItems.length > 0) {
       return buyNowItems.reduce(
-        (acc: number, item: { price: number; quantity: number }) =>
-          acc + item.price * item.quantity,
+        (acc: number, item: any) => {
+          const isMatchingSet = item.ownerSize !== "N/A" && item.petSize !== "N/A";
+          if (isMatchingSet) {
+            const halfPrice = Math.round(item.price * 0.5);
+            return acc + (item.ownerSize !== "N/A" ? item.ownerQuantity * halfPrice : 0) +
+                         (item.petSize !== "N/A" ? item.petQuantity * halfPrice : 0);
+          }
+          return acc + item.price * item.quantity;
+        },
         0,
       );
     }
@@ -527,13 +534,45 @@ export default function Checkout() {
       ? buildShippingAddress()
       : buildAddressPayload(billingData, { email: billingData.email });
 
-  const buildOrderItems = () =>
-    checkoutItems.map((item) => ({
-      productId: item.id.toString(),
-      quantity: item.quantity,
-      size: item.ownerSize,
-      petSize: item.petSize,
-    }));
+  const buildOrderItems = () => {
+    const items: {
+      productId: string;
+      quantity: number;
+      size: string | null;
+      petSize: string | null;
+    }[] = [];
+
+    checkoutItems.forEach((item) => {
+      const isMatchingSet = item.ownerSize !== "N/A" && item.petSize !== "N/A";
+      if (isMatchingSet) {
+        if (item.ownerQuantity > 0) {
+          items.push({
+            productId: item.id.toString(),
+            quantity: item.ownerQuantity,
+            size: item.ownerSize,
+            petSize: "N/A",
+          });
+        }
+        if (item.petQuantity > 0) {
+          items.push({
+            productId: item.id.toString(),
+            quantity: item.petQuantity,
+            size: "N/A",
+            petSize: item.petSize,
+          });
+        }
+      } else {
+        items.push({
+          productId: item.id.toString(),
+          quantity: item.quantity,
+          size: item.ownerSize,
+          petSize: item.petSize,
+        });
+      }
+    });
+
+    return items;
+  };
 
   const finalizeOrder = async (
     options?: {
@@ -1111,34 +1150,45 @@ export default function Checkout() {
 
                 {/* Cart Items */}
                 <div className="mb-6 space-y-4 border-b border-border pb-6">
-                  {checkoutItems.map((item) => (
-                    <div
-                      key={`${item.id}-${item.ownerSize}-${item.petSize}`}
-                      className="flex gap-4"
-                    >
-                      <div className="h-20 w-16 flex-shrink-0 overflow-hidden bg-background">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-body text-sm font-medium line-clamp-2">
-                          {item.name}
-                        </h3>
-                        <p className="font-body text-xs text-muted-foreground">
-                          Size: {item.ownerSize} / Pet: {item.petSize}
+                  {checkoutItems.map((item) => {
+                    const isMatchingSet = item.ownerSize !== "N/A" && item.petSize !== "N/A";
+                    const halfPrice = Math.round(item.price * 0.5);
+                    const lineTotal = isMatchingSet
+                      ? (item.ownerSize !== "N/A" ? item.ownerQuantity * halfPrice : 0) +
+                        (item.petSize !== "N/A" ? item.petQuantity * halfPrice : 0)
+                      : item.price * item.quantity;
+
+                    return (
+                      <div
+                        key={`${item.id}-${item.ownerSize}-${item.petSize}`}
+                        className="flex gap-4"
+                      >
+                        <div className="h-20 w-16 flex-shrink-0 overflow-hidden bg-background">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-body text-sm font-medium line-clamp-2">
+                            {item.name}
+                          </h3>
+                          <div className="font-body text-xs text-muted-foreground space-y-0.5">
+                            {item.ownerSize !== "N/A" && (
+                              <p>👤 Owner: Size {item.ownerSize} (Qty: {item.ownerQuantity})</p>
+                            )}
+                            {item.petSize !== "N/A" && (
+                              <p>🐾 Pet: Size {item.petSize} (Qty: {item.petQuantity})</p>
+                            )}
+                          </div>
+                        </div>
+                        <p className="font-body text-sm font-medium">
+                          ₹{lineTotal}
                         </p>
-                        <p className="font-body text-xs text-muted-foreground">
-                          Qty: {item.quantity}
-                        </p>
                       </div>
-                      <p className="font-body text-sm font-medium">
-                        ₹{item.price * item.quantity}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Coupon Code */}

@@ -1,24 +1,9 @@
 import { supabase } from '@/integrations/client';
 import { CartItemModel, CartItemData, RawCartItemRecord } from '@/domain/models/CartItem';
 
-type CartRpcClient = {
-  rpc: (
-    fn: string,
-    args?: Record<string, unknown>,
-  ) => Promise<{ error: { message: string } | null }>;
-};
-
 /**
  * CartService handles all cart-related business operations.
  * Encapsulates Supabase interactions and business logic.
- * 
- * This is a pure service class - no React dependencies.
- * Use the useCartService hook to integrate with React components.
- * 
- * @example
- * const service = new CartService(userId);
- * await service.addItem(item);
- * const items = await service.loadCart();
  */
 export class CartService {
   constructor(private readonly userId: string | null) {}
@@ -46,7 +31,9 @@ export class CartService {
           price,
           image_url,
           images,
-          slug
+          slug,
+          sizes,
+          pet_sizes
         )
       `)
       .eq('user_id', this.userId);
@@ -73,7 +60,24 @@ export class CartService {
 
       if (groupedItems.has(key)) {
         const existing = groupedItems.get(key)!;
-        groupedItems.set(key, existing.withQuantity(existing.quantity + item.quantity));
+        const newOwnerQty = existing.ownerQuantity + item.ownerQuantity;
+        const newPetQty = existing.petQuantity + item.petQuantity;
+        groupedItems.set(
+          key,
+          new CartItemModel(
+            existing.id,
+            existing.name,
+            existing.price,
+            existing.image,
+            existing.ownerSize,
+            existing.petSize,
+            newOwnerQty + newPetQty,
+            existing.slug,
+            existing.type,
+            newOwnerQty,
+            newPetQty
+          )
+        );
       } else {
         groupedItems.set(key, item);
       }
@@ -85,20 +89,66 @@ export class CartService {
   /**
    * Add item to cart in database
    */
-  async addItem(item: Omit<CartItemData, 'quantity'>, quantity = 1): Promise<void> {
+  async addItem(item: Omit<CartItemData, 'quantity'>): Promise<void> {
     if (!this.userId) return;
 
     const ownerSize = CartItemModel.normalizeSize(item.ownerSize);
     const petSize = CartItemModel.normalizeSize(item.petSize);
-    const rpcClient = supabase as unknown as CartRpcClient;
-    const { error } = await rpcClient.rpc('add_cart_item', {
-      p_product_id: item.id as string,
-      p_size: ownerSize,
-      p_pet_size: petSize,
-      p_quantity: quantity,
+
+    // Fetch existing rows for this product
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('cart_items')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('product_id', item.id);
+
+    if (fetchError) throw fetchError;
+
+    // Find matching row
+    const matchedRow = existingRows?.find(row => {
+      const parsedOwner = CartItemModel.deserializeSize(row.size);
+      const parsedPet = CartItemModel.deserializeSize(row.pet_size);
+      return parsedOwner.size === ownerSize && parsedPet.size === petSize;
     });
 
-    if (error) throw error;
+    if (matchedRow) {
+      const parsedOwner = CartItemModel.deserializeSize(matchedRow.size);
+      const parsedPet = CartItemModel.deserializeSize(matchedRow.pet_size);
+
+      const newOwnerQty = parsedOwner.quantity + item.ownerQuantity;
+      const newPetQty = parsedPet.quantity + item.petQuantity;
+      const newQuantity = newOwnerQty + newPetQty;
+
+      const serializedOwner = CartItemModel.serializeSize(ownerSize, newOwnerQty);
+      const serializedPet = CartItemModel.serializeSize(petSize, newPetQty);
+
+      const { error: updateError } = await supabase
+        .from('cart_items')
+        .update({
+          size: serializedOwner,
+          pet_size: serializedPet,
+          quantity: newQuantity
+        })
+        .eq('id', matchedRow.id);
+
+      if (updateError) throw updateError;
+    } else {
+      const serializedOwner = CartItemModel.serializeSize(ownerSize, item.ownerQuantity);
+      const serializedPet = CartItemModel.serializeSize(petSize, item.petQuantity);
+      const combinedQuantity = item.ownerQuantity + item.petQuantity;
+
+      const { error: insertError } = await supabase
+        .from('cart_items')
+        .insert({
+          user_id: this.userId,
+          product_id: item.id as string,
+          size: serializedOwner,
+          pet_size: serializedPet,
+          quantity: combinedQuantity
+        });
+
+      if (insertError) throw insertError;
+    }
   }
 
   /**
@@ -107,18 +157,30 @@ export class CartService {
   async removeItem(productId: string | number, ownerSize: string, petSize: string): Promise<void> {
     if (!this.userId) return;
 
-    try {
-      const rpcClient = supabase as unknown as CartRpcClient;
-      const { error } = await rpcClient.rpc('remove_cart_item', {
-        p_product_id: productId as string,
-        p_size: CartItemModel.normalizeSize(ownerSize),
-        p_pet_size: CartItemModel.normalizeSize(petSize),
-      });
+    const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
+    const normalizedPetSize = CartItemModel.normalizeSize(petSize);
 
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error in removeItem:', err);
-      throw err;
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('cart_items')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('product_id', productId);
+
+    if (fetchError) throw fetchError;
+
+    const matchedRow = existingRows?.find(row => {
+      const parsedOwner = CartItemModel.deserializeSize(row.size);
+      const parsedPet = CartItemModel.deserializeSize(row.pet_size);
+      return parsedOwner.size === normalizedOwnerSize && parsedPet.size === normalizedPetSize;
+    });
+
+    if (matchedRow) {
+      const { error: deleteError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('id', matchedRow.id);
+
+      if (deleteError) throw deleteError;
     }
   }
 
@@ -129,18 +191,49 @@ export class CartService {
     productId: string | number,
     ownerSize: string,
     petSize: string,
-    quantity: number
+    ownerQuantity: number,
+    petQuantity: number
   ): Promise<void> {
     if (!this.userId) return;
-    const rpcClient = supabase as unknown as CartRpcClient;
-    const { error } = await rpcClient.rpc('set_cart_item_quantity', {
-      p_product_id: productId as string,
-      p_size: CartItemModel.normalizeSize(ownerSize),
-      p_pet_size: CartItemModel.normalizeSize(petSize),
-      p_quantity: quantity,
+
+    if (ownerQuantity < 1 && petQuantity < 1) {
+      await this.removeItem(productId, ownerSize, petSize);
+      return;
+    }
+
+    const normalizedOwnerSize = CartItemModel.normalizeSize(ownerSize);
+    const normalizedPetSize = CartItemModel.normalizeSize(petSize);
+
+    const { data: existingRows, error: fetchError } = await supabase
+      .from('cart_items')
+      .select('*')
+      .eq('user_id', this.userId)
+      .eq('product_id', productId);
+
+    if (fetchError) throw fetchError;
+
+    const matchedRow = existingRows?.find(row => {
+      const parsedOwner = CartItemModel.deserializeSize(row.size);
+      const parsedPet = CartItemModel.deserializeSize(row.pet_size);
+      return parsedOwner.size === normalizedOwnerSize && parsedPet.size === normalizedPetSize;
     });
 
-    if (error) throw error;
+    if (matchedRow) {
+      const serializedOwner = CartItemModel.serializeSize(normalizedOwnerSize, ownerQuantity);
+      const serializedPet = CartItemModel.serializeSize(normalizedPetSize, petQuantity);
+      const newQuantity = ownerQuantity + petQuantity;
+
+      const { error: updateError } = await supabase
+        .from('cart_items')
+        .update({
+          size: serializedOwner,
+          pet_size: serializedPet,
+          quantity: newQuantity
+        })
+        .eq('id', matchedRow.id);
+
+      if (updateError) throw updateError;
+    }
   }
 
   /**
@@ -156,8 +249,22 @@ export class CartService {
    * Calculate cart totals
    */
   static calculateTotals(items: CartItemData[]): CartTotals {
-    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const itemCount = items.reduce((sum, item) => sum + (item.ownerQuantity + item.petQuantity || item.quantity), 0);
+    const subtotal = items.reduce((sum, item) => {
+      const isMatchingSet = item.ownerSize !== 'N/A' && item.petSize !== 'N/A';
+      if (isMatchingSet) {
+        const halfPrice = Math.round(item.price * 0.5);
+        return sum + (item.ownerSize !== 'N/A' ? item.ownerQuantity * halfPrice : 0) +
+                     (item.petSize !== 'N/A' ? item.petQuantity * halfPrice : 0);
+      } else {
+        if (item.ownerSize !== 'N/A') {
+          return sum + item.price * item.ownerQuantity;
+        } else if (item.petSize !== 'N/A') {
+          return sum + item.price * item.petQuantity;
+        }
+        return sum + item.price * item.quantity;
+      }
+    }, 0);
 
     return {
       itemCount,

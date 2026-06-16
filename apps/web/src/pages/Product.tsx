@@ -376,41 +376,25 @@ export default function Product() {
       return;
     }
 
-    let totalAdded = 0;
+    const isMatchingSet = product.sizes && product.sizes.length > 0 && product.pet_sizes && product.pet_sizes.length > 0;
 
-    if (selectedSize) {
-      addToCart({
-        id: product.id,
-        name: `${product.name} (Owner Only)`,
-        price: halfPrice,
-        image: product.image_url || "/product-1.jpg",
-        ownerSize: selectedSize,
-        petSize: "N/A",
-        slug: product.slug,
-      }, parentQuantity);
-      totalAdded += parentQuantity;
-    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_url || "/product-1.jpg",
+      ownerSize: selectedSize || "N/A",
+      petSize: selectedPetSize || "N/A",
+      slug: product.slug,
+      type: isMatchingSet ? "combo" : "owner",
+      ownerQuantity: selectedSize ? parentQuantity : 0,
+      petQuantity: selectedPetSize ? petQuantity : 0,
+    });
 
-    if (selectedPetSize) {
-      addToCart({
-        id: product.id,
-        name: `${product.name} (Pet Only)`,
-        price: halfPrice,
-        image: product.image_url || "/product-1.jpg",
-        ownerSize: "N/A",
-        petSize: selectedPetSize,
-        slug: product.slug,
-      }, petQuantity);
-      totalAdded += petQuantity;
-    }
-
-    if (totalAdded > 0) {
-      toast.success("Added to cart!", {
-        description: `Added ${totalAdded} item(s) to your cart.`,
-      });
-    } else {
-      toast.error("No items selected");
-    }
+    const totalAdded = (selectedSize ? parentQuantity : 0) + (selectedPetSize ? petQuantity : 0);
+    toast.success("Added to cart!", {
+      description: `Added ${totalAdded} item(s) to your cart.`,
+    });
   };
 
   const handleBuyNow = () => {
@@ -421,33 +405,21 @@ export default function Product() {
       return;
     }
 
-    const buyNowItems = [];
+    const isMatchingSet = product.sizes && product.sizes.length > 0 && product.pet_sizes && product.pet_sizes.length > 0;
 
-    if (selectedSize) {
-      buyNowItems.push({
-        id: product.id,
-        name: `${product.name} (Owner Only)`,
-        price: halfPrice,
-        image: product.image_url || "/product-1.jpg",
-        ownerSize: selectedSize,
-        petSize: "N/A",
-        slug: product.slug,
-        quantity: parentQuantity,
-      });
-    }
-
-    if (selectedPetSize) {
-      buyNowItems.push({
-        id: product.id,
-        name: `${product.name} (Pet Only)`,
-        price: halfPrice,
-        image: product.image_url || "/product-1.jpg",
-        ownerSize: "N/A",
-        petSize: selectedPetSize,
-        slug: product.slug,
-        quantity: petQuantity,
-      });
-    }
+    const buyNowItems = [{
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_url || "/product-1.jpg",
+      ownerSize: selectedSize || "N/A",
+      petSize: selectedPetSize || "N/A",
+      slug: product.slug,
+      quantity: (selectedSize ? parentQuantity : 0) + (selectedPetSize ? petQuantity : 0),
+      ownerQuantity: selectedSize ? parentQuantity : 0,
+      petQuantity: selectedPetSize ? petQuantity : 0,
+      type: isMatchingSet ? ("combo" as const) : ("owner" as const),
+    }];
 
     navigate("/checkout", { state: { buyNowItems } });
   };
