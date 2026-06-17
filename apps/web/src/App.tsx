@@ -98,6 +98,7 @@ const App = () => (
                 <Route path="/summer" element={<UserRoute><Collection /></UserRoute>} />
                 <Route path="/winter" element={<UserRoute><Collection /></UserRoute>} />
                 <Route path="/rainy" element={<UserRoute><Collection /></UserRoute>} />
+                <Route path="/twinning" element={<UserRoute><Collection /></UserRoute>} />
                 <Route path="/product/:slug" element={<UserRoute><Product /></UserRoute>} />
                 <Route path="/product/:slug/reviews" element={<UserRoute><ProductReviewsPage /></UserRoute>} />
                 <Route path="/cart" element={<UserRoute><Cart /></UserRoute>} />

@@ -64,10 +64,19 @@ export default function Shop() {
     const sort = searchParams.get("sort");
     const search = searchParams.get("search");
 
-    if (collection) setSelectedCollection(collection);
+    if (collection) {
+      const lowercaseCol = collection.toLowerCase();
+      if (lowercaseCol === "twinning" || lowercaseCol === "pebric") {
+        navigate("/twinning");
+        return;
+      }
+      setSelectedCollection(collection);
+    } else {
+      setSelectedCollection("all");
+    }
     if (sort) setSortBy(sort);
     if (search !== null) setSearchQuery(search);
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // Update price range when products load
   useEffect(() => {

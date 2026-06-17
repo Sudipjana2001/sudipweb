@@ -18,7 +18,7 @@ export default function Collection() {
   // Determine slug from URL path if not provided as param
   // For routes like /summer, /winter, /rainy defined in App.tsx
   const pathSlug = location.pathname.split('/')[1];
-  const collectionSlug = slug || (["summer", "winter", "rainy"].includes(pathSlug) ? pathSlug : "summer");
+  const collectionSlug = slug || (["summer", "winter", "rainy", "twinning"].includes(pathSlug) ? pathSlug : "summer");
   
   console.log("Collection Debug:", { slug, pathSlug, collectionSlug });
 
@@ -45,6 +45,7 @@ export default function Collection() {
     summer: "/collection-summer.jpg",
     winter: "/collection-winter.jpg",
     rainy: "/collection-rainy.jpg",
+    twinning: "/collection-summer.jpg",
   };
 
   const filteredProducts = useMemo(() => {
@@ -77,7 +78,9 @@ export default function Collection() {
   }, [filteredProducts, sortBy]);
 
   const collectionImage = collection?.image_url || fallbackImages[collectionSlug] || "/collection-summer.jpg";
-  const collectionName = collection?.name || `${collectionSlug.charAt(0).toUpperCase() + collectionSlug.slice(1)} Collection`;
+  const collectionName = collectionSlug === "twinning"
+    ? "Twinning Sets"
+    : (collection?.name || `${collectionSlug.charAt(0).toUpperCase() + collectionSlug.slice(1)} Collection`);
   const collectionDescription = collection?.description || "Explore our curated collection of matching outfits for you and your pet.";
 
   return (

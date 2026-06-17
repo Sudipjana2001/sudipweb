@@ -177,6 +177,32 @@ export function useProductsByCollection(collectionSlug: string) {
   return useQuery({
     queryKey: ["products", "collection", actualSlug],
     queryFn: async () => {
+      const isSetsCategory = ["twinning", "pebric", "sets"].includes(actualSlug.toLowerCase());
+
+      if (isSetsCategory) {
+        const { data: category } = await supabase
+          .from("categories")
+          .select("id")
+          .eq("slug", "sets")
+          .maybeSingle();
+
+        if (!category) return [];
+
+        const { data, error } = await supabase
+          .from("products")
+          .select(`
+            *,
+            category:categories(*),
+            collection:collections(*)
+          `)
+          .eq("category_id", category.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return data as Product[];
+      }
+
       const { data: collection } = await supabase
         .from("collections")
         .select("id")
@@ -204,6 +230,14 @@ export function useProductsByCollection(collectionSlug: string) {
 
       if (!cachedProducts) {
         return undefined;
+      }
+
+      const isSetsCategory = ["twinning", "pebric", "sets"].includes(actualSlug.toLowerCase());
+      if (isSetsCategory) {
+        return cachedProducts.filter(
+          (product) =>
+            product.is_active && product.category?.slug === "sets",
+        );
       }
 
       return cachedProducts.filter(
