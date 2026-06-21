@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { OptimizedImage } from "@/components/ui/optimized-image";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
-  Heart,
   Minus,
   Plus,
   Star,
@@ -10,7 +8,6 @@ import {
   Shield,
   RotateCcw,
   GitCompare,
-  Share2,
 } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -21,28 +18,14 @@ import { useProductReviewSummary } from "@/hooks/useReviews";
 import { ProductCard } from "@/components/ProductCard";
 import { SizeRecommendation } from "@/components/SizeRecommendation";
 import { ProductFabricInfo } from "@/components/ProductFabricInfo";
-import { getOptimizedImageSrc } from "@/lib/image";
 import { useTrackProductView } from "@/hooks/useRecentlyViewed";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
 import { useCompare } from "@/hooks/useCompare";
+import { ProductImageGallery } from "@/components/ProductImageGallery";
 
-const PRODUCT_IMAGE_TRANSFORM = {
-  width: 960,
-  height: 960,
-  quality: 80,
-  resize: "cover" as const,
-};
 
-const PRODUCT_THUMBNAIL_TRANSFORM = {
-  width: 120,
-  height: 120,
-  quality: 55,
-  resize: "cover" as const,
-};
-
-const PRODUCT_THUMBNAIL_SIZES = "(max-width: 640px) 18vw, 80px";
 const ProductReviews = lazy(() =>
   import("@/components/ProductReviews").then((module) => ({
     default: module.ProductReviews,
@@ -189,13 +172,10 @@ export default function Product() {
   const averageRating = reviewSummary?.averageRating || 0;
   const totalReviews = reviewSummary?.totalReviews || 0;
 
-  const [currentImage, setCurrentImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPetSize, setSelectedPetSize] = useState("");
   const [parentQuantity, setParentQuantity] = useState(1);
   const [petQuantity, setPetQuantity] = useState(1);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist } =
     useCart();
   const { addToCompare, removeFromCompare, isInCompare } = useCompare();
@@ -242,42 +222,6 @@ export default function Product() {
     .filter((p) => p.id !== product?.id)
     .slice(0, 3);
 
-  // Swipe gesture handlers
-  const minSwipeDistance = 50;
-  const [showSwipeHint, setShowSwipeHint] = useState(false);
-
-  // Show swipe hint on mount for mobile
-  useEffect(() => {
-    if (window.innerWidth < 768 && images.length > 1) {
-      setShowSwipeHint(true);
-      const timer = setTimeout(() => setShowSwipeHint(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [images.length]);
-
-  useEffect(() => {
-    if (images.length === 0) return;
-
-    const preloadUrls = [
-      getOptimizedImageSrc(images[currentImage], PRODUCT_IMAGE_TRANSFORM),
-    ];
-
-    if (images.length > 1) {
-      const nextIndex = (currentImage + 1) % images.length;
-      preloadUrls.push(
-        getOptimizedImageSrc(images[nextIndex], PRODUCT_IMAGE_TRANSFORM),
-      );
-    }
-
-    preloadUrls.forEach((url) => {
-      if (!url) return;
-
-      const preloadImage = new window.Image();
-      preloadImage.decoding = "async";
-      preloadImage.src = url;
-    });
-  }, [currentImage, images]);
-
   useEffect(() => {
     setLoadSecondaryContent(false);
 
@@ -287,29 +231,6 @@ export default function Product() {
 
     return () => window.clearTimeout(timer);
   }, [product?.id]);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe && images.length > 1) {
-      setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    }
-    if (isRightSwipe && images.length > 1) {
-      setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-    }
-  };
 
   // Track product view once per product per mount (avoid refetch storms from unstable mutation deps)
   useEffect(() => {
@@ -506,100 +427,13 @@ export default function Product() {
       <div className="container mx-auto px-4 md:px-6 py-5 md:py-8">
         <div className="grid gap-6 md:gap-8 lg:gap-12 lg:grid-cols-[30%_1fr]">
           {/* Image Gallery */}
-          <div className="space-y-4">
-            <div
-              className="relative aspect-square overflow-hidden bg-muted cursor-grab active:cursor-grabbing touch-pan-y"
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-            >
-              <OptimizedImage
-                src={images[currentImage]}
-                alt={product.name}
-                priority={true} // LCP Image
-                sizes="(max-width: 768px) 100vw, 30vw"
-                transform={PRODUCT_IMAGE_TRANSFORM}
-                className="h-full w-full object-cover select-none pointer-events-none bg-muted"
-                draggable={false}
-              />
-              <button
-                onClick={handleWishlist}
-                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 transition-colors hover:bg-background z-10"
-                aria-label="Add to favourites"
-              >
-                <Heart
-                  className={`h-5 w-5 ${
-                    inWishlist
-                      ? "fill-destructive text-destructive"
-                      : "text-foreground"
-                  }`}
-                />
-              </button>
-              <button
-                onClick={handleShare}
-                className="absolute right-4 top-16 flex h-10 w-10 items-center justify-center rounded-full bg-background/90 transition-colors hover:bg-background z-10"
-                aria-label="Share product link"
-              >
-                <Share2 className="h-5 w-5 text-foreground" />
-              </button>
-
-              {/* Swipe Hint Overlay */}
-              <div
-                className={`absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none transition-opacity duration-500 ${
-                  showSwipeHint ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <div className="bg-background/80 px-4 py-2 rounded-full backdrop-blur-sm shadow-sm">
-                  <p className="text-xs font-medium text-foreground flex items-center gap-2">
-                    <Minus className="w-4 h-4" /> Swipe to view{" "}
-                    <Minus className="w-4 h-4" />
-                  </p>
-                </div>
-              </div>
-
-              {/* Image indicator dots */}
-              {images.length > 1 && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                  {images.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImage(idx)}
-                      className={`h-2 w-2 rounded-full transition-all ${
-                        currentImage === idx
-                          ? "bg-foreground w-4"
-                          : "bg-foreground/40 hover:bg-foreground/60"
-                      }`}
-                      aria-label={`View image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="grid min-w-0 grid-cols-5 gap-3 sm:flex sm:overflow-x-auto sm:pb-2 sm:scrollbar-hide sm:snap-x">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentImage(idx)}
-                  className={`relative aspect-square w-full overflow-hidden border-2 transition-colors sm:w-16 sm:shrink-0 sm:snap-start md:w-20 ${
-                    currentImage === idx
-                      ? "border-foreground"
-                      : "border-transparent"
-                  }`}
-                >
-                  <OptimizedImage
-                    src={img}
-                    alt={`View ${idx + 1}`}
-                    priority={idx === currentImage}
-                    sizes={PRODUCT_THUMBNAIL_SIZES}
-                    loading={idx === currentImage ? "eager" : "lazy"}
-                    fetchPriority={idx === currentImage ? "high" : "low"}
-                    transform={PRODUCT_THUMBNAIL_TRANSFORM}
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
+          <ProductImageGallery
+            images={images}
+            productName={product.name}
+            inWishlist={inWishlist}
+            onWishlistToggle={handleWishlist}
+            onShare={handleShare}
+          />
 
           {/* Product Info */}
           <div className="space-y-5 md:space-y-6">
