@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Pause, Play, X, Package } from "lucide-react";
 import { format } from "date-fns";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Subscriptions() {
   const navigate = useNavigate();
@@ -79,10 +80,12 @@ export default function Subscriptions() {
                 <div key={subscription.id} className="rounded-lg border border-border bg-card p-6">
                   <div className="flex items-start gap-4">
                     {product?.image_url && (
-                      <img
+                      <OptimizedImage
                         src={product.image_url}
                         alt={product.name}
-                        className="h-20 w-20 rounded-lg object-cover"
+                        wrapperClassName="h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden"
+                        className="object-cover"
+                        sizes="80px"
                       />
                     )}
                     <div className="flex-1">

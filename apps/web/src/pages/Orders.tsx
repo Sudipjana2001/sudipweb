@@ -8,6 +8,7 @@ import { InvoiceDownload } from "@/components/InvoiceDownload";
 import { ReorderButton } from "@/components/ReorderButton";
 import { RefundTracker } from "@/components/RefundTracker";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { CancelOrderRequestButton } from "@/components/CancelOrderRequestButton";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -154,10 +155,12 @@ export default function Orders() {
                         className="flex items-center gap-4"
                       >
                         {item.product_image && (
-                          <img
+                          <OptimizedImage
                             src={item.product_image}
                             alt={item.product_name}
-                            className="h-16 w-16 rounded-lg object-cover"
+                            wrapperClassName="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden"
+                            className="object-cover"
+                            sizes="64px"
                           />
                         )}
                         <div className="flex-1">

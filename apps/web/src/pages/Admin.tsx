@@ -66,6 +66,7 @@ import { UsersManager } from "@/components/admin/UsersManager";
 import { SEOHead } from "@/components/SEOHead";
 import { useRealtimeChannel } from "@/hooks/useRealtime";
 import { Separator } from "@/components/ui/separator";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 interface Product {
   id: string;
@@ -235,6 +236,8 @@ export default function Admin() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<string>("");
+  const [isMigrating, setIsMigrating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -309,6 +312,111 @@ export default function Admin() {
     }
   }, [products.length]);
 
+  const runImageMigration = async () => {
+    setIsMigrating(true);
+    setMigrationStatus("Fetching active products...");
+    
+    try {
+      const { data: dbProducts, error: fetchError } = await supabase
+        .from("products")
+        .select("*");
+      
+      if (fetchError) throw fetchError;
+      if (!dbProducts || dbProducts.length === 0) {
+        setMigrationStatus("No products found.");
+        setIsMigrating(false);
+        return;
+      }
+
+      let migratedCount = 0;
+      let totalImagesChecked = 0;
+
+      for (let pIndex = 0; pIndex < dbProducts.length; pIndex++) {
+        const product = dbProducts[pIndex];
+        setMigrationStatus(`Checking product [${pIndex + 1}/${dbProducts.length}]: ${product.name}`);
+        
+        let needsUpdate = false;
+        let newImageUrl = product.image_url;
+        const newImages = [...(product.images || [])];
+
+        // 1. Check main image_url
+        if (product.image_url && product.image_url.includes("supabase.co") && !product.image_url.toLowerCase().endsWith(".webp")) {
+          setMigrationStatus(`Compressing main image for ${product.name}...`);
+          try {
+            const compressedBlob = await compressImageToWebP(product.image_url, { maxWidth: 1000, maxHeight: 1000, quality: 0.8 });
+            const fileName = `${Date.now()}-migrated-${Math.random().toString(36).substring(7)}.webp`;
+            const filePath = `products/${fileName}`;
+            
+            const { error: uploadErr } = await supabase.storage
+              .from("product-images")
+              .upload(filePath, compressedBlob, { contentType: "image/webp" });
+            
+            if (uploadErr) throw uploadErr;
+
+            const { data: { publicUrl } } = supabase.storage.from("product-images").getPublicUrl(filePath);
+            newImageUrl = publicUrl;
+            needsUpdate = true;
+            migratedCount++;
+          } catch (err) {
+            console.error(`Failed to migrate main image for product ${product.id}:`, err);
+          }
+        }
+
+        // 2. Check images gallery array
+        for (let i = 0; i < newImages.length; i++) {
+          totalImagesChecked++;
+          const imgUrl = newImages[i];
+          if (imgUrl && imgUrl.includes("supabase.co") && !imgUrl.toLowerCase().endsWith(".webp")) {
+            setMigrationStatus(`Compressing gallery image [${i + 1}/${newImages.length}] for ${product.name}...`);
+            try {
+              const compressedBlob = await compressImageToWebP(imgUrl, { maxWidth: 1000, maxHeight: 1000, quality: 0.8 });
+              const fileName = `${Date.now()}-migrated-${Math.random().toString(36).substring(7)}.webp`;
+              const filePath = `products/${fileName}`;
+              
+              const { error: uploadErr } = await supabase.storage
+                .from("product-images")
+                .upload(filePath, compressedBlob, { contentType: "image/webp" });
+              
+              if (uploadErr) throw uploadErr;
+
+              const { data: { publicUrl } } = supabase.storage.from("product-images").getPublicUrl(filePath);
+              newImages[i] = publicUrl;
+              needsUpdate = true;
+              migratedCount++;
+            } catch (err) {
+              console.error(`Failed to migrate gallery image ${i} for product ${product.id}:`, err);
+            }
+          }
+        }
+
+        if (needsUpdate) {
+          setMigrationStatus(`Saving product updates for ${product.name} to DB...`);
+          const { error: updateErr } = await supabase
+            .from("products")
+            .update({
+              image_url: newImageUrl,
+              images: newImages
+            })
+            .eq("id", product.id);
+          
+          if (updateErr) {
+            console.error(`Failed to save database update for product ${product.id}:`, updateErr);
+          }
+        }
+      }
+
+      setMigrationStatus(`Migration completed successfully! Processed all products. Optimized ${migratedCount} image(s).`);
+      toast.success(`Optimized ${migratedCount} images to WebP!`);
+      fetchData();
+    } catch (err) {
+      console.error("Migration error:", err);
+      setMigrationStatus(`Migration failed: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error("Migration failed");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   useEffect(() => {
     if (isAdmin) {
       void fetchData().catch((error) => {
@@ -377,13 +485,25 @@ export default function Admin() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const fileExt = file.name.split(".").pop();
+      
+      let uploadFile: File | Blob = file;
+      let fileExt = "webp";
+      
+      try {
+        uploadFile = await compressImageToWebP(file, { maxWidth: 1000, maxHeight: 1000, quality: 0.8 });
+      } catch (err) {
+        console.error("Compression failed, uploading original:", err);
+        fileExt = file.name.split(".").pop() || "png";
+      }
+
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("product-images")
-        .upload(filePath, file);
+        .upload(filePath, uploadFile, {
+          contentType: `image/${fileExt}`
+        });
 
       if (uploadError) {
         toast.error(`Failed to upload ${file.name}`);
@@ -843,14 +963,25 @@ export default function Admin() {
                   {products.length} products total
                 </p>
               </div>
-              <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Product
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={runImageMigration}
+                  disabled={isMigrating}
+                  className="border-[#8b6540]/30 text-[#8b6540] hover:bg-[#8b6540]/10 hover:text-[#8b6540]"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isMigrating ? "animate-spin" : ""}`} />
+                  {isMigrating ? "Optimizing..." : "Optimize DB Images"}
+                </Button>
+
+                <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Product
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
                   <DialogHeader>
                     <DialogTitle>Add New Product</DialogTitle>
                   </DialogHeader>
@@ -1084,6 +1215,7 @@ export default function Admin() {
                   </div>
                 </DialogContent>
               </Dialog>
+            </div>
 
               {/* Edit Product Dialog */}
               <Dialog
@@ -1343,6 +1475,12 @@ export default function Admin() {
                 </DialogContent>
               </Dialog>
             </div>
+
+            {migrationStatus && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 font-medium">
+                {migrationStatus}
+              </div>
+            )}
 
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="overflow-x-auto">

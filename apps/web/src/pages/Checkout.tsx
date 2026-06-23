@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -1164,10 +1165,11 @@ export default function Checkout() {
                         className="flex gap-4"
                       >
                         <div className="h-20 w-16 flex-shrink-0 overflow-hidden bg-background">
-                          <img
+                          <OptimizedImage
                             src={item.image}
                             alt={item.name}
                             className="h-full w-full object-cover"
+                            sizes="80px"
                           />
                         </div>
                         <div className="flex-1">

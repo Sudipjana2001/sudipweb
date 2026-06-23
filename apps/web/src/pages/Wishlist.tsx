@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Wishlist() {
   const { wishlistItems, removeFromWishlist } = useCart();
@@ -38,10 +39,11 @@ export default function Wishlist() {
             <div key={item.id} className="group relative">
               <Link to={`/product/${item.slug}`}>
                 <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                  <img
+                  <OptimizedImage
                     src={item.image}
                     alt={item.name}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
                   />
                 </div>
               </Link>

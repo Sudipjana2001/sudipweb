@@ -68,9 +68,9 @@ export function getOptimizedImageSrc(
   const supabaseImage = getSupabaseImageParts(src);
 
   if (supabaseImage) {
-    return supabase.storage
-      .from(supabaseImage.bucket)
-      .getPublicUrl(supabaseImage.path, { transform }).data.publicUrl;
+    // Note: Supabase image transformation is not enabled for this tenant (returns 403 Forbidden).
+    // We return the original URL directly, expecting it to be optimized (e.g. converted to WebP on upload).
+    return src;
   }
 
   return getUnsplashImageUrl(src, transform);

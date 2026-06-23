@@ -14,6 +14,7 @@ import { Star, ThumbsUp, ChevronLeft, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 function ProductReviewsPageSkeleton() {
   return (
@@ -224,10 +225,11 @@ export default function ProductReviews() {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                           {review.author_avatar_url ? (
-                            <img
+                            <OptimizedImage
                               src={review.author_avatar_url}
                               alt=""
                               className="h-full w-full rounded-full object-cover"
+                              sizes="40px"
                             />
                           ) : (
                             <span className="font-medium text-muted-foreground">

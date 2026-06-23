@@ -7,6 +7,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useCompare } from "@/hooks/useCompare";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -189,12 +190,13 @@ export default function Compare() {
                                   className="block w-full"
                                 >
                                   <div className="mx-auto w-32 aspect-[3/4] mb-3 overflow-hidden bg-muted">
-                                    <img
+                                    <OptimizedImage
                                       src={
                                         product.image_url || "/placeholder.svg"
                                       }
                                       alt={product.name}
                                       className="h-full w-full object-cover"
+                                      sizes="128px"
                                     />
                                   </div>
                                   <p className="font-display text-base leading-tight line-clamp-2">
@@ -309,10 +311,12 @@ export default function Compare() {
                     onClick={() => addToCompare(product.id)}
                     className="border border-border p-3 text-left transition-colors hover:bg-muted"
                   >
-                    <img
+                    <OptimizedImage
                       src={product.image_url || "/placeholder.svg"}
                       alt={product.name}
-                      className="mb-2 aspect-square w-full object-cover"
+                      wrapperClassName="mb-2 aspect-square w-full"
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, 200px"
                     />
                     <p className="font-body text-sm font-medium line-clamp-2">
                       {product.name}

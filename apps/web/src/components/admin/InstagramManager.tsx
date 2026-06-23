@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Save, ArrowUp, ArrowDown, Upload, Heart, ExternalLink } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 interface InstagramPostForm {
   image_url: string;
@@ -50,14 +52,14 @@ export function InstagramManager() {
     if (!file) return;
 
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `instagram/${fileName}`;
-
     try {
+      const compressedBlob = await compressImageToWebP(file, { maxWidth: 800, maxHeight: 800, quality: 0.8 });
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      const filePath = `instagram/${fileName}`;
+
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file);
+        .upload(filePath, compressedBlob, { contentType: "image/webp" });
 
       if (uploadError) throw uploadError;
 
@@ -222,10 +224,12 @@ export function InstagramManager() {
                 <Label>Post Image *</Label>
                 <div className="mt-2 flex items-center gap-4">
                   {newPost.image_url && (
-                    <img 
+                    <OptimizedImage 
                       src={newPost.image_url} 
                       alt="Preview" 
-                      className="h-20 w-20 rounded-md object-cover border"
+                      wrapperClassName="h-20 w-20 rounded-md overflow-hidden border"
+                      className="object-cover"
+                      sizes="80px"
                     />
                   )}
                   <div className="relative">
@@ -317,10 +321,11 @@ export function InstagramManager() {
                     </Button>
                  </div>
               ) : (
-                <img
+                <OptimizedImage
                   src={post.image_url}
                   alt={post.caption || "Instagram post"}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 300px"
                 />
               )}
               

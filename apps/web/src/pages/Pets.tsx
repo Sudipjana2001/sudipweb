@@ -35,6 +35,8 @@ import {
   Ruler,
 } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 const speciesOptions = [
   { value: "dog", label: "Dog", icon: Dog },
@@ -68,10 +70,11 @@ const PetForm = ({
       <div className="relative">
         <div className="h-24 w-24 overflow-hidden rounded-full bg-muted">
           {form.photo_url ? (
-            <img
+            <OptimizedImage
               src={form.photo_url}
               alt=""
               className="h-full w-full object-cover"
+              sizes="96px"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -296,25 +299,30 @@ export default function Pets() {
     if (!file || !user) return;
 
     setUploading(true);
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    try {
+      const compressedBlob = await compressImageToWebP(file, { maxWidth: 600, maxHeight: 600, quality: 0.8 });
+      const fileName = `${user.id}/${Date.now()}.webp`;
 
-    const { error } = await supabase.storage
-      .from("pet-photos")
-      .upload(fileName, file);
+      const { error } = await supabase.storage
+        .from("pet-photos")
+        .upload(fileName, compressedBlob, { contentType: "image/webp" });
 
-    if (error) {
-      toast.error("Failed to upload photo");
+      if (error) {
+        toast.error("Failed to upload photo");
+        setUploading(false);
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
+
+      setForm({ ...form, photo_url: publicUrl });
+    } catch (err) {
+      toast.error("Failed to compress or upload photo");
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("pet-photos").getPublicUrl(fileName);
-
-    setForm({ ...form, photo_url: publicUrl });
-    setUploading(false);
   };
 
   const handleSubmit = async () => {
@@ -443,10 +451,11 @@ export default function Pets() {
                   <div className="flex items-start gap-4">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-muted">
                       {pet.photo_url ? (
-                        <img
+                        <OptimizedImage
                           src={pet.photo_url}
                           alt={pet.name}
                           className="h-full w-full object-cover"
+                          sizes="64px"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">

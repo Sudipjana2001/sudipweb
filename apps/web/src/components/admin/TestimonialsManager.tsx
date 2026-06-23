@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Save, ArrowUp, ArrowDown, Upload, Star } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 interface TestimonialForm {
   customer_name: string;
@@ -56,14 +58,14 @@ export function TestimonialsManager() {
     if (!file) return;
 
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `testimonials/${fileName}`;
-
     try {
+      const compressedBlob = await compressImageToWebP(file, { maxWidth: 300, maxHeight: 300, quality: 0.8 });
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      const filePath = `testimonials/${fileName}`;
+
       const { error: uploadError } = await supabase.storage
         .from('product-images') // Reusing existing bucket for now
-        .upload(filePath, file);
+        .upload(filePath, compressedBlob, { contentType: "image/webp" });
 
       if (uploadError) throw uploadError;
 
@@ -291,10 +293,12 @@ export function TestimonialsManager() {
                 <Label>Customer Photo</Label>
                 <div className="mt-2 flex items-center gap-4">
                   {newTestimonial.image_url && (
-                    <img 
+                    <OptimizedImage 
                       src={newTestimonial.image_url} 
                       alt="Preview" 
-                      className="h-16 w-16 rounded-full object-cover border"
+                      wrapperClassName="h-16 w-16 rounded-full overflow-hidden border"
+                      className="object-cover"
+                      sizes="64px"
                     />
                   )}
                   <div className="relative">
@@ -353,10 +357,12 @@ export function TestimonialsManager() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                        {testimonial.image_url ? (
-                        <img 
+                        <OptimizedImage 
                           src={testimonial.image_url} 
                           alt={testimonial.customer_name} 
-                          className="h-8 w-8 rounded-full object-cover" 
+                          wrapperClassName="h-8 w-8 rounded-full overflow-hidden"
+                          className="object-cover" 
+                          sizes="32px"
                         />
                       ) : (
                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">

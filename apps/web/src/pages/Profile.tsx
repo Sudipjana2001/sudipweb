@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 import { INDIAN_STATES } from "@/lib/indianStates";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 import { AddressBook } from "@/components/profile/AddressBook";
 // ─── Validation helpers ───────────────────────────────────────────────────────
@@ -102,13 +104,13 @@ export default function Profile() {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const compressedBlob = await compressImageToWebP(file, { maxWidth: 300, maxHeight: 300, quality: 0.8 });
+      const fileName = `${user.id}/avatar.webp`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressedBlob, { upsert: true, contentType: "image/webp" });
 
       if (uploadError) throw uploadError;
 
@@ -189,10 +191,11 @@ export default function Profile() {
             <div className="relative">
               <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                 {avatarUrl ? (
-                  <img
+                  <OptimizedImage
                     src={avatarUrl}
                     alt="Profile"
                     className="h-full w-full object-cover"
+                    sizes="96px"
                   />
                 ) : (
                   <User className="h-12 w-12 text-muted-foreground" />

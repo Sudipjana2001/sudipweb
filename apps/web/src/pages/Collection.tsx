@@ -7,8 +7,25 @@ import { SEOHead } from "@/components/SEOHead";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown, ListFilter } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SortOption = "featured" | "price-low" | "price-high" | "newest";
+
+function ProductCardSkeleton() {
+  return (
+    <div className="group relative">
+      <div className="relative aspect-[4/5] overflow-hidden bg-muted rounded-2xl">
+        <Skeleton className="h-full w-full rounded-none" />
+      </div>
+      <div className="mt-3 space-y-1.5 px-1">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+    </div>
+  );
+}
 
 export default function Collection() {
   const { slug } = useParams<{ slug: string }>();
@@ -481,8 +498,10 @@ export default function Collection() {
         {/* Product Grid Area */}
         <div className="flex-1 pb-24">
           {productsLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
             </div>
           ) : (
             <>

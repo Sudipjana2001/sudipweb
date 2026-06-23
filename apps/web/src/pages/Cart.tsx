@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export default function Cart() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart, removeComboPart } = useCart();
@@ -74,9 +75,11 @@ export default function Cart() {
                         to={`/product/${item.slug}`}
                         className="h-24 w-20 flex-shrink-0 overflow-hidden bg-muted"
                       >
-                        <img
+                        <OptimizedImage
                           src={item.image}
                           alt={item.name}
+                          priority={false}
+                          sizes="80px"
                           className="h-full w-full object-cover object-center"
                         />
                       </Link>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, ArrowRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/client";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 interface MatchingOutfitsProps {
   productId: string;
@@ -70,9 +71,11 @@ export function MatchingOutfits({ productId, matchingProductId }: MatchingOutfit
         <Link to={`/product/${matchingProduct.slug}`} className="block group">
           <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted">
             {matchingProduct.image_url && (
-              <img
+              <OptimizedImage
                 src={matchingProduct.image_url}
                 alt={matchingProduct.name}
+                priority={false}
+                sizes="(max-width: 640px) 100vw, 320px"
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
             )}

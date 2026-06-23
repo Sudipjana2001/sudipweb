@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useCollections } from "@/hooks/useProducts";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export function FeaturedCollections() {
   const navigate = useNavigate();
@@ -64,11 +65,12 @@ export function FeaturedCollections() {
             >
               {/* Image Container */}
               <div className="aspect-[3/4] overflow-hidden">
-                <div
-                  className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
-                  style={{ 
-                    backgroundImage: `url(${collection.image_url || fallbackImages[collection.slug] || "/collection-summer.jpg"})` 
-                  }}
+                <OptimizedImage
+                  src={collection.image_url || fallbackImages[collection.slug] || "/collection-summer.jpg"}
+                  alt={collection.name}
+                  priority={true}
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 />
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-95" />

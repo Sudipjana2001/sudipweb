@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Clock } from "lucide-react";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export function RecentlyViewed() {
   const { data: items = [], isLoading } = useRecentlyViewed();
@@ -23,9 +24,11 @@ export function RecentlyViewed() {
                 className="flex-shrink-0 w-40 group"
               >
                 <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                  <img
+                  <OptimizedImage
                     src={item.product.image_url || "/product-1.jpg"}
                     alt={item.product.name}
+                    priority={false}
+                    sizes="160px"
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   />
                 </div>

@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Star, ThumbsUp, Camera, X, Check } from "lucide-react";
 import { format } from "date-fns";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 interface ProductReviewsProps {
   productId: string;
@@ -52,20 +54,27 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
     setUploading(true);
     const uploadedUrls: string[] = [];
 
-    for (const file of Array.from(files)) {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${productId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    try {
+      for (const file of Array.from(files)) {
+        const compressedBlob = await compressImageToWebP(file, { maxWidth: 800, maxHeight: 800, quality: 0.8 });
+        const fileName = `${user.id}/${productId}/${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
 
-      const { error } = await supabase.storage.from("review-photos").upload(fileName, file);
+        const { error } = await supabase.storage
+          .from("review-photos")
+          .upload(fileName, compressedBlob, { contentType: "image/webp" });
 
-      if (!error) {
-        const { data: { publicUrl } } = supabase.storage.from("review-photos").getPublicUrl(fileName);
-        uploadedUrls.push(publicUrl);
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from("review-photos").getPublicUrl(fileName);
+          uploadedUrls.push(publicUrl);
+        }
       }
-    }
 
-    setPhotos([...photos, ...uploadedUrls]);
-    setUploading(false);
+      setPhotos([...photos, ...uploadedUrls]);
+    } catch (err) {
+      toast.error("Failed to compress or upload photos");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -220,7 +229,12 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
                     <div className="flex flex-wrap gap-2">
                       {photos.map((url, idx) => (
                         <div key={idx} className="relative h-20 w-20 rounded-lg overflow-hidden bg-muted">
-                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <OptimizedImage
+                            src={url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            sizes="80px"
+                          />
                           <button
                             onClick={() => setPhotos(photos.filter((_, i) => i !== idx))}
                             className="absolute top-1 right-1 rounded-full bg-background p-1"
@@ -293,10 +307,11 @@ export function ProductReviews({ productId, productName, productSlug }: ProductR
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                           {review.author_avatar_url ? (
-                            <img
+                            <OptimizedImage
                               src={review.author_avatar_url}
                               alt=""
                               className="h-full w-full rounded-full object-cover"
+                              sizes="40px"
                             />
                           ) : (
                             <span className="font-medium text-muted-foreground">

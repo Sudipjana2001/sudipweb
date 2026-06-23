@@ -45,6 +45,7 @@ import {
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 /* ─── Lightbox for full-size photo view ─── */
 function PhotoLightbox({
@@ -209,10 +210,11 @@ function PhotoLightbox({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <img
+          <OptimizedImage
             src={post.image_url}
             alt={post.caption || "Pet photo"}
             className="max-h-[50vh] max-w-full rounded-lg object-contain shadow-2xl md:max-h-[85vh]"
+            sizes="(max-width: 768px) 100vw, 800px"
           />
         </div>
 
@@ -372,12 +374,12 @@ function GalleryCard({
       className="group relative cursor-pointer overflow-hidden rounded-lg bg-card break-inside-avoid mb-2"
       onClick={onOpen}
     >
-      <div className="overflow-hidden">
-        <img
+      <div className="overflow-hidden bg-muted">
+        <OptimizedImage
           src={post.image_url}
           alt={post.caption || "Pet photo"}
           className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 300px"
         />
       </div>
 

@@ -3,6 +3,7 @@ import { GitCompare, X } from "lucide-react";
 import { useCompare } from "@/hooks/useCompare";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export function CompareBar() {
   const navigate = useNavigate();
@@ -35,9 +36,11 @@ export function CompareBar() {
                   key={product.id}
                   className="group relative h-12 w-12 overflow-hidden border border-border"
                 >
-                  <img
+                  <OptimizedImage
                     src={product.image_url || "/placeholder.svg"}
                     alt={product.name}
+                    priority={false}
+                    sizes="48px"
                     className="h-full w-full object-cover"
                   />
                   <button

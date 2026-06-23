@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Save, Upload, X, ArrowUp, ArrowDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { OptimizedImage } from "@/components/ui/optimized-image";
+import { compressImageToWebP } from "@/lib/image-compress";
 
 interface HeroSlideForm {
   image_url: string;
@@ -64,19 +66,20 @@ export function HeroSlidesManager() {
     if (!file) return;
 
     setUploading(true);
-    const fileExt = file.name.split(".").pop();
-    const fileName = `hero-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `products/${fileName}`;
+    try {
+      const compressedBlob = await compressImageToWebP(file, { maxWidth: 1920, maxHeight: 1080, quality: 0.8 });
+      const fileName = `hero-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+      const filePath = `products/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("product-images")
-      .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, compressedBlob, { contentType: "image/webp" });
 
-    if (uploadError) {
-      toast.error("Failed to upload image");
-      setUploading(false);
-      return;
-    }
+      if (uploadError) {
+        toast.error("Failed to upload image");
+        setUploading(false);
+        return;
+      }
 
     const {
       data: { publicUrl },
@@ -89,7 +92,11 @@ export function HeroSlidesManager() {
     }
 
     toast.success("Image uploaded successfully");
-    setUploading(false);
+    } catch (error) {
+      toast.error("Failed to compress or upload image");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleAddSlide = async () => {
@@ -249,10 +256,11 @@ export function HeroSlidesManager() {
                 <div className="mt-2 space-y-4">
                   {newSlide.image_url && (
                     <div className="relative aspect-video overflow-hidden rounded-lg">
-                      <img
+                      <OptimizedImage
                         src={newSlide.image_url}
                         alt="Preview"
                         className="h-full w-full object-cover"
+                        sizes="(max-width: 640px) 100vw, 400px"
                       />
                       <button
                         onClick={() => setNewSlide({ ...newSlide, image_url: "" })}
@@ -391,10 +399,12 @@ export function HeroSlidesManager() {
               {slides.map((slide, index) => (
                 <tr key={slide.id} className="border-b border-border">
                   <td className="px-4 py-3">
-                    <img
+                    <OptimizedImage
                       src={slide.image_url}
                       alt={slide.headline}
-                      className="h-16 w-24 rounded-lg object-cover"
+                      wrapperClassName="h-16 w-24 rounded-lg overflow-hidden"
+                      className="object-cover"
+                      sizes="120px"
                     />
                   </td>
                   <td className="px-4 py-3">

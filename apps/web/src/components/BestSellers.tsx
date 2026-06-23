@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useBestSellers, Product } from "@/hooks/useProducts";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 export function BestSellers() {
   const { data: products = [], isLoading } = useBestSellers();
@@ -190,11 +191,12 @@ function ProductCard({
       >
         {/* Image Container */}
         <div className="relative mb-4 overflow-hidden bg-muted aspect-[3/4] transition-shadow duration-500 group-hover:shadow-elevated">
-          <div
-            className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
-            style={{
-              backgroundImage: `url(${product.image_url || "/product-1.jpg"})`,
-            }}
+          <OptimizedImage
+            src={product.image_url || "/product-1.jpg"}
+            alt={product.name}
+            priority={index < 2}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
 
           {/* Quick Add Overlay */}

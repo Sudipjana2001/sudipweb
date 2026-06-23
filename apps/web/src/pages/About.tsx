@@ -3,6 +3,7 @@ import { Heart, Star, Shield, Truck, RotateCcw, Leaf } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 const values = [
   {
@@ -40,10 +41,12 @@ export default function About() {
       {/* Hero */}
       <section className="relative h-[60vh] min-h-[500px]">
         <div className="absolute inset-0">
-          <img
+          <OptimizedImage
             src="/hero-1.jpg"
             alt="About Pebric"
             className="h-full w-full object-cover"
+            priority={true}
+            sizes="100vw"
           />
           <div className="absolute inset-0 bg-foreground/50" />
         </div>
@@ -84,10 +87,11 @@ export default function About() {
               </div>
             </div>
             <div className="relative aspect-square overflow-hidden bg-muted lg:aspect-auto">
-              <img
+              <OptimizedImage
                 src="/hero-2.jpg"
                 alt="Our journey"
                 className="h-full w-full object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
             </div>
           </div>

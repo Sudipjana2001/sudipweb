@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, X, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { cn } from "@/lib/utils";
+import { OptimizedImage } from "@/components/ui/optimized-image";
 
 interface SmartSearchProps {
   isOpen: boolean;
@@ -186,9 +187,11 @@ export function SmartSearch({ isOpen, onClose }: SmartSearchProps) {
                       }}
                       className="flex w-full items-center gap-4 border border-border p-3 text-left transition-colors hover:bg-muted"
                     >
-                      <img
+                      <OptimizedImage
                         src={product.image_url || "/placeholder.svg"}
                         alt={product.name}
+                        priority={false}
+                        sizes="64px"
                         className="h-16 w-16 object-cover"
                       />
                       <div className="flex-1">
