@@ -5,7 +5,7 @@ import {
   type Query,
 } from "@tanstack/react-query";
 
-const QUERY_CACHE_STORAGE_KEY = "pebric-query-cache-v1";
+const QUERY_CACHE_STORAGE_KEY = "pebric-query-cache-v3";
 const QUERY_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 export const CATALOG_STALE_TIME = 30 * 60 * 1000;
@@ -69,12 +69,16 @@ function loadPersistedCatalogState() {
 
     const parsed = JSON.parse(raw) as {
       persistedAt?: number;
+      supabaseUrl?: string;
       state?: unknown;
     };
 
+    const currentUrl = import.meta.env.VITE_SUPABASE_URL;
+
     if (
       !parsed.persistedAt ||
-      Date.now() - parsed.persistedAt > QUERY_CACHE_MAX_AGE
+      Date.now() - parsed.persistedAt > QUERY_CACHE_MAX_AGE ||
+      parsed.supabaseUrl !== currentUrl
     ) {
       window.localStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
       return null;
@@ -101,6 +105,7 @@ function persistCatalogState(queryClient: QueryClient) {
       QUERY_CACHE_STORAGE_KEY,
       JSON.stringify({
         persistedAt: Date.now(),
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
         state,
       }),
     );

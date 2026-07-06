@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout, adminNavGroups } from "@/components/layouts/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -221,6 +222,7 @@ const validAdminSections = new Set(
 );
 
 export default function Admin() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
@@ -408,12 +410,196 @@ export default function Admin() {
       setMigrationStatus(`Migration completed successfully! Processed all products. Optimized ${migratedCount} image(s).`);
       toast.success(`Optimized ${migratedCount} images to WebP!`);
       fetchData();
+      // Auto-backup disabled — use the manual Backup Catalog button.
     } catch (err) {
       console.error("Migration error:", err);
       setMigrationStatus(`Migration failed: ${err instanceof Error ? err.message : String(err)}`);
       toast.error("Migration failed");
     } finally {
       setIsMigrating(false);
+    }
+  };
+
+  // ─── MANUAL BACKUP ──────────────────────────────────────────────────────────
+  // Only runs when admin clicks the "Backup Catalog" button.
+  // Downloads all product images to the local backup/images folder and
+  // writes the complete products_catalog.json with every product field.
+  const triggerLocalBackup = async () => {
+    try {
+      toast.info("Fetching catalog from database...");
+
+      const [productsRes, categoriesRes, collectionsRes] = await Promise.all([
+        supabase.from("products").select("*").order("created_at", { ascending: false }),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("collections").select("*").order("name")
+      ]);
+
+      if (productsRes.error) throw new Error(`Products fetch failed: ${productsRes.error.message}`);
+      if (categoriesRes.error) throw new Error(`Categories fetch failed: ${categoriesRes.error.message}`);
+      if (collectionsRes.error) throw new Error(`Collections fetch failed: ${collectionsRes.error.message}`);
+
+      const allProducts = productsRes.data || [];
+      const allCategories = categoriesRes.data || [];
+      const allCollections = collectionsRes.data || [];
+
+      if (allProducts.length === 0) {
+        toast.warning("Backup skipped: catalog has no products. Add products first, then click Backup Catalog.");
+        return;
+      }
+
+      toast.info(`Saving ${allProducts.length} product(s) + downloading images...`);
+
+      // Send full payload to the Vite server-side backup plugin.
+      // The plugin writes products_catalog.json AND downloads all
+      // Supabase Storage images to backup/images/<slug>/
+      const res = await fetch("/api/backup/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          products: allProducts,
+          categories: allCategories,
+          collections: allCollections
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Server-side backup failed.");
+      }
+
+      console.log(`[Backup] ✓ Saved ${allProducts.length} product(s), ${allCategories.length} categories, ${allCollections.length} collections.`);
+      toast.success(`✅ Backup complete: ${allProducts.length} product(s) saved to local catalog.`);
+    } catch (err) {
+      console.error("[Backup] Failed:", err);
+      toast.error("Backup failed: " + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
+  const uploadLocalImageToSupabase = async (localPath: string): Promise<string> => {
+    const fetchUrl = localPath.replace("local://", "/api/backup/");
+    const filename = localPath.split("/").pop() || "image.webp";
+    
+    const response = await fetch(fetchUrl);
+    if (!response.ok) throw new Error(`Failed to fetch local image: ${localPath}`);
+    const blob = await response.blob();
+    
+    const fileExt = filename.split(".").pop() || "webp";
+    const filePath = `products/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, blob, {
+        contentType: `image/${fileExt}`
+      });
+      
+    if (uploadError) throw uploadError;
+    
+    const { data: { publicUrl } } = supabase.storage.from("product-images").getPublicUrl(filePath);
+    return publicUrl;
+  };
+
+  const handleLocalRestore = async () => {
+    setIsLoading(true);
+    toast.info("Loading backup file...");
+    try {
+      const res = await fetch("/api/backup/load");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Backup file not found.");
+      }
+      
+      const backupData = await res.json();
+      const { products = [], categories = [], collections = [] } = backupData;
+
+      if (products.length === 0) {
+        toast.error("Backup has no products to restore. The backup was saved when the catalog was empty. Please add products and run Backup Catalog first.");
+        return;
+      }
+
+      toast.info(`Restoring ${categories.length} categories...`);
+      for (const cat of categories) {
+        const { error } = await supabase.from("categories").upsert({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+          description: cat.description,
+          image_url: cat.image_url
+        }, { onConflict: "slug" });
+        if (error) console.warn(`Category upsert warning (${cat.name}):`, error.message);
+      }
+
+      toast.info(`Restoring ${collections.length} collections...`);
+      for (const col of collections) {
+        const { error } = await supabase.from("collections").upsert({
+          id: col.id,
+          name: col.name,
+          slug: col.slug,
+          description: col.description,
+          image_url: col.image_url
+        }, { onConflict: "slug" });
+        if (error) console.warn(`Collection upsert warning (${col.name}):`, error.message);
+      }
+
+      toast.info(`Restoring ${products.length} product(s)...`);
+      let restoredCount = 0;
+      let skippedCount = 0;
+
+      for (const prod of products) {
+        const restoredProduct = { ...prod };
+        
+        // Strip computed join fields that are not real columns
+        delete restoredProduct.category;
+        delete restoredProduct.collection;
+
+        // Handle main image restore from local backup
+        if (prod.image_url && prod.image_url.startsWith("local://")) {
+          try {
+            restoredProduct.image_url = await uploadLocalImageToSupabase(prod.image_url);
+          } catch (err) {
+            console.error(`Failed to restore main image for ${prod.name}:`, err);
+            restoredProduct.image_url = null;
+          }
+        }
+        
+        // Handle gallery images restore
+        if (Array.isArray(prod.images)) {
+          const restoredGallery = [];
+          for (const imgUrl of prod.images) {
+            if (imgUrl && imgUrl.startsWith("local://")) {
+              try {
+                const newUrl = await uploadLocalImageToSupabase(imgUrl);
+                restoredGallery.push(newUrl);
+              } catch (err) {
+                console.error(`Failed to restore gallery image ${imgUrl}:`, err);
+                restoredGallery.push(imgUrl);
+              }
+            } else {
+              restoredGallery.push(imgUrl);
+            }
+          }
+          restoredProduct.images = restoredGallery;
+        }
+        
+        const { error } = await supabase.from("products").upsert(restoredProduct, { onConflict: "slug" });
+        if (error) {
+          console.error(`Failed to restore product ${prod.name}:`, error.message);
+          skippedCount++;
+        } else {
+          restoredCount++;
+        }
+      }
+      
+      const summary = skippedCount > 0
+        ? `Restored ${restoredCount} product(s). ${skippedCount} skipped (already exist or error).`
+        : `Successfully restored ${restoredCount} product(s)!`;
+
+      toast.success(summary);
+      fetchData();
+    } catch (err) {
+      console.error("[Restore] Catalog restoration failed:", err);
+      toast.error("Restoration failed: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -574,6 +760,19 @@ export default function Admin() {
     setEditForm(product);
   };
 
+  const invalidateProductQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["product"] });
+    queryClient.invalidateQueries({ queryKey: ["product-by-id"] });
+    queryClient.invalidateQueries({ queryKey: ["categories"] });
+    queryClient.invalidateQueries({ queryKey: ["collections"] });
+    try {
+      localStorage.removeItem("pebric-query-cache-v3");
+    } catch (e) {
+      console.warn("Failed to clear local storage cache");
+    }
+  };
+
   const handleSave = async () => {
     if (!editingProduct) return;
 
@@ -607,7 +806,9 @@ export default function Admin() {
 
     toast.success("Product updated");
     setEditingProduct(null);
+    invalidateProductQueries();
     fetchData();
+    // Auto-backup disabled — use the manual Backup Catalog button.
   };
 
   const handleDelete = async (id: string) => {
@@ -619,19 +820,14 @@ export default function Admin() {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    type UntypedRpcClient = {
-      rpc: (
-        fn: string,
-        args?: Record<string, unknown>,
-      ) => Promise<{ error: { message: string } | null }>;
-    };
+    // First clean up dependent records that don't have ON DELETE CASCADE
+    await supabase.from("wishlist_items").delete().eq("product_id", id);
+    await supabase.from("cart_items").delete().eq("product_id", id);
+    await supabase.from("recently_viewed").delete().eq("product_id", id);
+    await supabase.from("product_occasions").delete().eq("product_id", id);
 
-    const { error } = await (supabase as unknown as UntypedRpcClient).rpc(
-      "delete_product_admin",
-      {
-        product_id: id,
-      },
-    );
+    // Now delete the product itself
+    const { error } = await supabase.from("products").delete().eq("id", id);
 
     if (error) {
       console.error("Delete error:", error);
@@ -641,7 +837,7 @@ export default function Admin() {
         return next;
       });
 
-      if (error.message.includes("foreign key constraint")) {
+      if (error.message.includes("foreign key constraint") || error.message.includes("order_items")) {
         toast.error(
           "Cannot delete product because it is part of an existing order.",
         );
@@ -652,7 +848,10 @@ export default function Admin() {
     }
 
     toast.success("Product deleted successfully");
+    invalidateProductQueries();
     fetchData();
+    // NOTE: Do NOT trigger backup after delete — it would overwrite the backup with an empty catalog.
+    // Use the manual "Backup Catalog" button before deleting if you want a snapshot.
   };
 
   const handleAddProduct = async () => {
@@ -714,7 +913,9 @@ export default function Admin() {
       is_new_arrival: true,
       images: [],
     });
+    invalidateProductQueries();
     fetchData();
+    // Auto-backup disabled — use the manual Backup Catalog button.
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
@@ -964,6 +1165,22 @@ export default function Admin() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={triggerLocalBackup}
+                  className="border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                >
+                  <Save className="mr-2 h-4 w-4" /> Backup Catalog
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleLocalRestore}
+                  className="border-blue-600/30 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Restore Catalog
+                </Button>
+
                 <Button
                   variant="outline"
                   onClick={runImageMigration}

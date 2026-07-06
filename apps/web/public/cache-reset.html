@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pebric Cache Reset</title>
+  <style>
+    body { font-family: monospace; max-width: 600px; margin: 40px auto; padding: 20px; background: #1a1a1a; color: #00ff00; }
+    .step { margin: 8px 0; padding: 8px 12px; background: #0a2a0a; border-left: 3px solid #00ff00; }
+    .error { border-left-color: #ff4444; color: #ff4444; }
+    .success { border-left-color: #00ff88; color: #00ff88; }
+    button { margin-top: 20px; padding: 12px 24px; background: #004400; color: #00ff00; border: 1px solid #00ff00; cursor: pointer; font-size: 16px; }
+    button:hover { background: #006600; }
+    h1 { color: #00ff88; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Pebric Cache Reset Tool</h1>
+  <div id="log"></div>
+  <button onclick="runFix()">🚀 Clear Cache & Reload</button>
+
+  <script>
+    function log(msg, type = '') {
+      const div = document.createElement('div');
+      div.className = `step ${type}`;
+      div.textContent = msg;
+      document.getElementById('log').appendChild(div);
+    }
+
+    async function runFix() {
+      document.getElementById('log').innerHTML = '';
+      log('Starting cache reset...');
+
+      // Clear all Pebric query cache keys
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('pebric-') || key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(k => {
+        localStorage.removeItem(k);
+        log(`✅ Cleared: ${k}`, 'success');
+      });
+
+      if (keysToRemove.length === 0) {
+        log('ℹ️  No cache keys found - cache was already clear');
+      }
+
+      // Verify Supabase is accessible
+      log('Testing Supabase connection...');
+      try {
+        const SUPABASE_URL = 'https://ykyruievdbwzlvyperjv.supabase.co';
+        const ANON_KEY = 'sb_publishable_1j6PG3qXptQAN3Ld6OIGpQ_qNEOuLit';
+        
+        const catRes = await fetch(`${SUPABASE_URL}/rest/v1/categories?select=name`, {
+          headers: { 'apikey': ANON_KEY }
+        });
+        const categories = await catRes.json();
+        log(`✅ Categories in DB: ${categories.map(c => c.name).join(', ')}`, 'success');
+
+        const colRes = await fetch(`${SUPABASE_URL}/rest/v1/collections?select=name`, {
+          headers: { 'apikey': ANON_KEY }
+        });
+        const collections = await colRes.json();
+        log(`✅ Collections in DB: ${collections.map(c => c.name).join(', ')}`, 'success');
+        
+        log('✅ Database is accessible and has correct data!', 'success');
+        log('🔄 Redirecting to shop page in 2 seconds...', 'success');
+        setTimeout(() => { window.location.href = '/shop'; }, 2000);
+      } catch (e) {
+        log(`❌ Error: ${e.message}`, 'error');
+      }
+    }
+
+    // Auto-run on page load
+    window.onload = runFix;
+  </script>
+</body>
+</html>

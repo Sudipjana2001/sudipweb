@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { ProductCard } from "@/components/ProductCard";
-import { useProducts, useCategories } from "@/hooks/useProducts";
+import { useProducts, useCategories, useCollections } from "@/hooks/useProducts";
 import { SlidersHorizontal, X, Search, ChevronDown, ArrowUpDown, ListFilter } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { SEOHead } from "@/components/SEOHead";
@@ -47,6 +47,7 @@ export default function Shop() {
 
   const { data: products = [], isLoading } = useProducts();
   const { data: categories = [] } = useCategories();
+  const { data: collections = [] } = useCollections();
 
   // Calculate price bounds
   const priceBounds = useMemo(() => {
@@ -312,19 +313,32 @@ export default function Shop() {
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
                 <div className="space-y-3">
-                  {["all", "summer", "winter", "rainy"].map((col) => (
-                    <label key={col} className="flex items-center gap-3 cursor-pointer group">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="mobile-collection"
+                      checked={selectedCollection === "all"}
+                      onChange={() => {
+                        handleCollectionChange("all");
+                        setMobileFilterOpen(false);
+                      }}
+                      className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
+                    />
+                    <span className="text-[15px] font-medium font-body text-foreground/80">All Collections</span>
+                  </label>
+                  {collections.map((col) => (
+                    <label key={col.id} className="flex items-center gap-3 cursor-pointer group">
                       <input 
                         type="radio" 
                         name="mobile-collection"
-                        checked={selectedCollection === col}
+                        checked={selectedCollection === col.slug}
                         onChange={() => {
-                          handleCollectionChange(col);
+                          handleCollectionChange(col.slug);
                           setMobileFilterOpen(false);
                         }}
                         className="w-[18px] h-[18px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors checked:border-[#8b6540]" 
                       />
-                      <span className="text-[15px] font-medium font-body text-foreground/80 capitalize">{col === "all" ? "All Collections" : col}</span>
+                      <span className="text-[15px] font-medium font-body text-foreground/80 capitalize">{col.name}</span>
                     </label>
                   ))}
                 </div>
@@ -475,16 +489,26 @@ export default function Shop() {
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8L6 4.5L9.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
             <div className="space-y-3">
-              {["all", "summer", "winter", "rainy"].map((col) => (
-                <label key={col} className="flex items-center gap-3 cursor-pointer group">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="collection"
+                  checked={selectedCollection === "all"}
+                  onChange={() => handleCollectionChange("all")}
+                  className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
+                />
+                <span className="text-sm font-medium font-body text-foreground/80">All Collections</span>
+              </label>
+              {collections.map((col) => (
+                <label key={col.id} className="flex items-center gap-3 cursor-pointer group">
                   <input 
                     type="radio" 
                     name="collection"
-                    checked={selectedCollection === col}
-                    onChange={() => handleCollectionChange(col)}
+                    checked={selectedCollection === col.slug}
+                    onChange={() => handleCollectionChange(col.slug)}
                     className="w-[16px] h-[16px] border-2 border-border/60 text-[#8b6540] focus:ring-0 focus:ring-offset-0 bg-transparent transition-colors group-hover:border-[#8b6540] checked:border-[#8b6540]" 
                   />
-                  <span className="text-sm font-medium font-body text-foreground/80 capitalize">{col === "all" ? "All Collections" : col}</span>
+                  <span className="text-sm font-medium font-body text-foreground/80 capitalize">{col.name}</span>
                 </label>
               ))}
             </div>

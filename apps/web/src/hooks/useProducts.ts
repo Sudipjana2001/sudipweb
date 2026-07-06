@@ -74,7 +74,7 @@ export function useProducts() {
 
   useEffect(() => {
     const channel = supabase
-      .channel(`products-realtime-${Math.random().toString(36).substring(2, 9)}`)
+      .channel(`catalog-realtime-${Math.random().toString(36).substring(2, 9)}`)
       .on(
         "postgres_changes",
         {
@@ -91,6 +91,30 @@ export function useProducts() {
           });
           queryClient.invalidateQueries({ queryKey: ["products", "best-sellers"] });
           queryClient.invalidateQueries({ queryKey: ["products", "new-arrivals"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "categories",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["categories"] });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "collections",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["collections"] });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
         }
       )
       .subscribe();
@@ -357,7 +381,10 @@ export function useCollections() {
       if (error) throw error;
       return data as Collection[];
     },
-    ...CATALOG_QUERY_OPTIONS,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 3,
   });
 }
 
@@ -373,7 +400,10 @@ export function useCategories() {
       if (error) throw error;
       return data as Category[];
     },
-    ...CATALOG_QUERY_OPTIONS,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 3,
   });
 }
 
