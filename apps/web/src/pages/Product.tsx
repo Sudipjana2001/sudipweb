@@ -316,6 +316,11 @@ export default function Product() {
     toast.success("Added to cart!", {
       description: `Added ${totalAdded} item(s) to your cart.`,
     });
+
+    setSelectedSize("");
+    setParentQuantity(1);
+    setSelectedPetSize("");
+    setPetQuantity(1);
   };
 
   const handleBuyNow = () => {
